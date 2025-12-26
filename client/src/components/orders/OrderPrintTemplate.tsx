@@ -223,40 +223,41 @@ function PrintContent({
     <div style={{ 
       fontFamily: "Arial, sans-serif", 
       direction: "rtl", 
-      padding: "5mm", 
+      padding: "10mm", 
       background: "#fff",
-      width: "287mm",
+      width: "297mm",
       margin: "0 auto",
-      boxSizing: "border-box"
+      boxSizing: "border-box",
+      minHeight: "210mm"
     }}>
       
       {/* Header */}
       <div style={{ 
         display: "flex", 
         justifyContent: "space-between", 
-        alignItems: "flex-start", 
-        marginBottom: "4mm", 
-        paddingBottom: "3mm", 
-        borderBottom: "2px solid #1e40af" 
+        alignItems: "center", 
+        marginBottom: "8mm", 
+        paddingBottom: "5mm", 
+        borderBottom: "3px solid #1e40af" 
       }}>
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
           {qrCodeUrl && (
-            <img src={qrCodeUrl} alt="QR Code" style={{ width: "25mm", height: "25mm" }} />
+            <img src={qrCodeUrl} alt="QR Code" style={{ width: "35mm", height: "35mm" }} />
           )}
           <div>
-            <h1 style={{ fontSize: "20px", fontWeight: "bold", color: "#1e40af", margin: "0 0 5px 0" }}>أمر تشغيل إنتاج</h1>
-            <p style={{ fontSize: "14px", color: "#64748b", margin: 0 }}>رقم الطلب: <span style={{ fontWeight: "bold", color: "#1e293b" }}>{order.order_number}</span></p>
+            <h1 style={{ fontSize: "28px", fontWeight: "bold", color: "#1e40af", margin: "0 0 5px 0" }}>أمر تشغيل إنتاج</h1>
+            <p style={{ fontSize: "18px", color: "#64748b", margin: 0 }}>رقم الطلب: <span style={{ fontWeight: "bold", color: "#1e293b" }}>{order.order_number}</span></p>
           </div>
         </div>
         
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "3px" }}>التاريخ: {format(new Date(order.created_at), "yyyy/MM/dd")}</div>
+          <div style={{ fontSize: "16px", color: "#64748b", marginBottom: "5px" }}>التاريخ: {format(new Date(order.created_at), "yyyy/MM/dd")}</div>
           <div style={{ 
             background: "#eff6ff", 
             color: "#1e40af", 
-            padding: "3px 10px", 
-            borderRadius: "6px", 
-            fontSize: "11px", 
+            padding: "5px 15px", 
+            borderRadius: "8px", 
+            fontSize: "14px", 
             fontWeight: "bold",
             display: "inline-block"
           }}>
@@ -269,56 +270,56 @@ function PrintContent({
       <div style={{ 
         display: "grid", 
         gridTemplateColumns: "1fr 1fr 1fr", 
-        gap: "8px", 
-        marginBottom: "5mm",
-        padding: "8px",
+        gap: "15px", 
+        marginBottom: "8mm",
+        padding: "15px",
         background: "#f8fafc",
-        borderRadius: "8px",
+        borderRadius: "10px",
         border: "1px solid #e2e8f0"
       }}>
         <div>
-          <label style={{ display: "block", fontSize: "10px", color: "#64748b", marginBottom: "1px" }}>العميل (عربي):</label>
-          <div style={{ fontWeight: "bold", fontSize: "13px" }}>{customer?.name_ar || "-"}</div>
+          <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "3px" }}>العميل (عربي):</label>
+          <div style={{ fontWeight: "bold", fontSize: "18px" }}>{customer?.name_ar || "-"}</div>
         </div>
         <div>
-          <label style={{ display: "block", fontSize: "10px", color: "#64748b", marginBottom: "1px" }}>العميل (English):</label>
-          <div style={{ fontWeight: "bold", fontSize: "13px" }}>{customer?.name || "-"}</div>
+          <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "3px" }}>العميل (English):</label>
+          <div style={{ fontWeight: "bold", fontSize: "18px" }}>{customer?.name || "-"}</div>
         </div>
         <div>
-          <label style={{ display: "block", fontSize: "10px", color: "#64748b", marginBottom: "1px" }}>كود العميل:</label>
-          <div style={{ fontWeight: "bold", fontSize: "13px" }}>{customer?.customer_code || "-"}</div>
+          <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "3px" }}>كود العميل:</label>
+          <div style={{ fontWeight: "bold", fontSize: "18px" }}>{customer?.customer_code || "-"}</div>
         </div>
         <div>
-          <label style={{ display: "block", fontSize: "10px", color: "#64748b", marginBottom: "1px" }}>رقم الدرج:</label>
-          <div style={{ fontWeight: "bold", fontSize: "13px" }}>{customer?.plate_drawer_code || "-"}</div>
+          <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "3px" }}>رقم الدرج:</label>
+          <div style={{ fontWeight: "bold", fontSize: "18px" }}>{customer?.plate_drawer_code || "-"}</div>
         </div>
         <div>
-          <label style={{ display: "block", fontSize: "10px", color: "#64748b", marginBottom: "1px" }}>مندوب المبيعات:</label>
-          <div style={{ fontWeight: "bold", fontSize: "13px" }}>{salesRep?.name || "-"}</div>
+          <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "3px" }}>مندوب المبيعات:</label>
+          <div style={{ fontWeight: "bold", fontSize: "18px" }}>{salesRep?.name || "-"}</div>
         </div>
         <div>
-          <label style={{ display: "block", fontSize: "10px", color: "#64748b", marginBottom: "1px" }}>ملاحظات الطلب:</label>
-          <div style={{ fontWeight: "normal", fontSize: "11px" }}>{order.notes || "لا يوجد"}</div>
+          <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "3px" }}>ملاحظات الطلب:</label>
+          <div style={{ fontWeight: "normal", fontSize: "16px" }}>{order.notes || "لا يوجد"}</div>
         </div>
       </div>
 
       {/* Production Orders Table */}
-      <div style={{ marginBottom: "5mm" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10px" }}>
+      <div style={{ marginBottom: "10mm" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
           <thead>
             <tr style={{ background: "#f1f5f9" }}>
-              <th style={{ border: "1px solid #e2e8f0", padding: "4px", fontWeight: "bold", color: "#334155", width: "30px" }}>#</th>
-              <th style={{ border: "1px solid #e2e8f0", padding: "4px", fontWeight: "bold", color: "#334155", width: "80px" }}>رقم الأمر</th>
-              <th style={{ border: "1px solid #e2e8f0", padding: "4px", fontWeight: "bold", color: "#334155" }}>المنتج</th>
-              <th style={{ border: "1px solid #e2e8f0", padding: "4px", fontWeight: "bold", color: "#334155", width: "80px" }}>المقاس</th>
-              <th style={{ border: "1px solid #e2e8f0", padding: "4px", fontWeight: "bold", color: "#334155", width: "50px" }}>العرض</th>
-              <th style={{ border: "1px solid #e2e8f0", padding: "4px", fontWeight: "bold", color: "#334155", width: "50px" }}>الطول</th>
-              <th style={{ border: "1px solid #e2e8f0", padding: "4px", fontWeight: "bold", color: "#334155", width: "50px" }}>السماكة</th>
-              <th style={{ border: "1px solid #e2e8f0", padding: "4px", fontWeight: "bold", color: "#334155", width: "80px" }}>اللون</th>
-              <th style={{ border: "1px solid #e2e8f0", padding: "4px", fontWeight: "bold", color: "#334155", width: "70px" }}>التخريم</th>
-              <th style={{ border: "1px solid #e2e8f0", padding: "4px", fontWeight: "bold", color: "#334155", width: "50px" }}>طباعة</th>
-              <th style={{ border: "1px solid #e2e8f0", padding: "4px", fontWeight: "bold", color: "#334155", width: "70px" }}>الكمية (كجم)</th>
-              <th style={{ border: "1px solid #e2e8f0", padding: "4px", fontWeight: "bold", color: "#334155", width: "120px" }}>ملاحظات</th>
+              <th style={{ border: "1px solid #e2e8f0", padding: "8px", fontWeight: "bold", color: "#334155" }}>#</th>
+              <th style={{ border: "1px solid #e2e8f0", padding: "8px", fontWeight: "bold", color: "#334155" }}>رقم الأمر</th>
+              <th style={{ border: "1px solid #e2e8f0", padding: "8px", fontWeight: "bold", color: "#334155" }}>المنتج</th>
+              <th style={{ border: "1px solid #e2e8f0", padding: "8px", fontWeight: "bold", color: "#334155" }}>المقاس</th>
+              <th style={{ border: "1px solid #e2e8f0", padding: "8px", fontWeight: "bold", color: "#334155" }}>العرض</th>
+              <th style={{ border: "1px solid #e2e8f0", padding: "8px", fontWeight: "bold", color: "#334155" }}>الطول</th>
+              <th style={{ border: "1px solid #e2e8f0", padding: "8px", fontWeight: "bold", color: "#334155" }}>السماكة</th>
+              <th style={{ border: "1px solid #e2e8f0", padding: "8px", fontWeight: "bold", color: "#334155" }}>اللون</th>
+              <th style={{ border: "1px solid #e2e8f0", padding: "8px", fontWeight: "bold", color: "#334155" }}>التخريم</th>
+              <th style={{ border: "1px solid #e2e8f0", padding: "8px", fontWeight: "bold", color: "#334155" }}>طباعة</th>
+              <th style={{ border: "1px solid #e2e8f0", padding: "8px", fontWeight: "bold", color: "#334155" }}>الكمية (كجم)</th>
+              <th style={{ border: "1px solid #e2e8f0", padding: "8px", fontWeight: "bold", color: "#334155" }}>ملاحظات</th>
             </tr>
           </thead>
           <tbody>
@@ -331,40 +332,40 @@ function PrintContent({
 
               return (
                 <tr key={po.id} style={{ background: index % 2 === 0 ? "#fff" : "#f8fafc" }}>
-                  <td style={{ border: "1px solid #e2e8f0", padding: "4px", textAlign: "center" }}>{index + 1}</td>
-                  <td style={{ border: "1px solid #e2e8f0", padding: "4px", textAlign: "center", fontWeight: "bold", color: "#1e40af" }}>{po.production_order_number}</td>
-                  <td style={{ border: "1px solid #e2e8f0", padding: "4px" }}>{item?.name_ar || item?.name || "-"}</td>
-                  <td style={{ border: "1px solid #e2e8f0", padding: "4px", textAlign: "center" }}>{customerProduct?.size_caption || "-"}</td>
-                  <td style={{ border: "1px solid #e2e8f0", padding: "4px", textAlign: "center" }}>{customerProduct?.width || "-"}</td>
-                  <td style={{ border: "1px solid #e2e8f0", padding: "4px", textAlign: "center" }}>{customerProduct?.cutting_length_cm ? `${customerProduct.cutting_length_cm} سم` : "-"}</td>
-                  <td style={{ border: "1px solid #e2e8f0", padding: "4px", textAlign: "center" }}>{customerProduct?.thickness || "-"}</td>
-                  <td style={{ border: "1px solid #e2e8f0", padding: "4px", textAlign: "center" }}>
+                  <td style={{ border: "1px solid #e2e8f0", padding: "8px", textAlign: "center" }}>{index + 1}</td>
+                  <td style={{ border: "1px solid #e2e8f0", padding: "8px", textAlign: "center", fontWeight: "bold", color: "#1e40af" }}>{po.production_order_number}</td>
+                  <td style={{ border: "1px solid #e2e8f0", padding: "8px" }}>{item?.name_ar || item?.name || "-"}</td>
+                  <td style={{ border: "1px solid #e2e8f0", padding: "8px", textAlign: "center" }}>{customerProduct?.size_caption || "-"}</td>
+                  <td style={{ border: "1px solid #e2e8f0", padding: "8px", textAlign: "center" }}>{customerProduct?.width || "-"}</td>
+                  <td style={{ border: "1px solid #e2e8f0", padding: "8px", textAlign: "center" }}>{customerProduct?.cutting_length_cm ? `${customerProduct.cutting_length_cm} سم` : "-"}</td>
+                  <td style={{ border: "1px solid #e2e8f0", padding: "8px", textAlign: "center" }}>{customerProduct?.thickness || "-"}</td>
+                  <td style={{ border: "1px solid #e2e8f0", padding: "8px", textAlign: "center" }}>
                     <span style={{ 
                       background: colorInfo.color, 
                       color: colorInfo.textColor, 
-                      padding: "1px 4px", 
-                      borderRadius: "3px",
-                      fontSize: "9px",
+                      padding: "2px 8px", 
+                      borderRadius: "4px",
+                      fontSize: "12px",
                       border: colorInfo.color === "#FFFFFF" ? "1px solid #ccc" : "none"
                     }}>
                       {colorInfo.name_ar}
                     </span>
                   </td>
-                  <td style={{ border: "1px solid #e2e8f0", padding: "4px", textAlign: "center", fontSize: "9px" }}>{customerProduct?.punching || "-"}</td>
-                  <td style={{ border: "1px solid #e2e8f0", padding: "4px", textAlign: "center" }}>
+                  <td style={{ border: "1px solid #e2e8f0", padding: "8px", textAlign: "center" }}>{customerProduct?.punching || "-"}</td>
+                  <td style={{ border: "1px solid #e2e8f0", padding: "8px", textAlign: "center" }}>
                     {customerProduct?.is_printed ? "نعم" : "لا"}
                   </td>
-                  <td style={{ border: "1px solid #e2e8f0", padding: "4px", textAlign: "center", fontWeight: "bold" }}>{requiredQty.toFixed(2)}</td>
-                  <td style={{ border: "1px solid #e2e8f0", padding: "4px", fontSize: "9px", color: "#64748b" }}>{po.notes || "-"}</td>
+                  <td style={{ border: "1px solid #e2e8f0", padding: "8px", textAlign: "center", fontWeight: "bold" }}>{requiredQty.toFixed(2)}</td>
+                  <td style={{ border: "1px solid #e2e8f0", padding: "8px", fontSize: "12px", color: "#64748b" }}>{po.notes || "-"}</td>
                 </tr>
               );
             })}
           </tbody>
           <tfoot>
             <tr style={{ background: "#1e40af", color: "#fff" }}>
-              <td colSpan={10} style={{ border: "1px solid #1e40af", padding: "5px", fontWeight: "bold", textAlign: "left" }}>المجموع الإجمالي:</td>
-              <td style={{ border: "1px solid #1e40af", padding: "5px", textAlign: "center", fontWeight: "bold" }}>{totalRequiredQty.toFixed(2)}</td>
-              <td style={{ border: "1px solid #1e40af", padding: "5px" }}></td>
+              <td colSpan={10} style={{ border: "1px solid #1e40af", padding: "10px", fontWeight: "bold", textAlign: "left", fontSize: "16px" }}>المجموع الإجمالي:</td>
+              <td style={{ border: "1px solid #1e40af", padding: "10px", textAlign: "center", fontWeight: "bold", fontSize: "16px" }}>{totalRequiredQty.toFixed(2)}</td>
+              <td style={{ border: "1px solid #1e40af", padding: "10px" }}></td>
             </tr>
           </tfoot>
         </table>
@@ -374,25 +375,25 @@ function PrintContent({
       <div style={{ 
         display: "grid", 
         gridTemplateColumns: "1fr 1fr 1fr 1fr", 
-        gap: "20px",
-        marginTop: "10mm",
-        borderTop: "1px solid #e2e8f0",
-        paddingTop: "5mm"
+        gap: "30px",
+        marginTop: "15mm",
+        borderTop: "2px solid #e2e8f0",
+        paddingTop: "10mm"
       }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "11px", fontWeight: "bold", marginBottom: "15mm" }}>إعداد / مندوب المبيعات</div>
+          <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "20mm" }}>إعداد / مندوب المبيعات</div>
           <div style={{ borderTop: "1px dashed #64748b", width: "80%", margin: "0 auto" }}></div>
         </div>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "11px", fontWeight: "bold", marginBottom: "15mm" }}>مدير المبيعات</div>
+          <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "20mm" }}>مدير المبيعات</div>
           <div style={{ borderTop: "1px dashed #64748b", width: "80%", margin: "0 auto" }}></div>
         </div>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "11px", fontWeight: "bold", marginBottom: "15mm" }}>مدير الإنتاج</div>
+          <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "20mm" }}>مدير الإنتاج</div>
           <div style={{ borderTop: "1px dashed #64748b", width: "80%", margin: "0 auto" }}></div>
         </div>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "11px", fontWeight: "bold", marginBottom: "15mm" }}>المدير العام</div>
+          <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "20mm" }}>المدير العام</div>
           <div style={{ borderTop: "1px dashed #64748b", width: "80%", margin: "0 auto" }}></div>
         </div>
       </div>
