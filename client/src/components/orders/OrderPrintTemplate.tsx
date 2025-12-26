@@ -152,34 +152,28 @@ export default function OrderPrintTemplate({
             margin: 0 !important;
             padding: 0 !important;
           }
-          body * {
+          body {
             visibility: hidden;
           }
-          .print-page, .print-page * {
-            visibility: visible !important;
-          }
           .print-page {
+            visibility: visible !important;
+            display: block !important;
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
             height: auto !important;
-            overflow: visible !important;
-            page-break-after: avoid;
-            page-break-inside: avoid;
           }
-          .no-print, .no-print * {
+          .print-page * {
+            visibility: visible !important;
+          }
+          .no-print {
             display: none !important;
-            visibility: hidden !important;
-            height: 0 !important;
-            width: 0 !important;
-            overflow: hidden !important;
-            position: absolute !important;
           }
         }
       `}</style>
 
-      <div className="print-page" style={{ display: "none" }}>
+      <div className="print-page hidden print:block">
         <PrintContent
           order={order}
           customer={customer}
