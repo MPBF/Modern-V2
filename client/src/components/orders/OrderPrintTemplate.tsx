@@ -141,28 +141,42 @@ export default function OrderPrintTemplate({
       </div>
 
       <style>{`
-        .print-only-content {
-          display: none;
+        @media screen {
+          .print-only {
+            display: none !important;
+          }
         }
         @media print {
           @page {
             size: A4 landscape;
-            margin: 8mm;
+            margin: 0;
           }
           body {
             margin: 0 !important;
             padding: 0 !important;
+            height: auto !important;
+            min-height: 0 !important;
+            background: white !important;
+          }
+          #root > *:not(.print-only) {
+            display: none !important;
           }
           .no-print {
             display: none !important;
           }
-          .print-only-content {
+          .print-only {
             display: block !important;
+            position: relative !important;
+            width: 100% !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
           }
         }
       `}</style>
 
-      <div className="print-only-content">
+      <div className="print-only">
         <PrintContent
           order={order}
           customer={customer}
