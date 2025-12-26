@@ -141,6 +141,11 @@ export default function OrderPrintTemplate({
       </div>
 
       <style>{`
+        @media screen {
+          .print-page {
+            display: none;
+          }
+        }
         @media print {
           @page {
             size: A4 landscape;
@@ -166,7 +171,7 @@ export default function OrderPrintTemplate({
         }
       `}</style>
 
-      <div className="print-page hidden print:block">
+      <div className="print-page">
         <PrintContent
           order={order}
           customer={customer}
