@@ -240,7 +240,7 @@ function PrintContent({ order, customer, salesRep, orderProductionOrders, custom
                 </td>
                 <td style={{ border: "1px solid #e2e8f0", padding: "8px", textAlign: "center" }}>{customerProduct?.punching || "-"}</td>
                 <td style={{ border: "1px solid #e2e8f0", padding: "8px", textAlign: "center" }}>{customerProduct?.is_printed ? "نعم" : "لا"}</td>
-                <td style={{ border: "1px solid #e2e8f0", padding: "8px", textAlign: "center", fontWeight: "bold" }}>{(po.final_quantity_kg || po.quantity_kg || 0).toFixed(2)}</td>
+                <td style={{ border: "1px solid #e2e8f0", padding: "8px", textAlign: "center", fontWeight: "bold" }}>{parseFloat(String(po.final_quantity_kg || po.quantity_kg || 0)).toFixed(2)}</td>
               </tr>
             );
           })}
