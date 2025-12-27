@@ -125,13 +125,15 @@ export default function OrderPrintTemplate({
       <style>{`
         @media print {
           @page { size: A4 landscape; margin: 0; }
-          body { margin: 0; padding: 0; background: white; }
-          #root > *:not(.print-only) { display: none !important; }
-          .print-only { display: block !important; }
+          body { margin: 0; padding: 0; background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .no-print { display: none !important; }
+          .print-area { display: block !important; visibility: visible !important; position: static !important; }
         }
+        .print-area { display: none; }
+        @media screen { .print-area { display: none; } }
       `}</style>
 
-      <div className="print-only hidden print:block">
+      <div className="print-area">
         <PrintContent
           order={order}
           customer={customer}
