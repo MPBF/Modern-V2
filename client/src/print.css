@@ -12,51 +12,76 @@
 }
 
 @media print {
-  /* إخفاء كل العناصر في الصفحة ما عدا المحتوى المراد طباعته */
+  /* إعدادات أساسية وثابتة للطباعة */
   html, body {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
-    height: 100% !important;
+    height: auto !important; /* كان 100% - قد يسبب مشاكل مع بعض الطابعات */
     background: white !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
-  
+
+  /* إخفاء كل شيء افتراضياً */
   body * {
-    visibility: hidden;
+    visibility: hidden !important;
   }
-  
+
+  /* اخفاء المعاينة/الأوفرلاي بشكل صريح (حتى لو no-print موجود) */
+  .print-preview-overlay,
+  .print-preview-toolbar,
+  .print-preview-paper,
+  .no-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* إظهار منطقة الطباعة فقط */
   .print-area,
   .print-area * {
     visibility: visible !important;
   }
-  
+
+  /* مهم: اجعلها static لتجنب white-page race conditions */
   .print-area {
     display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 0;
-    margin: 0;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
-  
+
   .print-page {
-    width: 100%;
-    padding: 0;
-    margin: 0;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
   }
-  
-  .no-print {
-    display: none !important;
-  }
-  
+
   /* منع الظلال والتأثيرات */
   * {
     box-shadow: none !important;
     text-shadow: none !important;
+    filter: none !important;
+    transform: none !important; /* احتياط ضد أي transform يسبب مشاكل طباعة */
+  }
+
+  /* تحسين كسر الصفحات */
+  table, tr, td, th {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-avoid-break,
+  .print-section,
+  .print-notes,
+  .print-signatures {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
 
@@ -375,15 +400,18 @@
    ========================================== */
 .print-page-break {
   page-break-before: always;
+  break-before: page;
 }
 
 .print-avoid-break {
   page-break-inside: avoid;
+  break-inside: avoid;
 }
 
 .print-section {
   margin-bottom: 6mm;
   page-break-inside: avoid;
+  break-inside: avoid;
 }
 
 .print-section-title {
@@ -559,7 +587,7 @@
     width: 95vw;
     max-width: 297mm;
   }
-  
+
   .print-preview-paper {
     padding: 10mm;
   }
@@ -569,13 +597,13 @@
   .print-preview-overlay {
     padding: 15px;
   }
-  
+
   .print-preview-toolbar {
     flex-direction: column;
     gap: 15px;
     padding: 15px;
   }
-  
+
   .print-preview-paper {
     min-height: auto;
   }
