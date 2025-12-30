@@ -667,9 +667,6 @@ export default function UserDashboard() {
     },
   });
 
-  // إعدادات التحقق من الموقع
-  const MAX_ACCURACY_METERS = 100; // الحد الأقصى للدقة المسموحة
-  
   // تحديث: طلب الموقع الجغرافي قبل إرسال الحضور
   const handleAttendanceAction = (status: string, action?: string) => {
     // التحقق من وجود الموقع الحالي
@@ -682,31 +679,11 @@ export default function UserDashboard() {
       return;
     }
 
-    // التحقق من دقة الموقع (فقط إذا كانت متوفرة)
-    const accuracyValue = currentLocation.accuracy;
-    const hasValidAccuracy = accuracyValue !== undefined && 
-                             accuracyValue !== null && 
-                             !isNaN(accuracyValue);
-    
-    if (hasValidAccuracy && accuracyValue > MAX_ACCURACY_METERS) {
-      toast({
-        title: "دقة الموقع منخفضة",
-        description: `دقة GPS الحالية (${Math.round(accuracyValue)} متر) منخفضة جداً. انتقل إلى مكان مفتوح وانقر "تحديث الموقع" للحصول على قراءة أدق.`,
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // تحذير إذا لم تتوفر معلومات الدقة (لكن نسمح بالمتابعة)
-    if (!hasValidAccuracy) {
-      console.warn("⚠️ لم تتوفر معلومات دقة GPS");
-    }
-
-    // التحقق من حداثة الموقع (يجب أن يكون خلال آخر 5 دقائق)
+    // التحقق من حداثة الموقع (يجب أن يكون خلال آخر 10 دقائق)
     if (currentLocation.timestamp) {
       const locationAge = Date.now() - currentLocation.timestamp;
-      const fiveMinutes = 5 * 60 * 1000;
-      if (locationAge > fiveMinutes) {
+      const tenMinutes = 10 * 60 * 1000;
+      if (locationAge > tenMinutes) {
         toast({
           title: "الموقع قديم",
           description: "يرجى النقر على 'تحديث الموقع' للحصول على موقع جديد قبل تسجيل الحضور.",
@@ -761,10 +738,20 @@ export default function UserDashboard() {
       }
     }
 
+    // إذا كان المستخدم داخل النطاق، السماح بتسجيل الحضور بغض النظر عن دقة GPS
+    // إذا كان خارج النطاق، عرض رسالة خطأ
     if (!isWithinRange) {
+      // تحذير إضافي إذا كانت الدقة منخفضة
+      const accuracyValue = currentLocation.accuracy;
+      const hasHighAccuracy = accuracyValue !== undefined && accuracyValue <= 1000;
+      
+      const accuracyNote = !hasHighAccuracy 
+        ? ` (دقة الموقع: ${Math.round(accuracyValue || 0)} متر - جرب تحديث الموقع)`
+        : "";
+      
       toast({
         title: "خارج نطاق المصانع",
-        description: `أنت على بعد ${Math.round(closestDistance)} متر من أقرب موقع (${closestLocation?.name_ar}). يجب أن تكون داخل نطاق ${closestLocation?.allowed_radius} متر لتسجيل الحضور.`,
+        description: `أنت على بعد ${Math.round(closestDistance)} متر من أقرب موقع (${closestLocation?.name_ar}). يجب أن تكون داخل نطاق ${closestLocation?.allowed_radius} متر لتسجيل الحضور.${accuracyNote}`,
         variant: "destructive",
       });
       return;
