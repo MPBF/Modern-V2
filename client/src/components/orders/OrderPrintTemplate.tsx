@@ -1,9 +1,8 @@
 
-import React, { useEffect, useMemo, useCallback, useRef, useState } from "react";
-// إذا أردت استخدام date-fns مع locale العربية:
-// import { format } from "date-fns";
-// import { ar } from "date-fns/locale";
+import { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import "../../print.css";
 
 // ========================
@@ -113,6 +112,7 @@ export default function OrderPrintTemplate({
   });
 
   const [isPrinting, setIsPrinting] = useState(false);
+  const printContentRef = useRef<HTMLDivElement>(null);
 
   // ثبّت المراجع لتجنب race conditions وقت الطباعة
   const customerProductsMap = useMemo(
@@ -139,30 +139,105 @@ export default function OrderPrintTemplate({
   const canPrint = Boolean(order?.id) && Boolean(customer?.id) && sortedOrders.length > 0;
 
   const handlePrint = useCallback(async () => {
-    if (!canPrint || isPrinting) return;
+    if (!canPrint || isPrinting || !printContentRef.current) return;
     setIsPrinting(true);
 
     try {
       // انتظر الخطوط (لو مدعومة)
-      // @ts-expect-error: document.fonts غير معرّف في بعض البيئات
-      if (document?.fonts?.ready) {
-        // @ts-expect-error
-        await document.fonts.ready;
+      try {
+        if ((document as any)?.fonts?.ready) {
+          await (document as any).fonts.ready;
+        }
+      } catch {
+        // تجاهل الخطأ
       }
-    } catch {
-      // تجاهل الخطأ
+
+      // انتظر إطارين رسم لضمان اكتمال DOM
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      // التقاط المحتوى كصورة بجودة عالية
+      const canvas = await html2canvas(printContentRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
+
+      // إنشاء PDF بحجم A4 أفقي
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+      });
+
+      // أبعاد A4 أفقي بالملم
+      const pageWidth = 297;
+      const pageHeight = 210;
+      const margin = 10;
+      const contentWidth = pageWidth - margin * 2;
+      const contentHeight = pageHeight - margin * 2;
+
+      // حساب النسبة للعرض فقط (للحفاظ على التناسب)
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const widthRatio = contentWidth / imgWidth;
+      const scaledWidth = contentWidth;
+      const scaledHeight = imgHeight * widthRatio;
+
+      // إذا كان المحتوى أطول من صفحة واحدة، نقسمه على صفحات متعددة
+      const pageContentHeight = contentHeight; // ارتفاع المحتوى في كل صفحة بالملم
+      const totalPages = Math.ceil(scaledHeight / pageContentHeight);
+
+      // ارتفاع جزء الصورة المقابل لكل صفحة
+      const sourcePageHeight = (pageContentHeight / widthRatio);
+
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) {
+          pdf.addPage();
+        }
+
+        // إنشاء canvas مؤقت لجزء من الصورة
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = canvas.width;
+        const remainingHeight = canvas.height - page * sourcePageHeight;
+        tempCanvas.height = Math.min(sourcePageHeight, remainingHeight);
+        
+        const ctx = tempCanvas.getContext("2d");
+        if (ctx) {
+          // رسم الجزء المطلوب من الصورة الأصلية
+          ctx.drawImage(
+            canvas,
+            0,
+            page * sourcePageHeight,
+            canvas.width,
+            tempCanvas.height,
+            0,
+            0,
+            canvas.width,
+            tempCanvas.height
+          );
+
+          const imgData = tempCanvas.toDataURL("image/png");
+          const thisPageHeight = Math.min(pageContentHeight, scaledHeight - page * pageContentHeight);
+          
+          // إضافة الصورة مع توسيط أفقي
+          const x = margin;
+          const y = margin;
+          pdf.addImage(imgData, "PNG", x, y, scaledWidth, thisPageHeight);
+        }
+      }
+
+      // تحميل الملف
+      const fileName = `أمر_تشغيل_${order?.order_number || "غير_محدد"}.pdf`;
+      pdf.save(fileName);
+
+    } catch (error) {
+      console.error("خطأ في تصدير PDF:", error);
+    } finally {
+      setIsPrinting(false);
     }
-
-    // انتظر إطارين رسم لضمان اكتمال DOM قبل الطباعة
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
-    // تنفيذ الطباعة
-    window.print();
-
-    // نؤخر إعادة تمكين الزر قليلاً لتجنب ضغطات متتالية
-    setTimeout(() => setIsPrinting(false), 300);
-  }, [canPrint, isPrinting]);
+  }, [canPrint, isPrinting, order?.order_number]);
 
   useEffect(() => {
     const onAfterPrint = () => {
@@ -222,15 +297,15 @@ export default function OrderPrintTemplate({
               disabled={!canPrint || isPrinting}
               title={
                 !canPrint
-                  ? "البيانات غير مكتملة للطباعة"
+                  ? "البيانات غير مكتملة للتصدير"
                   : isPrinting
-                  ? "جاري التحضير للطباعة..."
-                  : "طباعة"
+                  ? "جاري تصدير PDF..."
+                  : "تصدير PDF"
               }
-              aria-label="طباعة أمر التشغيل"
+              aria-label="تصدير أمر التشغيل كـ PDF"
               style={!canPrint ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
             >
-              {isPrinting ? "جاري الطباعة..." : "طباعة"}
+              {isPrinting ? "جاري التصدير..." : "تصدير PDF"}
             </button>
 
             <button
@@ -245,7 +320,7 @@ export default function OrderPrintTemplate({
         </div>
 
         {/* معاينة الورقة على الشاشة */}
-        <div className="print-preview-paper">
+        <div className="print-preview-paper" ref={printContentRef}>
           <PrintContent
             order={order}
             customer={customer}
