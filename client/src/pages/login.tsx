@@ -21,24 +21,26 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Factory } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 import FactoryLogoPath from "../../../attached_assets/FactoryLogoHPNGW.png";
 
-const loginSchema = z.object({
-  username: z
-    .string()
-    .min(1, "اسم المستخدم مطلوب")
-    .min(3, "اسم المستخدم يجب أن يكون 3 أحرف على الأقل"),
-  password: z
-    .string()
-    .min(1, "كلمة المرور مطلوبة")
-    .min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
-
 export default function Login() {
+  const { t } = useTranslation();
   const { login, isLoading } = useAuth();
   const { toast } = useToast();
+
+  const loginSchema = z.object({
+    username: z
+      .string()
+      .min(1, t('auth.usernameRequired'))
+      .min(3, t('auth.usernameMinLength')),
+    password: z
+      .string()
+      .min(1, t('auth.passwordRequired'))
+      .min(6, t('auth.passwordMinLength')),
+  });
+
+  type LoginFormValues = z.infer<typeof loginSchema>;
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -52,27 +54,25 @@ export default function Login() {
     try {
       await login(values.username, values.password);
       toast({
-        title: "مرحباً بك",
-        description: "تم تسجيل الدخول بنجاح",
+        title: t('auth.welcomeBack'),
+        description: t('auth.loginSuccess'),
       });
     } catch (error) {
-      let errorMessage = "حدث خطأ غير متوقع";
+      let errorMessage = t('auth.unexpectedError');
 
       if (error instanceof Error) {
         errorMessage = error.message;
       }
 
-      // If it's a network error, provide helpful message
       if (
         errorMessage.includes("Network error") ||
         errorMessage.includes("Failed to fetch")
       ) {
-        errorMessage =
-          "تعذر الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.";
+        errorMessage = t('auth.networkError');
       }
 
       toast({
-        title: "خطأ في تسجيل الدخول",
+        title: t('auth.loginError'),
         description: errorMessage,
         variant: "destructive",
       });
@@ -86,13 +86,13 @@ export default function Login() {
           <div className="mx-auto w-20 h-20 mb-4 flex items-center justify-center">
             <img 
               src={FactoryLogoPath} 
-              alt="شعار مصنع الأكياس البلاستيكية" 
+              alt={t('auth.factoryLogoAlt')} 
               className="w-full h-full object-contain"
             />
           </div>
-          <CardTitle className="text-2xl font-bold">MPBF System</CardTitle>
+          <CardTitle className="text-2xl font-bold">{t('auth.systemTitle')}</CardTitle>
           <p className="text-muted-foreground">
-            نظام إدارة مصنع الأكياس البلاستيكية
+            {t('auth.systemDescription')}
           </p>
         </CardHeader>
         <CardContent>
@@ -103,10 +103,10 @@ export default function Login() {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>اسم المستخدم</FormLabel>
+                    <FormLabel>{t('auth.username')}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="أدخل اسم المستخدم"
+                        placeholder={t('auth.enterUsername')}
                         className="text-right"
                         disabled={isLoading}
                         data-testid="input-username"
@@ -123,11 +123,11 @@ export default function Login() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>كلمة المرور</FormLabel>
+                    <FormLabel>{t('auth.password')}</FormLabel>
                     <FormControl>
                       <Input
                         type="password"
-                        placeholder="أدخل كلمة المرور"
+                        placeholder={t('auth.enterPassword')}
                         className="text-right"
                         disabled={isLoading}
                         data-testid="input-password"
@@ -145,7 +145,7 @@ export default function Login() {
                 disabled={isLoading}
                 data-testid="button-login"
               >
-                {isLoading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
+                {isLoading ? t('auth.loggingIn') : t('auth.login')}
               </Button>
             </form>
           </Form>
@@ -156,7 +156,7 @@ export default function Login() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-background px-2 text-muted-foreground">
-                أو
+                {t('auth.or')}
               </span>
             </div>
           </div>
@@ -177,13 +177,13 @@ export default function Login() {
               >
                 <path d="M2 2v20h20V2H2zm18 18H4V4h16v16z"/>
               </svg>
-              تسجيل الدخول باستخدام Replit
+              {t('auth.loginWithReplit')}
             </Button>
           </div>
 
           <div className="mt-6 pt-6 border-t">
             <p className="text-xs text-muted-foreground text-center">
-              جميع الحقوق محفوظة لـ AbuKhalid مطور ومنفذ
+              {t('auth.copyright')}
             </p>
           </div>
         </CardContent>

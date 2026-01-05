@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import PageLayout from "../components/layout/PageLayout";
 import {
   Card,
@@ -22,6 +23,7 @@ import { Copy, CheckCircle, AlertCircle, Settings } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 
 export default function WhatsAppSetup() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [certificate, setCertificate] = useState(
     "CmEKHQiXiLXLyZi7AhIGZW50OndhIgRNUEJGUPrb48QGGkCr8LSQ5wTCvUiJ5/EVMWcWnrs6hjWAcMwfaGfagJvEow6UVO4Wqzmpaq5kSaDjZXbrjqPgUwYfVtyXGt7pnK8CEi5tbgik9NfihfNatbOdqWgunFvl4F/C2OedL0VOrTxez1dCeu7pPITYOVBNqw5j",
@@ -37,34 +39,33 @@ export default function WhatsAppSetup() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({
-      title: "تم النسخ",
-      description: "تم نسخ النص إلى الحافظة",
+      title: t("whatsapp.setup.copied"),
+      description: t("whatsapp.setup.copiedToClipboard"),
     });
   };
 
   const saveTwilioSettings = async () => {
     try {
-      // Save Twilio settings to environment or database
       toast({
-        title: "تم الحفظ",
-        description: "تم حفظ إعدادات Twilio بنجاح",
+        title: t("whatsapp.setup.saved"),
+        description: t("whatsapp.setup.twilioSettingsSaved"),
       });
     } catch (error) {
       toast({
-        title: "خطأ",
-        description: "فشل في حفظ الإعدادات",
+        title: t("whatsapp.setup.error"),
+        description: t("whatsapp.setup.failedToSaveSettings"),
         variant: "destructive",
       });
     }
   };
 
   return (
-    <PageLayout title="إعداد WhatsApp Business API" description="ضبط إعدادات الواتس اب للأعمال وربطها بـ Meta Business">
+    <PageLayout title={t("whatsapp.setup.title")} description={t("whatsapp.setup.description")}>
       <Tabs defaultValue="meta" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="meta">شهادة Meta</TabsTrigger>
-              <TabsTrigger value="twilio">إعدادات Twilio</TabsTrigger>
-              <TabsTrigger value="test">اختبار الاتصال</TabsTrigger>
+              <TabsTrigger value="meta">{t("whatsapp.setup.metaCertificate")}</TabsTrigger>
+              <TabsTrigger value="twilio">{t("whatsapp.setup.twilioSettings")}</TabsTrigger>
+              <TabsTrigger value="test">{t("whatsapp.setup.testConnection")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="meta" className="space-y-4">
@@ -72,15 +73,15 @@ export default function WhatsAppSetup() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-green-600" />
-                    شهادة الملكية من Meta
+                    {t("whatsapp.setup.ownershipCertificate")}
                   </CardTitle>
                   <CardDescription>
-                    شهادة التحقق من ملكية رقم الهاتف المعتمدة من Meta Business
+                    {t("whatsapp.setup.ownershipCertificateDesc")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label htmlFor="displayName">اسم العرض المعتمد</Label>
+                    <Label htmlFor="displayName">{t("whatsapp.setup.approvedDisplayName")}</Label>
                     <Input
                       id="displayName"
                       value={displayName}
@@ -89,12 +90,12 @@ export default function WhatsAppSetup() {
                       readOnly
                     />
                     <p className="text-sm text-green-600 mt-1">
-                      ✓ معتمد من Meta
+                      {t("whatsapp.setup.approvedByMeta")}
                     </p>
                   </div>
 
                   <div>
-                    <Label htmlFor="certificate">شهادة الملكية</Label>
+                    <Label htmlFor="certificate">{t("whatsapp.setup.certificate")}</Label>
                     <div className="relative">
                       <Textarea
                         id="certificate"
@@ -113,21 +114,20 @@ export default function WhatsAppSetup() {
                       </Button>
                     </div>
                     <p className="text-sm text-gray-600 mt-1">
-                      هذه الشهادة تؤكد ملكيتك لرقم الهاتف في WhatsApp Business
-                      API
+                      {t("whatsapp.setup.certificateInfo")}
                     </p>
                   </div>
 
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      <strong>خطوات مهمة:</strong>
+                      <strong>{t("whatsapp.setup.importantSteps")}</strong>
                       <br />
-                      1. احفظ هذه الشهادة في مكان آمن
+                      {t("whatsapp.setup.step1")}
                       <br />
-                      2. استخدمها لتأكيد ملكية الرقم في لوحة تحكم Twilio
+                      {t("whatsapp.setup.step2")}
                       <br />
-                      3. تأكد من أن اسم العرض يطابق اسم شركتك المسجل
+                      {t("whatsapp.setup.step3")}
                     </AlertDescription>
                   </Alert>
                 </CardContent>
@@ -139,15 +139,15 @@ export default function WhatsAppSetup() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Settings className="h-5 w-5 text-blue-600" />
-                    إعدادات Twilio WhatsApp
+                    {t("whatsapp.setup.twilioWhatsappSettings")}
                   </CardTitle>
                   <CardDescription>
-                    ضبط معلومات حساب Twilio لإرسال رسائل WhatsApp
+                    {t("whatsapp.setup.twilioWhatsappDesc")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label htmlFor="accountSid">Account SID</Label>
+                    <Label htmlFor="accountSid">{t("whatsapp.setup.accountSid")}</Label>
                     <Input
                       id="accountSid"
                       value={twilioSettings.accountSid}
@@ -164,7 +164,7 @@ export default function WhatsAppSetup() {
                   </div>
 
                   <div>
-                    <Label htmlFor="authToken">Auth Token</Label>
+                    <Label htmlFor="authToken">{t("whatsapp.setup.authToken")}</Label>
                     <Input
                       id="authToken"
                       type="password"
@@ -182,7 +182,7 @@ export default function WhatsAppSetup() {
                   </div>
 
                   <div>
-                    <Label htmlFor="twilioPhone">رقم WhatsApp في Twilio</Label>
+                    <Label htmlFor="twilioPhone">{t("whatsapp.setup.twilioPhone")}</Label>
                     <Input
                       id="twilioPhone"
                       value={twilioSettings.phoneNumber}
@@ -197,37 +197,37 @@ export default function WhatsAppSetup() {
                       dir="ltr"
                     />
                     <p className="text-sm text-gray-600 mt-1">
-                      يجب أن يبدأ بـ "whatsapp:" متبوعاً برقم الهاتف
+                      {t("whatsapp.setup.twilioPhoneHint")}
                     </p>
                   </div>
 
                   <Button onClick={saveTwilioSettings} className="w-full">
-                    حفظ إعدادات Twilio
+                    {t("whatsapp.setup.saveTwilioSettings")}
                   </Button>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>متطلبات التكامل</CardTitle>
+                  <CardTitle>{t("whatsapp.setup.integrationRequirements")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
                       <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span>حساب Twilio مفعل</span>
+                      <span>{t("whatsapp.setup.twilioAccountActive")}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span>شهادة Meta معتمدة</span>
+                      <span>{t("whatsapp.setup.metaCertificateApproved")}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <AlertCircle className="h-5 w-5 text-orange-500" />
-                      <span>ربط رقم الهاتف في Twilio Console</span>
+                      <span>{t("whatsapp.setup.linkPhoneInTwilio")}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <AlertCircle className="h-5 w-5 text-orange-500" />
-                      <span>تفعيل WhatsApp Business API</span>
+                      <span>{t("whatsapp.setup.activateWhatsappApi")}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -237,14 +237,14 @@ export default function WhatsAppSetup() {
             <TabsContent value="test" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>اختبار إرسال الرسائل</CardTitle>
+                  <CardTitle>{t("whatsapp.setup.testSendingMessages")}</CardTitle>
                   <CardDescription>
-                    تأكد من أن النظام يمكنه إرسال رسائل WhatsApp بنجاح
+                    {t("whatsapp.setup.testSendingMessagesDesc")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label htmlFor="testPhone">رقم الهاتف للاختبار</Label>
+                    <Label htmlFor="testPhone">{t("whatsapp.setup.testPhoneNumber")}</Label>
                     <Input
                       id="testPhone"
                       value={phoneNumber}
@@ -259,18 +259,17 @@ export default function WhatsAppSetup() {
                     className="w-full"
                     onClick={() => {
                       toast({
-                        title: "جاري الإرسال...",
-                        description: "جاري إرسال رسالة اختبار",
+                        title: t("whatsapp.setup.sending"),
+                        description: t("whatsapp.setup.sendingTestMessage"),
                       });
                     }}
                   >
-                    إرسال رسالة اختبار
+                    {t("whatsapp.setup.sendTestMessage")}
                   </Button>
 
                   <Alert>
                     <AlertDescription>
-                      ستصل رسالة اختبار إلى الرقم المحدد خلال ثوان. تأكد من أن
-                      الرقم مسجل في WhatsApp.
+                      {t("whatsapp.setup.testMessageInfo")}
                     </AlertDescription>
                   </Alert>
                 </CardContent>

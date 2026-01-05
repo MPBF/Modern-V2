@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../hooks/use-auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from 'react-i18next';
 import PageLayout from "../components/layout/PageLayout";
 import {
   Card,
@@ -71,6 +72,7 @@ import LocationMapPicker from "../components/LocationMapPicker";
 import { Plus, Eye, EyeOff } from "lucide-react";
 
 export default function Settings() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -280,13 +282,13 @@ export default function Settings() {
       queryClient.invalidateQueries({ queryKey: ["/api/database/stats"] });
       setSelectedFile(null);
       toast({
-        title: "تم استيراد البيانات بنجاح",
+        title: t('settings.database.importSuccess'),
         description: `تم استيراد ${data.count || data.importedRecords} سجل من أصل ${data.totalRows || data.count} سجل`,
       });
     },
     onError: (error) => {
       toast({
-        title: "خطأ في استيراد البيانات",
+        title: t('settings.database.importError'),
         description:
           error instanceof Error
             ? error.message
@@ -430,13 +432,13 @@ export default function Settings() {
       setImportStep(2);
 
       toast({
-        title: "تم تحليل الملف بنجاح",
+        title: t('settings.database.fileParseSuccess'),
         description: `تم العثور على ${data.length} سجل و ${headers.length} عمود`,
       });
     } catch (error) {
       toast({
-        title: "خطأ في تحليل الملف",
-        description: "تأكد من صحة تنسيق الملف",
+        title: t('settings.database.fileParseError'),
+        description: t('settings.database.fileCorrupt'),
         variant: "destructive",
       });
     }
@@ -464,15 +466,15 @@ export default function Settings() {
           await parseFileData(file);
         } else {
           toast({
-            title: "يرجى اختيار الجدول أولاً",
-            description: "اختر الجدول المراد استيراد البيانات إليه",
+            title: t('settings.database.selectTableFirst'),
+            description: t('settings.database.selectTableFirstDesc'),
             variant: "destructive",
           });
         }
       } else {
         toast({
-          title: "نوع ملف غير مدعوم",
-          description: "يرجى اختيار ملف CSV أو JSON أو Excel",
+          title: t('settings.database.unsupportedFileType'),
+          description: t('settings.database.unsupportedFileTypeDesc'),
           variant: "destructive",
         });
       }
@@ -707,14 +709,14 @@ export default function Settings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/database/stats"] });
       toast({
-        title: "تم إنشاء النسخة الاحتياطية",
-        description: "تم تحميل النسخة الاحتياطية لجميع الجداول والسجلات بنجاح",
+        title: t('settings.database.backupCreated'),
+        description: t('settings.database.backupCreatedDesc'),
       });
     },
     onError: () => {
       toast({
-        title: "خطأ في إنشاء النسخة الاحتياطية",
-        description: "حدث خطأ أثناء إنشاء النسخة الاحتياطية",
+        title: t('settings.database.backupError'),
+        description: t('settings.database.backupErrorDesc'),
         variant: "destructive",
       });
     },
@@ -745,14 +747,14 @@ export default function Settings() {
     },
     onSuccess: () => {
       toast({
-        title: "تم تصدير البيانات",
-        description: "تم تصدير بيانات الجدول بنجاح",
+        title: t('settings.database.exportSuccess'),
+        description: t('settings.database.exportSuccessDesc'),
       });
     },
     onError: () => {
       toast({
-        title: "خطأ في تصدير البيانات",
-        description: "حدث خطأ أثناء تصدير البيانات",
+        title: t('settings.database.exportError'),
+        description: t('settings.database.exportErrorDesc'),
         variant: "destructive",
       });
     },
@@ -766,14 +768,14 @@ export default function Settings() {
     },
     onSuccess: () => {
       toast({
-        title: "تم تحسين الجداول",
-        description: "تم تحسين جميع الجداول بنجاح",
+        title: t('settings.database.optimizeSuccess'),
+        description: t('settings.database.optimizeSuccessDesc'),
       });
     },
     onError: () => {
       toast({
-        title: "خطأ في تحسين الجداول",
-        description: "حدث خطأ أثناء تحسين الجداول",
+        title: t('settings.database.optimizeError'),
+        description: t('settings.database.optimizeErrorDesc'),
         variant: "destructive",
       });
     },
@@ -787,14 +789,14 @@ export default function Settings() {
     },
     onSuccess: () => {
       toast({
-        title: "فحص التكامل",
-        description: "تم فحص تكامل قاعدة البيانات بنجاح",
+        title: t('settings.database.integrityCheck'),
+        description: t('settings.database.integrityCheckSuccess'),
       });
     },
     onError: () => {
       toast({
-        title: "خطأ في فحص التكامل",
-        description: "حدث خطأ أثناء فحص تكامل قاعدة البيانات",
+        title: t('settings.database.integrityCheckError'),
+        description: t('settings.database.integrityCheckErrorDesc'),
         variant: "destructive",
       });
     },
@@ -810,14 +812,14 @@ export default function Settings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/database/stats"] });
       toast({
-        title: "تم تنظيف البيانات",
-        description: "تم تنظيف البيانات القديمة بنجاح",
+        title: t('settings.database.cleanupSuccess'),
+        description: t('settings.database.cleanupSuccessDesc'),
       });
     },
     onError: () => {
       toast({
-        title: "خطأ في تنظيف البيانات",
-        description: "حدث خطأ أثناء تنظيف البيانات القديمة",
+        title: t('settings.database.cleanupError'),
+        description: t('settings.database.cleanupErrorDesc'),
         variant: "destructive",
       });
     },
@@ -833,8 +835,8 @@ export default function Settings() {
     },
     onSuccess: () => {
       toast({
-        title: "تم استعادة قاعدة البيانات بنجاح",
-        description: "تمت استعادة جميع البيانات من النسخة الاحتياطية",
+        title: t('settings.database.restoreSuccess'),
+        description: t('settings.database.restoreSuccessDesc'),
       });
       setSelectedBackupFile(null);
       setPendingBackupData(null);
@@ -843,8 +845,8 @@ export default function Settings() {
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في استعادة قاعدة البيانات",
-        description: error?.message || "حدث خطأ أثناء استعادة النسخة الاحتياطية",
+        title: t('settings.database.restoreError'),
+        description: error?.message || t('settings.database.backupErrorDesc'),
         variant: "destructive",
       });
     },
@@ -859,8 +861,8 @@ export default function Settings() {
     const maxSize = 50 * 1024 * 1024;
     if (file.size > maxSize) {
       toast({
-        title: "الملف كبير جداً",
-        description: "يجب أن يكون حجم الملف أقل من 50 ميجابايت",
+        title: t('settings.database.fileTooLarge'),
+        description: t('settings.database.fileTooLargeDesc'),
         variant: "destructive",
       });
       return;
@@ -869,8 +871,8 @@ export default function Settings() {
     // Check file type
     if (!file.name.endsWith('.json')) {
       toast({
-        title: "نوع ملف غير صحيح",
-        description: "يجب أن يكون الملف بصيغة JSON",
+        title: t('settings.database.invalidFileType'),
+        description: t('settings.database.invalidFileTypeDesc'),
         variant: "destructive",
       });
       return;
@@ -886,7 +888,7 @@ export default function Settings() {
         
         // Basic validation
         if (!backupData.tables || typeof backupData.tables !== 'object') {
-          throw new Error("بنية ملف النسخة الاحتياطية غير صحيحة");
+          throw new Error(t('settings.database.invalidBackupStructure'));
         }
 
         // Store the data and show confirmation dialog
@@ -894,8 +896,8 @@ export default function Settings() {
         setShowRestoreConfirm(true);
       } catch (error) {
         toast({
-          title: "خطأ في قراءة الملف",
-          description: error instanceof Error ? error.message : "الملف تالف أو غير صالح",
+          title: t('settings.database.fileReadError'),
+          description: error instanceof Error ? error.message : t('settings.database.fileCorrupt'),
           variant: "destructive",
         });
         setSelectedBackupFile(null);
@@ -904,8 +906,8 @@ export default function Settings() {
     
     reader.onerror = () => {
       toast({
-        title: "خطأ في قراءة الملف",
-        description: "فشل في قراءة الملف",
+        title: t('settings.database.fileReadError'),
+        description: t('settings.database.fileCorrupt'),
         variant: "destructive",
       });
       setSelectedBackupFile(null);
@@ -949,14 +951,14 @@ export default function Settings() {
         queryKey: ["/api/settings/user", user?.id],
       });
       toast({
-        title: "تم الحفظ بنجاح",
-        description: "تم حفظ إعداداتك الشخصية",
+        title: t('settings.saveSuccess'),
+        description: t('settings.userSettingsSaved'),
       });
     },
     onError: () => {
       toast({
-        title: "خطأ في الحفظ",
-        description: "حدث خطأ أثناء حفظ الإعدادات",
+        title: t('settings.saveError'),
+        description: t('settings.saveErrorDesc'),
         variant: "destructive",
       });
     },
@@ -985,14 +987,14 @@ export default function Settings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings/system"] });
       toast({
-        title: "تم الحفظ بنجاح",
-        description: "تم حفظ إعدادات النظام",
+        title: t('settings.saveSuccess'),
+        description: t('settings.systemSettingsSaved'),
       });
     },
     onError: () => {
       toast({
-        title: "خطأ في الحفظ",
-        description: "حدث خطأ أثناء حفظ إعدادات النظام",
+        title: t('settings.saveError'),
+        description: t('settings.saveErrorDesc'),
         variant: "destructive",
       });
     },
@@ -1007,36 +1009,36 @@ export default function Settings() {
   };
 
   return (
-    <PageLayout title="الإعدادات" description="إدارة إعدادات النظام والتفضيلات الشخصية">
+    <PageLayout title={t('settings.title')} description={t('settings.description')}>
       <Tabs defaultValue="roles" className="space-y-6">
             <TabsList className="grid w-full grid-cols-4 md:grid-cols-7">
               <TabsTrigger value="roles" className="flex items-center gap-2">
                 <Shield className="w-4 h-4" />
-                الأدوار والصلاحيات
+                {t('settings.tabs.roles')}
               </TabsTrigger>
               <TabsTrigger value="notifications" className="flex items-center gap-2">
                 <Bell className="w-4 h-4" />
-                التنبيهات
+                {t('settings.tabs.notifications')}
               </TabsTrigger>
               <TabsTrigger value="system" className="flex items-center gap-2">
                 <SettingsIcon className="w-4 h-4" />
-                النظام
+                {t('settings.tabs.system')}
               </TabsTrigger>
               <TabsTrigger value="database" className="flex items-center gap-2">
                 <Database className="w-4 h-4" />
-                قاعدة البيانات
+                {t('settings.tabs.database')}
               </TabsTrigger>
               <TabsTrigger value="location" className="flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
-                موقع المصنع
+                {t('settings.tabs.location')}
               </TabsTrigger>
               <TabsTrigger value="notification-center" className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" />
-                الإشعارات
+                {t('settings.tabs.notificationCenter')}
               </TabsTrigger>
               <TabsTrigger value="whatsapp-webhooks" className="flex items-center gap-2">
                 <Webhook className="w-4 h-4" />
-                Webhooks واتساب
+                {t('settings.tabs.whatsappWebhooks')}
               </TabsTrigger>
             </TabsList>
 
@@ -1045,10 +1047,10 @@ export default function Settings() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Shield className="w-5 h-5" />
-                    إدارة الأدوار والصلاحيات
+                    {t('settings.roles.title')}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    تحديد أدوار المستخدمين وصلاحياتهم في النظام
+                    {t('settings.roles.description')}
                   </p>
                 </CardHeader>
                 <CardContent>

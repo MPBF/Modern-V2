@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
 import {
   Card,
@@ -24,6 +25,7 @@ import {
 } from "lucide-react";
 
 export default function WhatsAppFinalSetup() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [phoneNumber, setPhoneNumber] = useState("+966");
   const [message, setMessage] = useState(
@@ -31,7 +33,6 @@ export default function WhatsAppFinalSetup() {
   );
   const [useTemplate, setUseTemplate] = useState(true);
 
-  // إرسال رسالة تجريبية
   const testMessage = useMutation({
     mutationFn: async (data: {
       phone: string;
@@ -43,7 +44,7 @@ export default function WhatsAppFinalSetup() {
         body: JSON.stringify({
           phone_number: data.phone,
           message: data.message,
-          title: "اختبار نهائي",
+          title: t("whatsapp.finalSetup.finalTest"),
           use_template: data.useTemplate,
           template_name: data.useTemplate
             ? "welcome_hxc4485f514cb7d4536026fc56250f75e7"
@@ -54,50 +55,42 @@ export default function WhatsAppFinalSetup() {
     },
     onSuccess: () => {
       toast({
-        title: "تم إرسال الرسالة بنجاح!",
-        description: "تم إرسال رسالة WhatsApp باستخدام Content Template",
+        title: t("whatsapp.finalSetup.messageSentSuccess"),
+        description: t("whatsapp.finalSetup.messageSentDesc"),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "فشل في الإرسال",
+        title: t("whatsapp.finalSetup.sendFailed"),
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  const systemStatus = {
-    twilioCredentials: true,
-    contentTemplate: true,
-    webhookConfigured: true,
-    metaTemplateApproved: true,
-    ready: true,
-  };
-
   const features = [
     {
       icon: <MessageSquare className="h-5 w-5" />,
-      title: "إرسال الرسائل",
-      description: "إرسال رسائل WhatsApp للموظفين والعملاء",
+      title: t("whatsapp.finalSetup.sendMessages"),
+      description: t("whatsapp.finalSetup.sendMessagesDesc"),
       status: "active",
     },
     {
       icon: <CheckCircle className="h-5 w-5" />,
-      title: "القوالب المُوافقة",
-      description: "استخدام قوالب Meta المُوافق عليها",
+      title: t("whatsapp.finalSetup.approvedTemplates"),
+      description: t("whatsapp.finalSetup.approvedTemplatesDesc"),
       status: "active",
     },
     {
       icon: <Zap className="h-5 w-5" />,
-      title: "إشعارات فورية",
-      description: "إشعارات تلقائية للطلبات والصيانة",
+      title: t("whatsapp.finalSetup.instantNotifications"),
+      description: t("whatsapp.finalSetup.instantNotificationsDesc"),
       status: "active",
     },
     {
       icon: <Settings className="h-5 w-5" />,
-      title: "تحديثات الحالة",
-      description: "متابعة حالة الرسائل والتسليم",
+      title: t("whatsapp.finalSetup.statusUpdates"),
+      description: t("whatsapp.finalSetup.statusUpdatesDesc"),
       status: "active",
     },
   ];
@@ -108,81 +101,75 @@ export default function WhatsAppFinalSetup() {
       dir="rtl"
     >
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
         <div className="text-center space-y-4">
           <div className="w-20 h-20 bg-green-600 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle className="h-12 w-12 text-white" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900">
-            🎉 WhatsApp Business API جاهز!
+            {t("whatsapp.finalSetup.title")}
           </h1>
           <p className="text-xl text-gray-600">
-            تم إعداد نظام WhatsApp بنجاح مع جميع الميزات المطلوبة
+            {t("whatsapp.finalSetup.description")}
           </p>
         </div>
 
-        {/* Success Alert */}
         <Alert className="border-green-200 bg-green-50">
           <CheckCircle className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-700">
-            <strong>إعداد مكتمل!</strong> النظام جاهز لإرسال رسائل WhatsApp
-            باستخدام Twilio مع Content Template المرتبط بقالب Meta المُوافق
-            عليه. لا مزيد من خطأ 63016!
+            <strong>{t("whatsapp.finalSetup.setupComplete")}</strong> {t("whatsapp.finalSetup.setupCompleteDesc")}
           </AlertDescription>
         </Alert>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* System Status */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
-                حالة النظام
+                {t("whatsapp.finalSetup.systemStatus")}
               </CardTitle>
-              <CardDescription>جميع المكونات تعمل بشكل صحيح</CardDescription>
+              <CardDescription>{t("whatsapp.finalSetup.systemStatusDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm">بيانات Twilio</span>
-                <Badge className="bg-green-100 text-green-800">متصل</Badge>
+                <span className="text-sm">{t("whatsapp.finalSetup.twilioCredentials")}</span>
+                <Badge className="bg-green-100 text-green-800">{t("whatsapp.finalSetup.connected")}</Badge>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm">Content Template</span>
-                <Badge className="bg-green-100 text-green-800">مُعد</Badge>
+                <span className="text-sm">{t("whatsapp.finalSetup.contentTemplate")}</span>
+                <Badge className="bg-green-100 text-green-800">{t("whatsapp.finalSetup.configured")}</Badge>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm">Meta Template</span>
-                <Badge className="bg-green-100 text-green-800">مُوافق</Badge>
+                <span className="text-sm">{t("whatsapp.finalSetup.metaTemplate")}</span>
+                <Badge className="bg-green-100 text-green-800">{t("whatsapp.finalSetup.approved")}</Badge>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm">Webhook</span>
-                <Badge className="bg-green-100 text-green-800">نشط</Badge>
+                <span className="text-sm">{t("whatsapp.finalSetup.webhook")}</span>
+                <Badge className="bg-green-100 text-green-800">{t("whatsapp.finalSetup.active")}</Badge>
               </div>
 
               <div className="flex items-center justify-between font-medium pt-2 border-t">
-                <span>الحالة العامة</span>
-                <Badge className="bg-green-600 text-white">جاهز للإنتاج</Badge>
+                <span>{t("whatsapp.finalSetup.overallStatus")}</span>
+                <Badge className="bg-green-600 text-white">{t("whatsapp.finalSetup.readyForProduction")}</Badge>
               </div>
             </CardContent>
           </Card>
 
-          {/* Test Message */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Send className="h-5 w-5" />
-                اختبار نهائي
+                {t("whatsapp.finalSetup.finalTest")}
               </CardTitle>
               <CardDescription>
-                إرسال رسالة تجريبية للتأكد من العمل الصحيح
+                {t("whatsapp.finalSetup.finalTestDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="finalTestPhone">رقم الهاتف</Label>
+                <Label htmlFor="finalTestPhone">{t("whatsapp.finalSetup.phoneNumber")}</Label>
                 <Input
                   id="finalTestPhone"
                   value={phoneNumber}
@@ -194,7 +181,7 @@ export default function WhatsAppFinalSetup() {
               </div>
 
               <div>
-                <Label htmlFor="finalTestMessage">الرسالة</Label>
+                <Label htmlFor="finalTestMessage">{t("whatsapp.finalSetup.message")}</Label>
                 <Input
                   id="finalTestMessage"
                   value={message}
@@ -212,7 +199,7 @@ export default function WhatsAppFinalSetup() {
                   data-testid="checkbox-final-template"
                 />
                 <Label htmlFor="finalUseTemplate" className="text-sm">
-                  استخدام Content Template (موصى به)
+                  {t("whatsapp.finalSetup.useContentTemplate")}
                 </Label>
               </div>
 
@@ -231,12 +218,12 @@ export default function WhatsAppFinalSetup() {
                 {testMessage.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    جاري الإرسال...
+                    {t("whatsapp.finalSetup.sending")}
                   </>
                 ) : (
                   <>
                     <Send className="mr-2 h-4 w-4" />
-                    إرسال رسالة تجريبية
+                    {t("whatsapp.finalSetup.sendTestMessage")}
                   </>
                 )}
               </Button>
@@ -244,12 +231,11 @@ export default function WhatsAppFinalSetup() {
           </Card>
         </div>
 
-        {/* Features Overview */}
         <Card>
           <CardHeader>
-            <CardTitle>المميزات المتاحة الآن</CardTitle>
+            <CardTitle>{t("whatsapp.finalSetup.availableFeatures")}</CardTitle>
             <CardDescription>
-              جميع المميزات جاهزة للاستخدام في نظام MPBF
+              {t("whatsapp.finalSetup.availableFeaturesDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -268,17 +254,16 @@ export default function WhatsAppFinalSetup() {
                       {feature.description}
                     </p>
                   </div>
-                  <Badge className="bg-green-100 text-green-800">نشط</Badge>
+                  <Badge className="bg-green-100 text-green-800">{t("whatsapp.finalSetup.active")}</Badge>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Technical Details */}
         <Card className="border-blue-200 bg-blue-50">
           <CardHeader>
-            <CardTitle className="text-blue-800">التفاصيل التقنية</CardTitle>
+            <CardTitle className="text-blue-800">{t("whatsapp.finalSetup.technicalDetails")}</CardTitle>
           </CardHeader>
           <CardContent className="text-blue-700 space-y-2 text-sm">
             <div className="flex items-center gap-2">
@@ -310,10 +295,9 @@ export default function WhatsAppFinalSetup() {
           </CardContent>
         </Card>
 
-        {/* Next Steps */}
         <Card>
           <CardHeader>
-            <CardTitle>الخطوات التالية</CardTitle>
+            <CardTitle>{t("whatsapp.finalSetup.nextSteps")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -322,9 +306,9 @@ export default function WhatsAppFinalSetup() {
                   1
                 </span>
                 <div>
-                  <h4 className="font-medium">استخدام النظام في الإنتاج</h4>
+                  <h4 className="font-medium">{t("whatsapp.finalSetup.useInProduction")}</h4>
                   <p className="text-sm text-gray-600">
-                    النظام جاهز لإرسال إشعارات الطلبات والصيانة
+                    {t("whatsapp.finalSetup.useInProductionDesc")}
                   </p>
                 </div>
               </div>
@@ -334,9 +318,9 @@ export default function WhatsAppFinalSetup() {
                   2
                 </span>
                 <div>
-                  <h4 className="font-medium">مراقبة الأداء</h4>
+                  <h4 className="font-medium">{t("whatsapp.finalSetup.monitorPerformance")}</h4>
                   <p className="text-sm text-gray-600">
-                    متابعة حالة الرسائل ومعدلات التسليم
+                    {t("whatsapp.finalSetup.monitorPerformanceDesc")}
                   </p>
                 </div>
               </div>
@@ -346,9 +330,9 @@ export default function WhatsAppFinalSetup() {
                   3
                 </span>
                 <div>
-                  <h4 className="font-medium">إضافة قوالب جديدة</h4>
+                  <h4 className="font-medium">{t("whatsapp.finalSetup.addNewTemplates")}</h4>
                   <p className="text-sm text-gray-600">
-                    إنشاء قوالب إضافية حسب الحاجة
+                    {t("whatsapp.finalSetup.addNewTemplatesDesc")}
                   </p>
                 </div>
               </div>

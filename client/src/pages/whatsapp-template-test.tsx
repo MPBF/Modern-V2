@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Card,
@@ -30,6 +31,7 @@ import {
 } from "lucide-react";
 
 export default function WhatsAppTemplateTest() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [phoneNumber, setPhoneNumber] = useState("+966");
@@ -42,38 +44,33 @@ export default function WhatsAppTemplateTest() {
   const [useTemplate, setUseTemplate] = useState(true);
   const [testResults, setTestResults] = useState<any[]>([]);
 
-  // قوالب الرسائل المُوافق عليها
   const approvedTemplates = [
     {
       id: "welcome_hxc4485f514cb7d4536026fc56250f75e7",
       name: "Welcome Template",
       language: "Arabic",
-      description: "قالب الترحيب المُوافق عليه من Meta",
+      description: t("whatsapp.template.welcomeTemplateDesc"),
       variables: ["{{1}}"],
       example: "مرحباً، {{1}}",
     },
   ];
 
-  // استعلام الإشعارات مع cleanup مناسب
   const { data: notifications, refetch: refetchNotifications } = useQuery({
     queryKey: ["/api/notifications"],
-    refetchInterval: false, // Disabled polling to reduce server load
-    staleTime: 2 * 60 * 1000, // 2 minutes stale time
-    gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
-    refetchOnWindowFocus: false, // Prevent unnecessary refetches
+    refetchInterval: false,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  // تنظيف الاستعلامات عند إلغاء تحميل المكون
   useEffect(() => {
     return () => {
-      // Cancel all queries for this component when unmounting
       queryClient.cancelQueries({ queryKey: ["/api/notifications"] });
     };
   }, [queryClient]);
 
   const notificationsList = Array.isArray(notifications) ? notifications : [];
 
-  // إرسال رسالة باستخدام القالب
   const sendTemplateMessage = useMutation({
     mutationFn: async (data: {
       phone: string;
@@ -86,7 +83,7 @@ export default function WhatsAppTemplateTest() {
         body: JSON.stringify({
           phone_number: data.phone,
           message: data.variables[0] || "رسالة اختبار",
-          title: "رسالة اختبار القالب",
+          title: t("whatsapp.template.sendWithApprovedTemplate"),
           template_name: data.template,
           variables: data.variables,
           use_template: data.useTemplate,
@@ -96,8 +93,8 @@ export default function WhatsAppTemplateTest() {
     },
     onSuccess: (data: any) => {
       toast({
-        title: "تم إرسال الرسالة بنجاح",
-        description: `تم إرسال رسالة باستخدام القالب إلى ${phoneNumber}`,
+        title: t("whatsapp.template.messageSentSuccess"),
+        description: t("whatsapp.template.messageSentTo", { phone: phoneNumber }),
       });
 
       setTestResults((prev) => [
@@ -118,8 +115,8 @@ export default function WhatsAppTemplateTest() {
     },
     onError: (error: any) => {
       toast({
-        title: "فشل في الإرسال",
-        description: error.message || "حدث خطأ أثناء إرسال الرسالة",
+        title: t("whatsapp.template.sendFailed"),
+        description: error.message || t("whatsapp.template.sendError"),
         variant: "destructive",
       });
 
@@ -142,8 +139,8 @@ export default function WhatsAppTemplateTest() {
   const handleSendTest = () => {
     if (!phoneNumber) {
       toast({
-        title: "بيانات ناقصة",
-        description: "يرجى ملء رقم الهاتف",
+        title: t("whatsapp.template.missingData"),
+        description: t("whatsapp.template.fillPhoneNumber"),
         variant: "destructive",
       });
       return;
@@ -151,8 +148,8 @@ export default function WhatsAppTemplateTest() {
 
     if (!phoneNumber.startsWith("+")) {
       toast({
-        title: "رقم هاتف غير صحيح",
-        description: "يجب أن يبدأ رقم الهاتف بـ +",
+        title: t("whatsapp.template.invalidPhone"),
+        description: t("whatsapp.template.phoneMustStartWithPlus"),
         variant: "destructive",
       });
       return;
@@ -209,31 +206,29 @@ export default function WhatsAppTemplateTest() {
   return (
     <div className="min-h-screen bg-gray-50 p-4" dir="rtl">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            ✨ اختبار قوالب WhatsApp المُوافقة
+            {t("whatsapp.template.title")}
           </h1>
           <p className="text-gray-600">
-            اختبار إرسال رسائل WhatsApp باستخدام القوالب المُوافق عليها من Meta
+            {t("whatsapp.template.description")}
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* نموذج الإرسال */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5" />
-                إرسال رسالة بقالب مُوافق
+                {t("whatsapp.template.sendWithApprovedTemplate")}
               </CardTitle>
               <CardDescription>
-                استخدام القوالب المُوافق عليها من Meta لإرسال الرسائل
+                {t("whatsapp.template.sendWithApprovedTemplateDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="phone">رقم الهاتف</Label>
+                <Label htmlFor="phone">{t("whatsapp.template.phoneNumber")}</Label>
                 <Input
                   id="phone"
                   value={phoneNumber}
@@ -245,13 +240,13 @@ export default function WhatsAppTemplateTest() {
               </div>
 
               <div>
-                <Label htmlFor="template">القالب</Label>
+                <Label htmlFor="template">{t("whatsapp.template.template")}</Label>
                 <Select
                   value={selectedTemplate}
                   onValueChange={setSelectedTemplate}
                 >
                   <SelectTrigger data-testid="select-template">
-                    <SelectValue placeholder="اختر القالب" />
+                    <SelectValue placeholder={t("whatsapp.template.selectTemplate")} />
                   </SelectTrigger>
                   <SelectContent>
                     {approvedTemplates
@@ -279,16 +274,15 @@ export default function WhatsAppTemplateTest() {
                 </Select>
               </div>
 
-              {/* متغيرات القالب */}
               <div>
-                <Label>متغيرات القالب</Label>
+                <Label>{t("whatsapp.template.templateVariables")}</Label>
                 <div className="space-y-2">
                   {templateVariables.map((variable, index) => (
                     <div key={index} className="flex items-center gap-2">
                       <Input
                         value={variable}
                         onChange={(e) => updateVariable(index, e.target.value)}
-                        placeholder={`متغير ${index + 1}`}
+                        placeholder={`${t("whatsapp.template.variablePlaceholder")} ${index + 1}`}
                         data-testid={`input-variable-${index}`}
                       />
                       <Button
@@ -298,7 +292,7 @@ export default function WhatsAppTemplateTest() {
                         onClick={() => removeVariable(index)}
                         data-testid={`button-remove-variable-${index}`}
                       >
-                        حذف
+                        {t("whatsapp.template.delete")}
                       </Button>
                     </div>
                   ))}
@@ -309,7 +303,7 @@ export default function WhatsAppTemplateTest() {
                     onClick={addVariable}
                     data-testid="button-add-variable"
                   >
-                    إضافة متغير
+                    {t("whatsapp.template.addVariable")}
                   </Button>
                 </div>
               </div>
@@ -323,7 +317,7 @@ export default function WhatsAppTemplateTest() {
                   data-testid="checkbox-use-template"
                 />
                 <Label htmlFor="useTemplate" className="text-sm">
-                  استخدام القالب المُوافق عليه (Production Mode)
+                  {t("whatsapp.template.useApprovedTemplate")}
                 </Label>
               </div>
 
@@ -336,31 +330,30 @@ export default function WhatsAppTemplateTest() {
                 {sendTemplateMessage.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    جاري الإرسال...
+                    {t("whatsapp.template.sending")}
                   </>
                 ) : (
                   <>
                     <Send className="mr-2 h-4 w-4" />
-                    إرسال رسالة بالقالب
+                    {t("whatsapp.template.sendWithTemplate")}
                   </>
                 )}
               </Button>
             </CardContent>
           </Card>
 
-          {/* تفاصيل القالب المُختار */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5" />
-                تفاصيل القالب
+                {t("whatsapp.template.templateDetails")}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {approvedTemplates.find((t) => t.id === selectedTemplate) && (
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-sm font-medium">اسم القالب:</Label>
+                    <Label className="text-sm font-medium">{t("whatsapp.template.templateName")}</Label>
                     <p className="text-sm text-gray-600 font-mono">
                       {
                         approvedTemplates.find((t) => t.id === selectedTemplate)
@@ -370,14 +363,14 @@ export default function WhatsAppTemplateTest() {
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">معرف القالب:</Label>
+                    <Label className="text-sm font-medium">{t("whatsapp.template.templateId")}</Label>
                     <p className="text-xs text-gray-500 font-mono break-all">
                       {selectedTemplate}
                     </p>
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">اللغة:</Label>
+                    <Label className="text-sm font-medium">{t("whatsapp.template.language")}</Label>
                     <Badge variant="outline">
                       {
                         approvedTemplates.find((t) => t.id === selectedTemplate)
@@ -387,7 +380,7 @@ export default function WhatsAppTemplateTest() {
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">المتغيرات:</Label>
+                    <Label className="text-sm font-medium">{t("whatsapp.template.variables")}</Label>
                     <div className="text-sm text-gray-600">
                       {approvedTemplates
                         .find((t) => t.id === selectedTemplate)
@@ -396,7 +389,7 @@ export default function WhatsAppTemplateTest() {
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">مثال:</Label>
+                    <Label className="text-sm font-medium">{t("whatsapp.template.example")}</Label>
                     <div className="bg-gray-50 p-3 rounded text-sm font-mono">
                       {
                         approvedTemplates.find((t) => t.id === selectedTemplate)
@@ -407,9 +400,9 @@ export default function WhatsAppTemplateTest() {
 
                   <div className="bg-blue-50 p-3 rounded">
                     <p className="text-xs text-blue-700">
-                      <strong>حالة القالب:</strong> مُوافق عليه من Meta ✅
+                      <strong>{t("whatsapp.template.templateStatus")}</strong> {t("whatsapp.template.approvedByMeta")}
                       <br />
-                      يمكن استخدامه لإرسال رسائل إلى أي رقم WhatsApp مُسجل
+                      {t("whatsapp.template.canSendToAnyNumber")}
                     </p>
                   </div>
                 </div>
@@ -418,13 +411,12 @@ export default function WhatsAppTemplateTest() {
           </Card>
         </div>
 
-        {/* سجل النتائج */}
         {testResults.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>📋 سجل اختبارات القوالب</CardTitle>
+              <CardTitle>{t("whatsapp.template.testResultsLog")}</CardTitle>
               <CardDescription>
-                نتائج الرسائل المُرسلة باستخدام القوالب
+                {t("whatsapp.template.testResultsLogDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -444,7 +436,7 @@ export default function WhatsAppTemplateTest() {
                         </Badge>
                         {result.useTemplate && (
                           <Badge variant="outline" className="text-xs">
-                            قالب
+                            {t("whatsapp.template.templateLabel")}
                           </Badge>
                         )}
                       </div>
@@ -455,11 +447,11 @@ export default function WhatsAppTemplateTest() {
 
                     <div className="space-y-1 text-sm">
                       <p>
-                        <strong>القالب:</strong> {result.template}
+                        <strong>{t("whatsapp.template.templateKey")}</strong> {result.template}
                       </p>
                       <p>
-                        <strong>المتغيرات:</strong>{" "}
-                        {result.variables?.join(", ") || "لا يوجد"}
+                        <strong>{t("whatsapp.template.variablesKey")}</strong>{" "}
+                        {result.variables?.join(", ") || t("whatsapp.template.noVariables")}
                       </p>
                     </div>
 
@@ -471,7 +463,7 @@ export default function WhatsAppTemplateTest() {
 
                     {result.error && (
                       <p className="text-xs text-red-600 mt-2">
-                        خطأ: {result.error}
+                        {t("whatsapp.template.errorLabel")} {result.error}
                       </p>
                     )}
                   </div>
@@ -481,12 +473,11 @@ export default function WhatsAppTemplateTest() {
           </Card>
         )}
 
-        {/* الإشعارات الأخيرة */}
         {notificationsList && notificationsList.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>📬 آخر الإشعارات</CardTitle>
-              <CardDescription>آخر الرسائل المُرسلة عبر النظام</CardDescription>
+              <CardTitle>{t("whatsapp.template.recentNotifications")}</CardTitle>
+              <CardDescription>{t("whatsapp.template.recentNotificationsDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -517,7 +508,7 @@ export default function WhatsAppTemplateTest() {
 
                     {notification.phone_number && (
                       <p className="text-xs text-gray-500">
-                        إلى: {notification.phone_number}
+                        {t("whatsapp.template.to")} {notification.phone_number}
                       </p>
                     )}
                   </div>

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Card,
@@ -14,23 +15,18 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
-  Phone,
-  MessageCircle,
   Settings,
   ExternalLink,
 } from "lucide-react";
 
 export default function WhatsAppTroubleshoot() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [checkedItems, setCheckedItems] = useState<string[]>([]);
 
-  // استعلام الإشعارات للتحقق من أخطاء Twilio مع معدل تحديث مُحسن
   const { data: notifications } = useQuery({
     queryKey: ["/api/notifications"],
-    // Reduce polling frequency to every 30 seconds instead of 10
     refetchInterval: 30000,
-    // Use global gcTime instead of overriding
-    // Remove manual cleanup - React Query handles this automatically
   });
 
   const notificationsList = Array.isArray(notifications) ? notifications : [];
@@ -41,58 +37,57 @@ export default function WhatsAppTroubleshoot() {
   const troubleshootSteps = [
     {
       id: "check-twilio-console",
-      title: "التحقق من Twilio Console",
-      description: "تأكد من إعداد WhatsApp Business في Twilio Console",
+      title: t("whatsapp.troubleshoot.checkTwilioConsole"),
+      description: t("whatsapp.troubleshoot.checkTwilioConsoleDesc"),
       status: "pending",
       actions: [
-        "اذهب إلى Twilio Console → Messaging → WhatsApp senders",
-        "تأكد أن رقم +15557911537 مُفعل ومُصدق عليه",
-        "تحقق من حالة WhatsApp Business Account",
+        t("whatsapp.troubleshoot.checkTwilioAction1"),
+        t("whatsapp.troubleshoot.checkTwilioAction2"),
+        t("whatsapp.troubleshoot.checkTwilioAction3"),
       ],
     },
     {
       id: "verify-recipient",
-      title: "التحقق من رقم المستقبل",
-      description: "تأكد أن رقم الهاتف المستقبل مُسجل في WhatsApp",
+      title: t("whatsapp.troubleshoot.verifyRecipient"),
+      description: t("whatsapp.troubleshoot.verifyRecipientDesc"),
       status: "pending",
       actions: [
-        "تأكد أن الرقم مُسجل في WhatsApp",
-        "تأكد أن الرقم يقبل رسائل من أرقام الأعمال",
-        "جرب إرسال رسالة إلى رقم مختلف",
+        t("whatsapp.troubleshoot.verifyRecipientAction1"),
+        t("whatsapp.troubleshoot.verifyRecipientAction2"),
+        t("whatsapp.troubleshoot.verifyRecipientAction3"),
       ],
     },
     {
       id: "check-template-approval",
-      title: "التحقق من قوالب الرسائل",
-      description:
-        "تأكد من الموافقة على قوالب الرسائل في Meta Business Manager",
+      title: t("whatsapp.troubleshoot.checkTemplateApproval"),
+      description: t("whatsapp.troubleshoot.checkTemplateApprovalDesc"),
       status: "pending",
       actions: [
-        "اذهب إلى Meta Business Manager → WhatsApp → Message Templates",
-        "تأكد من وجود قالب رسالة مُوافق عليه",
-        'قم بإنشاء قالب "Hello World" إذا لم يكن موجوداً',
+        t("whatsapp.troubleshoot.checkTemplateAction1"),
+        t("whatsapp.troubleshoot.checkTemplateAction2"),
+        t("whatsapp.troubleshoot.checkTemplateAction3"),
       ],
     },
     {
       id: "sandbox-mode",
-      title: "وضع Sandbox",
-      description: "التحقق من إعدادات وضع الاختبار",
+      title: t("whatsapp.troubleshoot.sandboxMode"),
+      description: t("whatsapp.troubleshoot.sandboxModeDesc"),
       status: "pending",
       actions: [
-        "في WhatsApp Sandbox، يجب إضافة الأرقام المستقبلة يدوياً",
-        'أرسل رسالة "join" إلى رقم Sandbox من هاتفك',
-        "تأكد أن الرقم المستقبل مُضاف إلى Sandbox",
+        t("whatsapp.troubleshoot.sandboxAction1"),
+        t("whatsapp.troubleshoot.sandboxAction2"),
+        t("whatsapp.troubleshoot.sandboxAction3"),
       ],
     },
     {
       id: "webhook-setup",
-      title: "إعداد Webhook",
-      description: "التحقق من إعداد Webhook في Twilio",
+      title: t("whatsapp.troubleshoot.webhookSetup"),
+      description: t("whatsapp.troubleshoot.webhookSetupDesc"),
       status: "pending",
       actions: [
-        "اذهب إلى Twilio Console → Messaging → WhatsApp senders → Configure",
-        "تأكد من إعداد Webhook URL بشكل صحيح",
-        `استخدم: ${window.location.origin}/api/notifications/webhook/twilio`,
+        t("whatsapp.troubleshoot.webhookAction1"),
+        t("whatsapp.troubleshoot.webhookAction2"),
+        `${t("whatsapp.troubleshoot.webhookAction3")} ${window.location.origin}/api/notifications/webhook/twilio`,
       ],
     },
   ];
@@ -105,39 +100,34 @@ export default function WhatsAppTroubleshoot() {
     );
   };
 
-  const getErrorCode63016Details = () => ({
+  const error63016 = {
     code: "63016",
-    description:
-      "WhatsApp Business Account غير مُعد بشكل صحيح أو المستقبل غير مُسجل",
+    description: t("whatsapp.troubleshoot.errorDescription"),
     solutions: [
-      "تأكد من تفعيل WhatsApp Business Account في Meta Business Manager",
-      "تأكد من ربط الحساب بـ Twilio بشكل صحيح",
-      "تأكد أن رقم المستقبل مُسجل في WhatsApp ويقبل رسائل الأعمال",
-      "في وضع Sandbox، يجب إضافة الأرقام المستقبلة يدوياً",
+      t("whatsapp.troubleshoot.solution1"),
+      t("whatsapp.troubleshoot.solution2"),
+      t("whatsapp.troubleshoot.solution3"),
+      t("whatsapp.troubleshoot.solution4"),
     ],
-  });
-
-  const error63016 = getErrorCode63016Details();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4" dir="rtl">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            🔧 تشخيص مشاكل WhatsApp
+            {t("whatsapp.troubleshoot.title")}
           </h1>
           <p className="text-gray-600">
-            دليل خطوة بخطوة لحل مشاكل إرسال رسائل WhatsApp
+            {t("whatsapp.troubleshoot.description")}
           </p>
         </div>
 
-        {/* خطأ 63016 */}
         <Card className="border-red-200 bg-red-50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-700">
               <XCircle className="h-5 w-5" />
-              خطأ Twilio: {error63016.code}
+              {t("whatsapp.troubleshoot.twilioError")} {error63016.code}
             </CardTitle>
             <CardDescription className="text-red-600">
               {error63016.description}
@@ -145,7 +135,7 @@ export default function WhatsAppTroubleshoot() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <h4 className="font-medium text-red-700">الحلول المقترحة:</h4>
+              <h4 className="font-medium text-red-700">{t("whatsapp.troubleshoot.suggestedSolutions")}</h4>
               <ul className="list-disc list-inside space-y-1 text-sm text-red-700">
                 {error63016.solutions.map((solution, index) => (
                   <li key={index}>{solution}</li>
@@ -155,25 +145,24 @@ export default function WhatsAppTroubleshoot() {
           </CardContent>
         </Card>
 
-        {/* معلومات النظام الحالي */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5" />
-              حالة النظام الحالي
+              {t("whatsapp.troubleshoot.currentSystemStatus")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">رقم WhatsApp:</span>
+                  <span className="text-sm text-gray-600">{t("whatsapp.troubleshoot.whatsappNumber")}</span>
                   <Badge variant="outline">+15557911537</Badge>
                 </div>
 
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">
-                    Business Account ID:
+                    {t("whatsapp.troubleshoot.businessAccountId")}
                   </span>
                   <Badge variant="outline" className="text-xs">
                     795259496521200
@@ -181,7 +170,7 @@ export default function WhatsAppTroubleshoot() {
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Twilio Account:</span>
+                  <span className="text-sm text-gray-600">{t("whatsapp.troubleshoot.twilioAccount")}</span>
                   <Badge variant="outline" className="text-xs">
                     ACe4ba2fd2e98be5b019c354539404cc29
                   </Badge>
@@ -190,18 +179,18 @@ export default function WhatsAppTroubleshoot() {
 
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">آخر رسالة:</span>
-                  <Badge className="bg-red-100 text-red-800">undelivered</Badge>
+                  <span className="text-sm text-gray-600">{t("whatsapp.troubleshoot.lastMessage")}</span>
+                  <Badge className="bg-red-100 text-red-800">{t("whatsapp.troubleshoot.undelivered")}</Badge>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">كود الخطأ:</span>
+                  <span className="text-sm text-gray-600">{t("whatsapp.troubleshoot.errorCode")}</span>
                   <Badge className="bg-red-100 text-red-800">63016</Badge>
                 </div>
 
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">
-                    الرسائل الفاشلة:
+                    {t("whatsapp.troubleshoot.failedMessages")}
                   </span>
                   <Badge className="bg-red-100 text-red-800">
                     {failedMessages.length}
@@ -212,12 +201,11 @@ export default function WhatsAppTroubleshoot() {
           </CardContent>
         </Card>
 
-        {/* خطوات التشخيص */}
         <Card>
           <CardHeader>
-            <CardTitle>📋 قائمة التحقق</CardTitle>
+            <CardTitle>{t("whatsapp.troubleshoot.checklist")}</CardTitle>
             <CardDescription>
-              اتبع هذه الخطوات بالترتيب لحل المشكلة
+              {t("whatsapp.troubleshoot.checklistDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -265,12 +253,11 @@ export default function WhatsAppTroubleshoot() {
           </CardContent>
         </Card>
 
-        {/* روابط مفيدة */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ExternalLink className="h-5 w-5" />
-              روابط مفيدة
+              {t("whatsapp.troubleshoot.usefulLinks")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -286,9 +273,9 @@ export default function WhatsAppTroubleshoot() {
                   rel="noopener noreferrer"
                 >
                   <div className="text-left">
-                    <div className="font-medium">Twilio WhatsApp Console</div>
+                    <div className="font-medium">{t("whatsapp.troubleshoot.twilioWhatsappConsole")}</div>
                     <div className="text-sm text-gray-500">
-                      إدارة أرقام WhatsApp
+                      {t("whatsapp.troubleshoot.manageWhatsappNumbers")}
                     </div>
                   </div>
                 </a>
@@ -305,9 +292,9 @@ export default function WhatsAppTroubleshoot() {
                   rel="noopener noreferrer"
                 >
                   <div className="text-left">
-                    <div className="font-medium">Meta Business Manager</div>
+                    <div className="font-medium">{t("whatsapp.troubleshoot.metaBusinessManager")}</div>
                     <div className="text-sm text-gray-500">
-                      إدارة WhatsApp Business
+                      {t("whatsapp.troubleshoot.manageWhatsappBusiness")}
                     </div>
                   </div>
                 </a>
@@ -324,9 +311,9 @@ export default function WhatsAppTroubleshoot() {
                   rel="noopener noreferrer"
                 >
                   <div className="text-left">
-                    <div className="font-medium">WhatsApp Sandbox</div>
+                    <div className="font-medium">{t("whatsapp.troubleshoot.whatsappSandbox")}</div>
                     <div className="text-sm text-gray-500">
-                      دليل وضع الاختبار
+                      {t("whatsapp.troubleshoot.sandboxGuide")}
                     </div>
                   </div>
                 </a>
@@ -343,8 +330,8 @@ export default function WhatsAppTroubleshoot() {
                   rel="noopener noreferrer"
                 >
                   <div className="text-left">
-                    <div className="font-medium">تفاصيل خطأ 63016</div>
-                    <div className="text-sm text-gray-500">شرح مفصل للخطأ</div>
+                    <div className="font-medium">{t("whatsapp.troubleshoot.error63016Details")}</div>
+                    <div className="text-sm text-gray-500">{t("whatsapp.troubleshoot.errorExplanation")}</div>
                   </div>
                 </a>
               </Button>
@@ -352,13 +339,12 @@ export default function WhatsAppTroubleshoot() {
           </CardContent>
         </Card>
 
-        {/* الرسائل الفاشلة */}
         {failedMessages.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-red-700">
                 <AlertTriangle className="h-5 w-5" />
-                الرسائل الفاشلة ({failedMessages.length})
+                {t("whatsapp.troubleshoot.failedMessagesTitle")} ({failedMessages.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -370,7 +356,7 @@ export default function WhatsAppTroubleshoot() {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium text-red-700">
-                        {message.phone_number || "رقم غير محدد"}
+                        {message.phone_number || t("whatsapp.troubleshoot.unknownNumber")}
                       </span>
                       <Badge className="bg-red-100 text-red-800">
                         {message.status}
@@ -381,7 +367,7 @@ export default function WhatsAppTroubleshoot() {
                     </p>
                     {message.error_message && (
                       <p className="text-xs text-red-600">
-                        خطأ: {message.error_message}
+                        {t("whatsapp.troubleshoot.errorLabel")} {message.error_message}
                       </p>
                     )}
                     <p className="text-xs text-gray-500">

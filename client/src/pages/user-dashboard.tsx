@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from 'react-i18next';
 import PageLayout from "../components/layout/PageLayout";
 import UserProfile from "../components/dashboard/UserProfile";
 import {
@@ -128,6 +129,7 @@ interface UserRequest {
 }
 
 export default function UserDashboard() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -214,8 +216,8 @@ export default function UserDashboard() {
         setIsLoadingLocation(false);
         
         showLocationToast(
-          "✅ تم تحديد الموقع التقريبي",
-          `المنطقة: ${data.city || data.region || 'غير محدد'} (دقة تقريبية)`
+          t('userDashboard.location.approximateLocation'),
+          t('userDashboard.location.regionInfo', { region: data.city || data.region || 'N/A' })
         );
         return true;
       }
@@ -237,7 +239,7 @@ export default function UserDashboard() {
       console.log('⚠️ GPS غير متاح، جاري استخدام IP...');
       tryIPGeolocation().then(success => {
         if (!success && isMountedRef.current) {
-          setLocationError("لا يمكن تحديد الموقع");
+          setLocationError(t('userDashboard.location.cantGetLocation'));
           setIsLoadingLocation(false);
         }
       });
@@ -271,16 +273,16 @@ export default function UserDashboard() {
           setIsLoadingLocation(false);
           
           const accuracyMessage = newLocation.accuracy <= 50 
-            ? "دقة ممتازة" 
+            ? t('userDashboard.location.accuracyExcellent')
             : newLocation.accuracy <= 200 
-              ? "دقة جيدة" 
+              ? t('userDashboard.location.accuracyGood')
               : newLocation.accuracy <= 1000
-                ? "دقة متوسطة"
-                : "دقة منخفضة";
+                ? t('userDashboard.location.accuracyMedium')
+                : t('userDashboard.location.accuracyLow');
           
           showLocationToast(
-            "✅ تم تحديث الموقع",
-            `الدقة: ±${Math.round(newLocation.accuracy)} متر (${accuracyMessage})`
+            t('userDashboard.location.locationUpdated'),
+            t('userDashboard.location.accuracy', { accuracy: Math.round(newLocation.accuracy), quality: accuracyMessage })
           );
         },
         async (error) => {
@@ -294,22 +296,22 @@ export default function UserDashboard() {
           
           if (!ipSuccess && isMountedRef.current) {
             setIsLoadingLocation(false);
-            let errorMessage = "لا يمكن الحصول على الموقع";
+            let errorMessage = t('userDashboard.location.cantGetLocation');
             
             switch (error.code) {
               case error.PERMISSION_DENIED:
-                errorMessage = "يرجى السماح بالوصول إلى الموقع من إعدادات المتصفح";
+                errorMessage = t('userDashboard.location.permissionDenied');
                 break;
               case error.POSITION_UNAVAILABLE:
-                errorMessage = "خدمات الموقع غير متاحة";
+                errorMessage = t('userDashboard.location.unavailable');
                 break;
               case error.TIMEOUT:
-                errorMessage = "انتهت مهلة تحديد الموقع - حاول مرة أخرى";
+                errorMessage = t('userDashboard.location.timeout');
                 break;
             }
             
             setLocationError(errorMessage);
-            showLocationToast("خطأ في تحديد الموقع", errorMessage, "destructive");
+            showLocationToast(t('userDashboard.location.locationError'), errorMessage, "destructive");
           }
         },
         {
@@ -496,11 +498,11 @@ export default function UserDashboard() {
       queryClient.invalidateQueries({
         queryKey: ["/api/attendance/daily-status", user?.id],
       });
-      toast({ title: "تم تسجيل الحضور بنجاح" });
+      toast({ title: t('userDashboard.attendance.attendanceSuccess') });
     },
     onError: (error: Error) => {
       toast({
-        title: "خطأ في التسجيل",
+        title: t('userDashboard.attendance.attendanceError'),
         description: error.message,
         variant: "destructive",
       });
@@ -662,7 +664,7 @@ export default function UserDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user-requests"] });
-      toast({ title: "تم إرسال الطلب بنجاح" });
+      toast({ title: t('userDashboard.requests.submitSuccess') });
       requestForm.reset();
     },
   });
@@ -672,8 +674,8 @@ export default function UserDashboard() {
     // التحقق من وجود الموقع الحالي
     if (!currentLocation) {
       toast({
-        title: "خطأ في الموقع",
-        description: "يرجى السماح بالوصول إلى موقعك الجغرافي لتسجيل الحضور",
+        title: t('userDashboard.location.error'),
+        description: t('userDashboard.location.allowAccess'),
         variant: "destructive",
       });
       return;
@@ -685,8 +687,8 @@ export default function UserDashboard() {
       const tenMinutes = 10 * 60 * 1000;
       if (locationAge > tenMinutes) {
         toast({
-          title: "الموقع قديم",
-          description: "يرجى النقر على 'تحديث الموقع' للحصول على موقع جديد قبل تسجيل الحضور.",
+          title: t('userDashboard.location.outdated'),
+          description: t('userDashboard.location.refreshLocation'),
           variant: "destructive",
         });
         return;
@@ -696,8 +698,8 @@ export default function UserDashboard() {
     // انتظار تحميل المواقع
     if (isLoadingLocations) {
       toast({
-        title: "جاري التحميل",
-        description: "جاري تحميل مواقع المصانع، يرجى الانتظار...",
+        title: t('common.loading'),
+        description: t('common.pleaseWait'),
       });
       return;
     }
@@ -705,8 +707,8 @@ export default function UserDashboard() {
     // التحقق من وجود مواقع نشطة
     if (!activeLocations || activeLocations.length === 0) {
       toast({
-        title: "خطأ",
-        description: "لا توجد مواقع مصانع نشطة. يرجى التواصل مع الإدارة.",
+        title: t('common.error'),
+        description: t('userDashboard.location.notNearFactory'),
         variant: "destructive",
       });
       return;
@@ -750,8 +752,8 @@ export default function UserDashboard() {
         : "";
       
       toast({
-        title: "خارج نطاق المصانع",
-        description: `أنت على بعد ${Math.round(closestDistance)} متر من أقرب موقع (${closestLocation?.name_ar}). يجب أن تكون داخل نطاق ${closestLocation?.allowed_radius} متر لتسجيل الحضور.${accuracyNote}`,
+        title: t('userDashboard.location.notNearFactory'),
+        description: t('userDashboard.location.distanceInfo', { distance: Math.round(closestDistance) }),
         variant: "destructive",
       });
       return;
@@ -801,16 +803,16 @@ export default function UserDashboard() {
   };
 
   return (
-    <PageLayout title="لوحة التحكم الشخصية" description={`مرحباً ${userData?.full_name || userData?.username}`}>
+    <PageLayout title={t('userDashboard.title')} description={`${t('dashboard.welcome')} ${userData?.full_name || userData?.username}`}>
       <div className="max-w-7xl mx-auto">
         <Tabs defaultValue="overview" className="space-y-6">
               <TabsList className="grid w-full grid-cols-2 md:grid-cols-6">
-                <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
-                <TabsTrigger value="profile">الملف الشخصي</TabsTrigger>
-                <TabsTrigger value="attendance">الحضور</TabsTrigger>
-                <TabsTrigger value="violations">المخالفات</TabsTrigger>
-                <TabsTrigger value="requests">طلباتي</TabsTrigger>
-                <TabsTrigger value="location">الموقع</TabsTrigger>
+                <TabsTrigger value="overview">{t('userDashboard.tabs.quickActions')}</TabsTrigger>
+                <TabsTrigger value="profile">{t('userDashboard.tabs.profile')}</TabsTrigger>
+                <TabsTrigger value="attendance">{t('userDashboard.tabs.attendance')}</TabsTrigger>
+                <TabsTrigger value="violations">{t('userDashboard.tabs.violations')}</TabsTrigger>
+                <TabsTrigger value="requests">{t('userDashboard.tabs.requests')}</TabsTrigger>
+                <TabsTrigger value="location">{t('settings.tabs.location')}</TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}
@@ -837,7 +839,7 @@ export default function UserDashboard() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-600 dark:text-gray-300">
-                        الحالة الحالية
+                        {t('userDashboard.attendance.currentStatus')}
                       </p>
                       <span
                         className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${

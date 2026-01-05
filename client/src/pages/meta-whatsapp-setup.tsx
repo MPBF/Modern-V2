@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { useMutation } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -12,13 +13,6 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { Alert, AlertDescription } from "../components/ui/alert";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../components/ui/select";
 import { useToast } from "../hooks/use-toast";
 import { apiRequest } from "../lib/queryClient";
 import {
@@ -28,12 +22,11 @@ import {
   Send,
   Loader2,
   Settings,
-  Phone,
-  MessageSquare,
   Key,
 } from "lucide-react";
 
 export default function MetaWhatsAppSetup() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [phoneNumber, setPhoneNumber] = useState("+966");
   const [message, setMessage] = useState(
@@ -44,7 +37,6 @@ export default function MetaWhatsAppSetup() {
     "welcome_hxc4485f514cb7d4536026fc56250f75e7",
   );
 
-  // إرسال رسالة تجريبية عبر Meta API
   const testMetaAPI = useMutation({
     mutationFn: async (data: {
       phone: string;
@@ -57,7 +49,7 @@ export default function MetaWhatsAppSetup() {
         body: JSON.stringify({
           phone_number: data.phone,
           message: data.message,
-          title: "اختبار Meta API",
+          title: t("whatsapp.metaSetup.testMetaApi"),
           use_template: data.useTemplate,
           template_name: data.templateName,
         }),
@@ -66,13 +58,13 @@ export default function MetaWhatsAppSetup() {
     },
     onSuccess: () => {
       toast({
-        title: "تم إرسال الرسالة بنجاح",
-        description: "تم إرسال رسالة اختبار عبر Meta WhatsApp API",
+        title: t("whatsapp.metaSetup.messageSentSuccess"),
+        description: t("whatsapp.metaSetup.messageSentDesc"),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "فشل في الإرسال",
+        title: t("whatsapp.metaSetup.sendFailed"),
         description: error.message,
         variant: "destructive",
       });
@@ -82,61 +74,61 @@ export default function MetaWhatsAppSetup() {
   const setupSteps = [
     {
       id: "business-manager",
-      title: "إعداد Meta Business Manager",
+      title: t("whatsapp.metaSetup.setupBusinessManager"),
       status: "completed",
-      description: "إنشاء وإعداد حساب Meta Business Manager",
+      description: t("whatsapp.metaSetup.setupBusinessManagerDesc"),
       details: [
-        "تم إنشاء Business Account ID: 795259496521200",
-        "تم ربط WhatsApp Business Account",
-        "تم التحقق من الحساب التجاري",
+        t("whatsapp.metaSetup.businessAccountCreated"),
+        t("whatsapp.metaSetup.whatsappAccountLinked"),
+        t("whatsapp.metaSetup.businessAccountVerified"),
       ],
     },
     {
       id: "app-creation",
-      title: "إنشاء تطبيق Meta",
+      title: t("whatsapp.metaSetup.createMetaApp"),
       status: "required",
-      description: "إنشاء تطبيق في Meta for Developers",
+      description: t("whatsapp.metaSetup.createMetaAppDesc"),
       details: [
-        "اذهب إلى developers.facebook.com",
-        'أنشئ تطبيق جديد من نوع "Business"',
-        "أضف منتج WhatsApp Business Platform",
-        "احصل على App ID و App Secret",
+        t("whatsapp.metaSetup.goToDevelopers"),
+        t("whatsapp.metaSetup.createBusinessApp"),
+        t("whatsapp.metaSetup.addWhatsappProduct"),
+        t("whatsapp.metaSetup.getAppCredentials"),
       ],
     },
     {
       id: "access-token",
-      title: "إنشاء Access Token",
+      title: t("whatsapp.metaSetup.createAccessToken"),
       status: "required",
-      description: "الحصول على Access Token دائم",
+      description: t("whatsapp.metaSetup.createAccessTokenDesc"),
       details: [
-        "من App Dashboard → WhatsApp → API Setup",
-        "أنشئ System User في Business Manager",
-        "اربط System User بـ WhatsApp Business Account",
-        "احصل على Permanent Access Token",
+        t("whatsapp.metaSetup.fromAppDashboard"),
+        t("whatsapp.metaSetup.createSystemUser"),
+        t("whatsapp.metaSetup.linkSystemUser"),
+        t("whatsapp.metaSetup.getPermanentToken"),
       ],
     },
     {
       id: "phone-number",
-      title: "إعداد رقم الهاتف",
+      title: t("whatsapp.metaSetup.setupPhoneNumber"),
       status: "required",
-      description: "تسجيل وإعداد رقم WhatsApp Business",
+      description: t("whatsapp.metaSetup.setupPhoneNumberDesc"),
       details: [
-        "سجل رقم هاتف تجاري في Meta",
-        "تحقق من الرقم باستخدام SMS/Voice",
-        "احصل على Phone Number ID",
-        "اختبر إرسال الرسائل",
+        t("whatsapp.metaSetup.registerBusinessPhone"),
+        t("whatsapp.metaSetup.verifyPhone"),
+        t("whatsapp.metaSetup.getPhoneNumberId"),
+        t("whatsapp.metaSetup.testSendingMessages"),
       ],
     },
     {
       id: "webhook",
-      title: "إعداد Webhook",
+      title: t("whatsapp.metaSetup.setupWebhook"),
       status: "required",
-      description: "ربط النظام بـ Meta Webhook",
+      description: t("whatsapp.metaSetup.setupWebhookDesc"),
       details: [
-        "استخدم URL: https://your-domain.replit.app/api/notifications/webhook/meta",
-        "Verify Token: mpbf_webhook_token",
-        "Subscribe to messages, message_status",
-        "اختبر الاستجابة للأحداث",
+        t("whatsapp.metaSetup.useWebhookUrl"),
+        t("whatsapp.metaSetup.verifyToken"),
+        t("whatsapp.metaSetup.subscribeToEvents"),
+        t("whatsapp.metaSetup.testEventResponse"),
       ],
     },
   ];
@@ -144,25 +136,25 @@ export default function MetaWhatsAppSetup() {
   const requiredSecrets = [
     {
       name: "META_ACCESS_TOKEN",
-      description: "Access Token دائم من Meta Business Manager",
+      description: t("whatsapp.metaSetup.accessTokenDesc"),
       example: "EAABsBCS1iL8BAxxxxxx...",
       required: true,
     },
     {
       name: "META_PHONE_NUMBER_ID",
-      description: "معرف رقم الهاتف المسجل في Meta",
+      description: t("whatsapp.metaSetup.phoneNumberIdDesc"),
       example: "1234567890123456",
       required: true,
     },
     {
       name: "META_BUSINESS_ACCOUNT_ID",
-      description: "معرف حساب WhatsApp Business",
+      description: t("whatsapp.metaSetup.businessAccountIdDesc"),
       example: "795259496521200",
       required: false,
     },
     {
       name: "META_WEBHOOK_VERIFY_TOKEN",
-      description: "رمز التحقق من Webhook",
+      description: t("whatsapp.metaSetup.webhookVerifyTokenDesc"),
       example: "mpbf_webhook_token",
       required: false,
     },
@@ -194,33 +186,41 @@ export default function MetaWhatsAppSetup() {
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "completed":
+        return t("whatsapp.metaSetup.completed");
+      case "required":
+        return t("whatsapp.metaSetup.required");
+      case "optional":
+        return t("whatsapp.metaSetup.optional");
+      default:
+        return t("whatsapp.metaSetup.optional");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4" dir="rtl">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            🚀 إعداد Meta WhatsApp Business API
+            {t("whatsapp.metaSetup.title")}
           </h1>
           <p className="text-gray-600">
-            إعداد وتكوين Meta WhatsApp Business API للاستخدام المباشر
+            {t("whatsapp.metaSetup.description")}
           </p>
         </div>
 
-        {/* Important Notice */}
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            <strong>مهم:</strong> استخدام Meta WhatsApp API مباشرة يوفر تحكم
-            أكبر وتكلفة أقل من Twilio، ولكن يتطلب إعداد تقني أكثر تفصيلاً. تأكد
-            من إكمال جميع الخطوات بعناية.
+            <strong>{t("whatsapp.metaSetup.importantNote")}</strong> {t("whatsapp.metaSetup.importantNoteDesc")}
           </AlertDescription>
         </Alert>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Setup Steps */}
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-gray-900">خطوات الإعداد</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t("whatsapp.metaSetup.setupSteps")}</h2>
 
             {setupSteps.map((step, index) => (
               <Card key={step.id} className="relative">
@@ -235,11 +235,7 @@ export default function MetaWhatsAppSetup() {
                     <div className="flex items-center gap-2">
                       {getStatusIcon(step.status)}
                       <Badge className={getStatusColor(step.status)}>
-                        {step.status === "completed"
-                          ? "مكتمل"
-                          : step.status === "required"
-                            ? "مطلوب"
-                            : "اختياري"}
+                        {getStatusLabel(step.status)}
                       </Badge>
                     </div>
                   </CardTitle>
@@ -270,17 +266,15 @@ export default function MetaWhatsAppSetup() {
             ))}
           </div>
 
-          {/* Configuration & Testing */}
           <div className="space-y-6">
-            {/* Required Secrets */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Key className="h-5 w-5" />
-                  المتغيرات المطلوبة
+                  {t("whatsapp.metaSetup.requiredVariables")}
                 </CardTitle>
                 <CardDescription>
-                  إضافة هذه المتغيرات في Replit Secrets
+                  {t("whatsapp.metaSetup.requiredVariablesDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -291,7 +285,7 @@ export default function MetaWhatsAppSetup() {
                       <Badge
                         variant={secret.required ? "destructive" : "secondary"}
                       >
-                        {secret.required ? "مطلوب" : "اختياري"}
+                        {secret.required ? t("whatsapp.metaSetup.required") : t("whatsapp.metaSetup.optional")}
                       </Badge>
                     </div>
                     <p className="text-xs text-gray-600 mb-2">
@@ -305,20 +299,19 @@ export default function MetaWhatsAppSetup() {
               </CardContent>
             </Card>
 
-            {/* Test Section */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Send className="h-5 w-5" />
-                  اختبار Meta API
+                  {t("whatsapp.metaSetup.testMetaApi")}
                 </CardTitle>
                 <CardDescription>
-                  اختبار إرسال رسالة عبر Meta WhatsApp API
+                  {t("whatsapp.metaSetup.testMetaApiDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="testPhone">رقم الهاتف</Label>
+                  <Label htmlFor="testPhone">{t("whatsapp.metaSetup.phoneNumber")}</Label>
                   <Input
                     id="testPhone"
                     value={phoneNumber}
@@ -330,7 +323,7 @@ export default function MetaWhatsAppSetup() {
                 </div>
 
                 <div>
-                  <Label htmlFor="testMessage">الرسالة</Label>
+                  <Label htmlFor="testMessage">{t("whatsapp.metaSetup.message")}</Label>
                   <Input
                     id="testMessage"
                     value={message}
@@ -349,13 +342,13 @@ export default function MetaWhatsAppSetup() {
                     data-testid="checkbox-template"
                   />
                   <Label htmlFor="useTemplate" className="text-sm">
-                    استخدام القالب المُوافق عليه
+                    {t("whatsapp.metaSetup.useApprovedTemplate")}
                   </Label>
                 </div>
 
                 {useTemplate && (
                   <div>
-                    <Label htmlFor="templateName">اسم القالب</Label>
+                    <Label htmlFor="templateName">{t("whatsapp.metaSetup.templateName")}</Label>
                     <Input
                       id="templateName"
                       value={templateName}
@@ -383,24 +376,23 @@ export default function MetaWhatsAppSetup() {
                   {testMetaAPI.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      جاري الإرسال...
+                      {t("whatsapp.metaSetup.sending")}
                     </>
                   ) : (
                     <>
                       <Send className="mr-2 h-4 w-4" />
-                      اختبار Meta API
+                      {t("whatsapp.metaSetup.testMetaApiButton")}
                     </>
                   )}
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Quick Links */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ExternalLink className="h-5 w-5" />
-                  روابط مفيدة
+                  {t("whatsapp.metaSetup.usefulLinks")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -416,9 +408,9 @@ export default function MetaWhatsAppSetup() {
                       rel="noopener noreferrer"
                     >
                       <div className="text-right">
-                        <div className="font-medium">Meta for Developers</div>
+                        <div className="font-medium">{t("whatsapp.metaSetup.metaForDevelopers")}</div>
                         <div className="text-sm text-gray-500">
-                          إنشاء تطبيق Meta جديد
+                          {t("whatsapp.metaSetup.createNewMetaApp")}
                         </div>
                       </div>
                     </a>
@@ -435,9 +427,9 @@ export default function MetaWhatsAppSetup() {
                       rel="noopener noreferrer"
                     >
                       <div className="text-right">
-                        <div className="font-medium">Meta Business Manager</div>
+                        <div className="font-medium">{t("whatsapp.metaSetup.metaBusinessManager")}</div>
                         <div className="text-sm text-gray-500">
-                          إدارة الحسابات التجارية
+                          {t("whatsapp.metaSetup.manageBusinessAccounts")}
                         </div>
                       </div>
                     </a>
@@ -455,10 +447,10 @@ export default function MetaWhatsAppSetup() {
                     >
                       <div className="text-right">
                         <div className="font-medium">
-                          WhatsApp Cloud API Guide
+                          {t("whatsapp.metaSetup.whatsappCloudApiGuide")}
                         </div>
                         <div className="text-sm text-gray-500">
-                          دليل البدء السريع
+                          {t("whatsapp.metaSetup.quickStartGuide")}
                         </div>
                       </div>
                     </a>
@@ -475,9 +467,9 @@ export default function MetaWhatsAppSetup() {
                       rel="noopener noreferrer"
                     >
                       <div className="text-right">
-                        <div className="font-medium">Webhook Configuration</div>
+                        <div className="font-medium">{t("whatsapp.metaSetup.webhookConfiguration")}</div>
                         <div className="text-sm text-gray-500">
-                          إعداد Webhooks
+                          {t("whatsapp.metaSetup.setupWebhooks")}
                         </div>
                       </div>
                     </a>
@@ -488,19 +480,18 @@ export default function MetaWhatsAppSetup() {
           </div>
         </div>
 
-        {/* Benefits */}
         <Card>
           <CardHeader>
-            <CardTitle>🎯 مزايا استخدام Meta API مباشرة</CardTitle>
+            <CardTitle>{t("whatsapp.metaSetup.directApiBenefits")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="flex items-start gap-3">
                 <CheckCircle className="h-5 w-5 text-green-600 mt-1" />
                 <div>
-                  <h4 className="font-medium">تكلفة أقل</h4>
+                  <h4 className="font-medium">{t("whatsapp.metaSetup.lowerCost")}</h4>
                   <p className="text-sm text-gray-600">
-                    لا توجد رسوم وسطاء، فقط رسوم Meta
+                    {t("whatsapp.metaSetup.lowerCostDesc")}
                   </p>
                 </div>
               </div>
@@ -508,9 +499,9 @@ export default function MetaWhatsAppSetup() {
               <div className="flex items-start gap-3">
                 <CheckCircle className="h-5 w-5 text-green-600 mt-1" />
                 <div>
-                  <h4 className="font-medium">تحكم كامل</h4>
+                  <h4 className="font-medium">{t("whatsapp.metaSetup.fullControl")}</h4>
                   <p className="text-sm text-gray-600">
-                    إدارة مباشرة للقوالب والإعدادات
+                    {t("whatsapp.metaSetup.fullControlDesc")}
                   </p>
                 </div>
               </div>
@@ -518,9 +509,9 @@ export default function MetaWhatsAppSetup() {
               <div className="flex items-start gap-3">
                 <CheckCircle className="h-5 w-5 text-green-600 mt-1" />
                 <div>
-                  <h4 className="font-medium">ميزات متقدمة</h4>
+                  <h4 className="font-medium">{t("whatsapp.metaSetup.advancedFeatures")}</h4>
                   <p className="text-sm text-gray-600">
-                    وصول لجميع ميزات WhatsApp Business
+                    {t("whatsapp.metaSetup.advancedFeaturesDesc")}
                   </p>
                 </div>
               </div>
@@ -528,9 +519,9 @@ export default function MetaWhatsAppSetup() {
               <div className="flex items-start gap-3">
                 <CheckCircle className="h-5 w-5 text-green-600 mt-1" />
                 <div>
-                  <h4 className="font-medium">استقرار أعلى</h4>
+                  <h4 className="font-medium">{t("whatsapp.metaSetup.higherStability")}</h4>
                   <p className="text-sm text-gray-600">
-                    اتصال مباشر بدون وسطاء
+                    {t("whatsapp.metaSetup.higherStabilityDesc")}
                   </p>
                 </div>
               </div>
@@ -538,9 +529,9 @@ export default function MetaWhatsAppSetup() {
               <div className="flex items-start gap-3">
                 <CheckCircle className="h-5 w-5 text-green-600 mt-1" />
                 <div>
-                  <h4 className="font-medium">تحديثات فورية</h4>
+                  <h4 className="font-medium">{t("whatsapp.metaSetup.instantUpdates")}</h4>
                   <p className="text-sm text-gray-600">
-                    الحصول على آخر التحديثات مباشرة
+                    {t("whatsapp.metaSetup.instantUpdatesDesc")}
                   </p>
                 </div>
               </div>
@@ -548,8 +539,8 @@ export default function MetaWhatsAppSetup() {
               <div className="flex items-start gap-3">
                 <CheckCircle className="h-5 w-5 text-green-600 mt-1" />
                 <div>
-                  <h4 className="font-medium">دعم أفضل</h4>
-                  <p className="text-sm text-gray-600">دعم مباشر من Meta</p>
+                  <h4 className="font-medium">{t("whatsapp.metaSetup.betterSupport")}</h4>
+                  <p className="text-sm text-gray-600">{t("whatsapp.metaSetup.betterSupportDesc")}</p>
                 </div>
               </div>
             </div>
