@@ -1,23 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { ScrollArea } from "../components/ui/scroll-area";
-import { Separator } from "../components/ui/separator";
 import {
   AlertTriangle,
   Shield,
@@ -29,15 +21,11 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Eye,
   AlertCircle,
   TrendingUp,
-  Users,
   Bell,
-  Filter,
   Search,
   ChevronRight,
-  Zap,
 } from "lucide-react";
 import { Input } from "../components/ui/input";
 import {
@@ -49,10 +37,9 @@ import {
 } from "../components/ui/select";
 import { apiRequest } from "../lib/queryClient";
 import { useToast } from "../hooks/use-toast";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { ar } from "date-fns/locale";
 
-// أنواع البيانات
 interface SystemAlert {
   id: number;
   title: string;
@@ -99,10 +86,8 @@ interface HealthStatus {
   last_check: string;
 }
 
-/**
- * مركز التحذيرات الذكية الشامل
- */
 export default function AlertsCenter() {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterSeverity, setFilterSeverity] = useState<string>("all");
@@ -110,7 +95,6 @@ export default function AlertsCenter() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // جلب التحذيرات
   const { data: alerts = [], isLoading: alertsLoading } = useQuery<
     SystemAlert[]
   >({
@@ -122,22 +106,19 @@ export default function AlertsCenter() {
         severity: filterSeverity === "all" ? undefined : filterSeverity,
       },
     ],
-    refetchInterval: 30000, // تحديث كل 30 ثانية
+    refetchInterval: 30000,
   });
 
-  // جلب إحصائيات التحذيرات
   const { data: stats } = useQuery<AlertStats>({
     queryKey: ["/api/alerts/stats"],
-    refetchInterval: 60000, // تحديث كل دقيقة
+    refetchInterval: 60000,
   });
 
-  // جلب حالة النظام
   const { data: healthStatus } = useQuery<HealthStatus>({
     queryKey: ["/api/system/health"],
     refetchInterval: 30000,
   });
 
-  // حل التحذير
   const resolveAlertMutation = useMutation({
     mutationFn: async ({
       alertId,
@@ -155,20 +136,19 @@ export default function AlertsCenter() {
       queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/alerts/stats"] });
       toast({
-        title: "تم حل التحذير بنجاح",
-        description: "تم تحديث حالة التحذير",
+        title: t('system.alerts.resolveSuccess'),
+        description: t('system.alerts.resolveSuccessDesc'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في حل التحذير",
+        title: t('system.alerts.resolveError'),
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  // إغلاق التحذير
   const dismissAlertMutation = useMutation({
     mutationFn: async (alertId: number) => {
       return apiRequest(`/api/alerts/${alertId}/dismiss`, {
@@ -179,20 +159,19 @@ export default function AlertsCenter() {
       queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/alerts/stats"] });
       toast({
-        title: "تم إغلاق التحذير",
-        description: "تم إغلاق التحذير بنجاح",
+        title: t('system.alerts.dismissSuccess'),
+        description: t('system.alerts.dismissSuccessDesc'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ في إغلاق التحذير",
+        title: t('system.alerts.dismissError'),
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  // فلترة التحذيرات
   const filteredAlerts = alerts.filter((alert: SystemAlert) => {
     const matchesSearch =
       searchQuery === "" ||
@@ -202,7 +181,6 @@ export default function AlertsCenter() {
     return matchesSearch;
   });
 
-  // الحصول على أيقونة النوع
   const getTypeIcon = (type: string) => {
     const icons = {
       system: Database,
@@ -216,7 +194,6 @@ export default function AlertsCenter() {
     return icons[type as keyof typeof icons] || AlertTriangle;
   };
 
-  // الحصول على أيقونة الخطورة
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "critical":
@@ -232,7 +209,6 @@ export default function AlertsCenter() {
     }
   };
 
-  // الحصول على أيقونة الحالة
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "active":
@@ -246,33 +222,53 @@ export default function AlertsCenter() {
     }
   };
 
+  const getSeverityLabel = (severity: string) => {
+    const severityKey = severity as 'critical' | 'high' | 'medium' | 'low';
+    return t(`system.alerts.severity.${severityKey}`, severity);
+  };
+
+  const getTypeLabel = (type: string) => {
+    const typeKey = type as 'system' | 'production' | 'inventory' | 'quality' | 'maintenance' | 'security';
+    return t(`system.alerts.types.${typeKey}`, type);
+  };
+
+  const getStatusLabel = (status: string) => {
+    const statusKey = status as 'active' | 'resolved' | 'dismissed';
+    return t(`system.alerts.status.${statusKey}`, status);
+  };
+
+  const getHealthStatusLabel = (status: string) => {
+    const statusKey = status as 'healthy' | 'warning' | 'danger';
+    if (status === 'healthy') return t('system.alerts.status.healthy');
+    if (status === 'warning') return t('system.alerts.status.warning');
+    return t('system.alerts.status.danger');
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6" dir="rtl">
-      {/* رأس الصفحة */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            مركز التحذيرات الذكية
+            {t('system.alerts.title')}
           </h1>
           <p className="text-gray-600 dark:text-gray-300 mt-2">
-            مراقبة شاملة لحالة النظام والتحذيرات الاستباقية
+            {t('system.alerts.description')}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-sm">
             <Activity className="w-4 h-4 ml-1" />
-            مراقبة مباشرة
+            {t('system.alerts.liveMonitoring')}
           </Badge>
         </div>
       </div>
 
-      {/* ملخص حالة النظام */}
       {healthStatus && (
         <Card className="border-2">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
               <Shield className="w-5 h-5" />
-              حالة النظام العامة
+              {t('system.alerts.systemStatus')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -287,14 +283,10 @@ export default function AlertsCenter() {
                         : "text-red-600"
                   }`}
                 >
-                  {healthStatus.overall_status === "healthy"
-                    ? "سليم"
-                    : healthStatus.overall_status === "warning"
-                      ? "تحذير"
-                      : "خطر"}
+                  {getHealthStatusLabel(healthStatus.overall_status)}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-300">
-                  الحالة العامة
+                  {t('system.alerts.overallStatus')}
                 </div>
               </div>
               <div className="text-center">
@@ -302,7 +294,7 @@ export default function AlertsCenter() {
                   {healthStatus.healthy_checks}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-300">
-                  فحوصات سليمة
+                  {t('system.alerts.healthyChecks')}
                 </div>
               </div>
               <div className="text-center">
@@ -310,7 +302,7 @@ export default function AlertsCenter() {
                   {healthStatus.warning_checks}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-300">
-                  تحذيرات
+                  {t('system.alerts.warnings')}
                 </div>
               </div>
               <div className="text-center">
@@ -318,7 +310,7 @@ export default function AlertsCenter() {
                   {healthStatus.critical_checks}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-300">
-                  حالات خطرة
+                  {t('system.alerts.criticalCases')}
                 </div>
               </div>
             </div>
@@ -326,7 +318,6 @@ export default function AlertsCenter() {
         </Card>
       )}
 
-      {/* إحصائيات التحذيرات */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
@@ -334,7 +325,7 @@ export default function AlertsCenter() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                    إجمالي التحذيرات
+                    {t('system.alerts.totalAlerts')}
                   </p>
                   <p className="text-2xl font-bold">{stats.total_alerts}</p>
                 </div>
@@ -348,7 +339,7 @@ export default function AlertsCenter() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                    تحذيرات نشطة
+                    {t('system.alerts.activeAlerts')}
                   </p>
                   <p className="text-2xl font-bold text-orange-600">
                     {stats.active_alerts}
@@ -364,7 +355,7 @@ export default function AlertsCenter() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                    تحذيرات حرجة
+                    {t('system.alerts.criticalAlerts')}
                   </p>
                   <p className="text-2xl font-bold text-red-600">
                     {stats.critical_alerts}
@@ -380,7 +371,7 @@ export default function AlertsCenter() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                    تم حلها اليوم
+                    {t('system.alerts.resolvedToday')}
                   </p>
                   <p className="text-2xl font-bold text-green-600">
                     {stats.resolved_today}
@@ -393,7 +384,6 @@ export default function AlertsCenter() {
         </div>
       )}
 
-      {/* الفلاتر والبحث */}
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4">
@@ -401,7 +391,7 @@ export default function AlertsCenter() {
               <div className="relative">
                 <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="البحث في التحذيرات..."
+                  placeholder={t('system.alerts.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pr-10"
@@ -418,10 +408,10 @@ export default function AlertsCenter() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">جميع الحالات</SelectItem>
-                <SelectItem value="active">نشطة</SelectItem>
-                <SelectItem value="resolved">محلولة</SelectItem>
-                <SelectItem value="dismissed">مغلقة</SelectItem>
+                <SelectItem value="all">{t('system.alerts.filters.allStatuses')}</SelectItem>
+                <SelectItem value="active">{t('system.alerts.filters.active')}</SelectItem>
+                <SelectItem value="resolved">{t('system.alerts.filters.resolved')}</SelectItem>
+                <SelectItem value="dismissed">{t('system.alerts.filters.dismissed')}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -430,13 +420,13 @@ export default function AlertsCenter() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">جميع الأنواع</SelectItem>
-                <SelectItem value="system">نظام</SelectItem>
-                <SelectItem value="production">إنتاج</SelectItem>
-                <SelectItem value="inventory">مخزون</SelectItem>
-                <SelectItem value="quality">جودة</SelectItem>
-                <SelectItem value="maintenance">صيانة</SelectItem>
-                <SelectItem value="security">أمان</SelectItem>
+                <SelectItem value="all">{t('system.alerts.filters.allTypes')}</SelectItem>
+                <SelectItem value="system">{t('system.alerts.filters.system')}</SelectItem>
+                <SelectItem value="production">{t('system.alerts.filters.production')}</SelectItem>
+                <SelectItem value="inventory">{t('system.alerts.filters.inventory')}</SelectItem>
+                <SelectItem value="quality">{t('system.alerts.filters.quality')}</SelectItem>
+                <SelectItem value="maintenance">{t('system.alerts.filters.maintenance')}</SelectItem>
+                <SelectItem value="security">{t('system.alerts.filters.security')}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -448,23 +438,22 @@ export default function AlertsCenter() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">جميع المستويات</SelectItem>
-                <SelectItem value="critical">حرج</SelectItem>
-                <SelectItem value="high">عالي</SelectItem>
-                <SelectItem value="medium">متوسط</SelectItem>
-                <SelectItem value="low">منخفض</SelectItem>
+                <SelectItem value="all">{t('system.alerts.filters.allLevels')}</SelectItem>
+                <SelectItem value="critical">{t('system.alerts.filters.critical')}</SelectItem>
+                <SelectItem value="high">{t('system.alerts.filters.high')}</SelectItem>
+                <SelectItem value="medium">{t('system.alerts.filters.medium')}</SelectItem>
+                <SelectItem value="low">{t('system.alerts.filters.low')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardContent>
       </Card>
 
-      {/* قائمة التحذيرات */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5" />
-            التحذيرات ({filteredAlerts.length})
+            {t('system.alerts.alertsList')} ({filteredAlerts.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -474,7 +463,7 @@ export default function AlertsCenter() {
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    جاري تحميل التحذيرات...
+                    {t('system.alerts.loadingAlerts')}
                   </p>
                 </div>
               </div>
@@ -482,10 +471,10 @@ export default function AlertsCenter() {
               <div className="text-center py-8">
                 <CheckCircle2 className="w-16 h-16 text-green-600 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  لا توجد تحذيرات
+                  {t('system.alerts.noAlerts')}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300">
-                  رائع! لا توجد تحذيرات تطابق المعايير المحددة
+                  {t('system.alerts.noAlertsMessage')}
                 </p>
               </div>
             ) : (
@@ -520,30 +509,12 @@ export default function AlertsCenter() {
                                   {alert.title_ar}
                                 </h3>
                                 <Badge
-                                  variant={getSeverityColor(alert.severity)}
+                                  variant={getSeverityColor(alert.severity) as any}
                                 >
-                                  {alert.severity === "critical"
-                                    ? "حرج"
-                                    : alert.severity === "high"
-                                      ? "عالي"
-                                      : alert.severity === "medium"
-                                        ? "متوسط"
-                                        : "منخفض"}
+                                  {getSeverityLabel(alert.severity)}
                                 </Badge>
                                 <Badge variant="outline">
-                                  {alert.type === "system"
-                                    ? "نظام"
-                                    : alert.type === "production"
-                                      ? "إنتاج"
-                                      : alert.type === "inventory"
-                                        ? "مخزون"
-                                        : alert.type === "quality"
-                                          ? "جودة"
-                                          : alert.type === "maintenance"
-                                            ? "صيانة"
-                                            : alert.type === "security"
-                                              ? "أمان"
-                                              : alert.type}
+                                  {getTypeLabel(alert.type)}
                                 </Badge>
                               </div>
 
@@ -554,13 +525,7 @@ export default function AlertsCenter() {
                               <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                                 <div className="flex items-center gap-1">
                                   <StatusIcon className="w-4 h-4" />
-                                  {alert.status === "active"
-                                    ? "نشط"
-                                    : alert.status === "resolved"
-                                      ? "محلول"
-                                      : alert.status === "dismissed"
-                                        ? "مغلق"
-                                        : alert.status}
+                                  {getStatusLabel(alert.status)}
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <Clock className="w-4 h-4" />
@@ -575,17 +540,16 @@ export default function AlertsCenter() {
                                 {alert.occurrences > 1 && (
                                   <div className="flex items-center gap-1">
                                     <TrendingUp className="w-4 h-4" />
-                                    {alert.occurrences} مرة
+                                    {t('system.alerts.occurrences', { count: alert.occurrences })}
                                   </div>
                                 )}
                               </div>
 
-                              {/* الإجراءات المقترحة */}
                               {alert.suggested_actions &&
                                 alert.suggested_actions.length > 0 && (
                                   <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
                                     <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
-                                      إجراءات مقترحة:
+                                      {t('system.alerts.suggestedActions')}
                                     </p>
                                     <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
                                       {alert.suggested_actions.map(
@@ -606,7 +570,6 @@ export default function AlertsCenter() {
                             </div>
                           </div>
 
-                          {/* أزرار الإجراءات */}
                           {alert.status === "active" && (
                             <div className="flex gap-2">
                               <Button
@@ -619,8 +582,7 @@ export default function AlertsCenter() {
                                 disabled={resolveAlertMutation.isPending}
                                 data-testid={`button-resolve-${alert.id}`}
                               >
-                                <CheckCircle2 className="w-4 h-4 ml-1" />
-                                حل
+                                {t('system.alerts.resolve')}
                               </Button>
                               <Button
                                 size="sm"
@@ -631,8 +593,7 @@ export default function AlertsCenter() {
                                 disabled={dismissAlertMutation.isPending}
                                 data-testid={`button-dismiss-${alert.id}`}
                               >
-                                <XCircle className="w-4 h-4 ml-1" />
-                                إغلاق
+                                {t('system.alerts.dismiss')}
                               </Button>
                             </div>
                           )}

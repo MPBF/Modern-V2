@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import PageLayout from "../components/layout/PageLayout";
 import {
@@ -118,6 +119,7 @@ interface ProductionOrder {
 }
 
 export default function ProductionMonitoring() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("film");
   const [searchRoll, setSearchRoll] = useState("");
   const [searchOrder, setSearchOrder] = useState("");
@@ -314,9 +316,8 @@ export default function ProductionMonitoring() {
   }));
 
   return (
-    <PageLayout title="لوحة مراقبة الإنتاج" description="مراقبة شاملة للأقسام الثلاثة: الفيلم - الطباعة - التقطيع">
+    <PageLayout title={t("monitoring.title")} description={t("monitoring.description")}>
       <div className="space-y-6" dir="rtl">
-        {/* Header with action buttons */}
         <div className="flex flex-wrap items-center justify-end gap-2">
               <Button
                 variant="outline"
@@ -325,7 +326,7 @@ export default function ProductionMonitoring() {
                 data-testid="button-refresh"
               >
                 <RefreshCw className="w-4 h-4 ml-2" />
-                تحديث
+                {t("monitoring.refresh")}
               </Button>
 
               <Button
@@ -335,15 +336,14 @@ export default function ProductionMonitoring() {
                 data-testid="button-export"
               >
                 <Download className="w-4 h-4 ml-2" />
-                تصدير
+                {t("monitoring.export")}
               </Button>
             </div>
 
-          {/* Date Filter */}
           <Card>
             <CardContent className="p-4">
               <div className="flex flex-wrap items-center gap-4">
-                <span className="text-sm font-medium">الفترة الزمنية:</span>
+                <span className="text-sm font-medium">{t("monitoring.timePeriod")}</span>
                 <Input
                   type="date"
                   value={dateFrom}
@@ -351,7 +351,7 @@ export default function ProductionMonitoring() {
                   className="w-40"
                   data-testid="input-date-from"
                 />
-                <span className="text-sm text-gray-500">إلى</span>
+                <span className="text-sm text-gray-500">{t("monitoring.to")}</span>
                 <Input
                   type="date"
                   value={dateTo}
@@ -363,7 +363,6 @@ export default function ProductionMonitoring() {
             </CardContent>
           </Card>
 
-          {/* Main Tabs for Sections */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3 bg-white border-2 border-gray-200 p-1 h-auto">
               <TabsTrigger
@@ -372,7 +371,7 @@ export default function ProductionMonitoring() {
                 data-testid="tab-film"
               >
                 <Film className="w-5 h-5" />
-                <span className="font-semibold">قسم الفيلم</span>
+                <span className="font-semibold">{t("monitoring.tabs.film")}</span>
               </TabsTrigger>
               <TabsTrigger
                 value="printing"
@@ -380,7 +379,7 @@ export default function ProductionMonitoring() {
                 data-testid="tab-printing"
               >
                 <Printer className="w-5 h-5" />
-                <span className="font-semibold">قسم الطباعة</span>
+                <span className="font-semibold">{t("monitoring.tabs.printing")}</span>
               </TabsTrigger>
               <TabsTrigger
                 value="cutting"
@@ -388,7 +387,7 @@ export default function ProductionMonitoring() {
                 data-testid="tab-cutting"
               >
                 <Scissors className="w-5 h-5" />
-                <span className="font-semibold">قسم التقطيع</span>
+                <span className="font-semibold">{t("monitoring.tabs.cutting")}</span>
               </TabsTrigger>
             </TabsList>
 
@@ -496,6 +495,7 @@ function SectionContent({
   formatNumber,
   formatWeight,
 }: SectionContentProps) {
+  const { t } = useTranslation();
   // Filter rolls and orders by search
   const filteredRolls = rolls.filter(roll =>
     (roll.roll_number || '').toLowerCase().includes(searchRoll.toLowerCase()) ||
@@ -511,13 +511,12 @@ function SectionContent({
 
   return (
     <>
-      {/* Statistics Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="border-2" style={{ borderColor: color }}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-600 mb-1">الإنتاج الكلي</p>
+                <p className="text-xs text-gray-600 mb-1">{t("monitoring.stats.totalProduction")}</p>
                 <p className="text-2xl font-bold" style={{ color }}>
                   {formatWeight(stats.total_weight)}
                 </p>
@@ -531,7 +530,7 @@ function SectionContent({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-600 mb-1">عدد الرولات</p>
+                <p className="text-xs text-gray-600 mb-1">{t("monitoring.stats.rollsCount")}</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {formatNumber(stats.total_rolls)}
                 </p>
@@ -545,7 +544,7 @@ function SectionContent({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-600 mb-1">طلبات مكتملة</p>
+                <p className="text-xs text-gray-600 mb-1">{t("monitoring.stats.completedOrders")}</p>
                 <p className="text-2xl font-bold text-green-600">
                   {formatNumber(stats.completed_orders)}
                 </p>
@@ -559,7 +558,7 @@ function SectionContent({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-600 mb-1">طلبات نشطة</p>
+                <p className="text-xs text-gray-600 mb-1">{t("monitoring.stats.activeOrders")}</p>
                 <p className="text-2xl font-bold text-orange-600">
                   {formatNumber(stats.active_orders)}
                 </p>
@@ -573,7 +572,7 @@ function SectionContent({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-600 mb-1">الكفاءة</p>
+                <p className="text-xs text-gray-600 mb-1">{t("monitoring.stats.efficiency")}</p>
                 <p className="text-2xl font-bold text-indigo-600">
                   {formatNumber(stats.efficiency)}%
                 </p>
@@ -584,14 +583,12 @@ function SectionContent({
         </Card>
       </div>
 
-      {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Users Performance Chart */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              أداء المستخدمين (أفضل 10)
+              {t("monitoring.charts.usersPerformance")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -602,23 +599,22 @@ function SectionContent({
                   <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="production" fill={color} name="الإنتاج (كجم)" />
+                  <Bar dataKey="production" fill={color} name={t("monitoring.stats.totalProduction")} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="text-center py-12 text-gray-500">
-                لا توجد بيانات للمستخدمين
+                {t("monitoring.charts.noUsersData")}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Machines Production Chart */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="w-5 h-5" />
-              إنتاج المكائن
+              {t("monitoring.charts.machinesProduction")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -629,12 +625,12 @@ function SectionContent({
                   <XAxis dataKey="name" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="production" fill={color} name="الإنتاج (كجم)" />
+                  <Bar dataKey="production" fill={color} name={t("monitoring.stats.totalProduction")} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="text-center py-12 text-gray-500">
-                لا توجد بيانات للمكائن
+                {t("monitoring.charts.noMachinesData")}
               </div>
             )}
           </CardContent>

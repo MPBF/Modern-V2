@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from 'react-i18next';
 import { useAuth } from "../hooks/use-auth";
 import { userHasPermission } from "../utils/roleUtils";
 import PageLayout from "../components/layout/PageLayout";
@@ -11,6 +12,7 @@ import PrintingOperatorDashboard from "./PrintingOperatorDashboard";
 import CuttingOperatorDashboard from "./CuttingOperatorDashboard";
 
 export default function ProductionDashboard() {
+  const { t } = useTranslation();
   const { user } = useAuth();
 
   const canViewFilm = useMemo(() => 
@@ -40,22 +42,22 @@ export default function ProductionDashboard() {
 
   if (availableTabs.length === 0) {
     return (
-      <PageLayout title="لوحة الإنتاج">
+      <PageLayout title={t('production.dashboard.title')}>
         <Card className="mt-8">
           <CardHeader>
             <div className="flex items-center gap-3">
               <AlertCircle className="h-8 w-8 text-yellow-500" />
               <div>
-                <CardTitle>لا توجد صلاحيات</CardTitle>
+                <CardTitle>{t('production.dashboard.noPermissions')}</CardTitle>
                 <CardDescription>
-                  ليس لديك صلاحيات الوصول إلى أي من لوحات الإنتاج
+                  {t('production.dashboard.noPermissionsDescription')}
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              يرجى التواصل مع المدير للحصول على الصلاحيات المناسبة.
+              {t('production.dashboard.contactAdmin')}
             </p>
           </CardContent>
         </Card>
@@ -65,8 +67,8 @@ export default function ProductionDashboard() {
 
   return (
     <PageLayout 
-      title="لوحة الإنتاج"
-      description="إدارة مراحل الإنتاج المختلفة من خلال اللوحات المتخصصة"
+      title={t('production.dashboard.title')}
+      description={t('production.dashboard.description')}
     >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 gap-2 h-auto bg-transparent">
@@ -78,11 +80,11 @@ export default function ProductionDashboard() {
                 >
                   <Film className="h-5 w-5" />
                   <div className="text-right">
-                    <div className="font-semibold">عامل الفيلم</div>
-                    <div className="text-xs text-muted-foreground">إنشاء البكرات</div>
+                    <div className="font-semibold">{t('production.dashboard.filmOperator')}</div>
+                    <div className="text-xs text-muted-foreground">{t('production.dashboard.createRolls')}</div>
                   </div>
                   {activeTab === 'film' && (
-                    <Badge variant="default" className="mr-auto">نشط</Badge>
+                    <Badge variant="default" className="mr-auto">{t('production.dashboard.active')}</Badge>
                   )}
                 </TabsTrigger>
               )}
@@ -95,11 +97,11 @@ export default function ProductionDashboard() {
                 >
                   <Printer className="h-5 w-5" />
                   <div className="text-right">
-                    <div className="font-semibold">عامل الطباعة</div>
-                    <div className="text-xs text-muted-foreground">طباعة البكرات</div>
+                    <div className="font-semibold">{t('production.dashboard.printingOperator')}</div>
+                    <div className="text-xs text-muted-foreground">{t('production.dashboard.printRolls')}</div>
                   </div>
                   {activeTab === 'printing' && (
-                    <Badge variant="default" className="mr-auto">نشط</Badge>
+                    <Badge variant="default" className="mr-auto">{t('production.dashboard.active')}</Badge>
                   )}
                 </TabsTrigger>
               )}
@@ -112,11 +114,11 @@ export default function ProductionDashboard() {
                 >
                   <Scissors className="h-5 w-5" />
                   <div className="text-right">
-                    <div className="font-semibold">عامل التقطيع</div>
-                    <div className="text-xs text-muted-foreground">تقطيع البكرات</div>
+                    <div className="font-semibold">{t('production.dashboard.cuttingOperator')}</div>
+                    <div className="text-xs text-muted-foreground">{t('production.dashboard.cutRolls')}</div>
                   </div>
                   {activeTab === 'cutting' && (
-                    <Badge variant="default" className="mr-auto">نشط</Badge>
+                    <Badge variant="default" className="mr-auto">{t('production.dashboard.active')}</Badge>
                   )}
                 </TabsTrigger>
               )}

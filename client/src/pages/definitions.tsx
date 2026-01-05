@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import PageLayout from "../components/layout/PageLayout";
 import {
@@ -58,6 +59,7 @@ import {
 import { formatNumber } from "../lib/formatNumber";
 
 export default function Definitions() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -1629,16 +1631,15 @@ export default function Definitions() {
   };
 
   return (
-    <PageLayout title="التعريفات الأساسية">
+    <PageLayout title={t("definitions.title")}>
       <div className="w-full space-y-4">
-        {/* Search and Filter Controls */}
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-lg shadow-sm border border-gray-200">
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
                     type="text"
-                    placeholder="البحث السريع..."
+                    placeholder={t("definitions.search")}
                     value={quickSearch}
                     onChange={(e) => setQuickSearch(e.target.value)}
                     className="pr-10"
@@ -1648,19 +1649,18 @@ export default function Definitions() {
                   <Filter className="w-4 h-4 text-gray-400" />
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-40">
-                      <SelectValue placeholder="فلترة الحالة" />
+                      <SelectValue placeholder={t("definitions.allStatuses")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">جميع الحالات</SelectItem>
-                      <SelectItem value="active">نشط</SelectItem>
-                      <SelectItem value="inactive">غير نشط</SelectItem>
+                      <SelectItem value="all">{t("definitions.allStatuses")}</SelectItem>
+                      <SelectItem value="active">{t("definitions.active")}</SelectItem>
+                      <SelectItem value="inactive">{t("definitions.inactive")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
             </div>
 
-            {/* Tabs */}
             <div className="w-full">
               <Tabs
                 value={selectedTab}
@@ -1677,7 +1677,7 @@ export default function Definitions() {
                              text-gray-600 hover:text-blue-600 px-3 py-2 text-sm font-medium
                              transition-all duration-200 rounded-md min-w-0 flex-1"
                   >
-                    العملاء
+                    {t("definitions.tabs.customers")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="sections"
@@ -1685,7 +1685,7 @@ export default function Definitions() {
                              text-gray-600 hover:text-blue-600 px-3 py-2 text-sm font-medium
                              transition-all duration-200 rounded-md min-w-0 flex-1"
                   >
-                    الأقسام
+                    {t("definitions.tabs.sections")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="categories"
@@ -1693,7 +1693,7 @@ export default function Definitions() {
                              text-gray-600 hover:text-blue-600 px-3 py-2 text-sm font-medium
                              transition-all duration-200 rounded-md min-w-0 flex-1"
                   >
-                    الفئات
+                    {t("definitions.tabs.categories")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="items"
@@ -1701,7 +1701,7 @@ export default function Definitions() {
                              text-gray-600 hover:text-blue-600 px-3 py-2 text-sm font-medium
                              transition-all duration-200 rounded-md min-w-0 flex-1"
                   >
-                    الأصناف
+                    {t("definitions.tabs.items")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="customer-products"
@@ -1709,7 +1709,7 @@ export default function Definitions() {
                              text-gray-600 hover:text-blue-600 px-2 py-2 text-xs font-medium
                              transition-all duration-200 rounded-md min-w-0 flex-1"
                   >
-                    منتجات العملاء
+                    {t("definitions.tabs.customerProducts")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="machines"
@@ -1717,7 +1717,7 @@ export default function Definitions() {
                              text-gray-600 hover:text-blue-600 px-3 py-2 text-sm font-medium
                              transition-all duration-200 rounded-md min-w-0 flex-1"
                   >
-                    المكائن
+                    {t("definitions.tabs.machines")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="users"
@@ -1725,7 +1725,7 @@ export default function Definitions() {
                              text-gray-600 hover:text-blue-600 px-3 py-2 text-sm font-medium
                              transition-all duration-200 rounded-md min-w-0 flex-1"
                   >
-                    المستخدمين
+                    {t("definitions.tabs.users")}
                   </TabsTrigger>
                 </TabsList>
 

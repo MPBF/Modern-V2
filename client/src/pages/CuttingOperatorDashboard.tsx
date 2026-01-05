@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from 'react-i18next';
 import PageLayout from "../components/layout/PageLayout";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
@@ -41,7 +42,6 @@ interface ProductionOrderWithRolls {
   rolls: RollDetails[];
   total_rolls: number;
   total_weight: number;
-  // Product details for Cutting section
   cutting_length_cm?: number;
   punching?: string;
 }
@@ -51,6 +51,7 @@ interface CuttingOperatorDashboardProps {
 }
 
 export default function CuttingOperatorDashboard({ hideLayout = false }: CuttingOperatorDashboardProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [processingRollIds, setProcessingRollIds] = useState<Set<number>>(new Set());
   const [selectedRoll, setSelectedRoll] = useState<RollDetails | null>(null);
@@ -75,15 +76,15 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
       setSelectedRoll(null);
       setNetWeight("");
       toast({ 
-        title: "✓ تم بنجاح", 
-        description: "تم إكمال عملية التقطيع وحساب الهدر تلقائياً", 
+        title: t('operators.common.success'), 
+        description: t('operators.cutting.cuttingCompleted'), 
         variant: "default" 
       });
     },
     onError: (error: any) => {
       toast({ 
-        title: "خطأ", 
-        description: error.message || "فشل في إكمال عملية التقطيع", 
+        title: t('operators.common.error'), 
+        description: error.message || t('operators.cutting.cuttingFailed'), 
         variant: "destructive" 
       });
     },
@@ -103,8 +104,8 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
     
     if (isNaN(netWeightNum) || netWeightNum <= 0) {
       toast({ 
-        title: "خطأ", 
-        description: "يرجى إدخال وزن صافي صحيح", 
+        title: t('operators.common.error'), 
+        description: t('operators.cutting.invalidNetWeight'), 
         variant: "destructive" 
       });
       return;
@@ -112,8 +113,8 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
     
     if (netWeightNum > grossWeight) {
       toast({ 
-        title: "خطأ", 
-        description: "الوزن الصافي لا يمكن أن يكون أكبر من الوزن الخام", 
+        title: t('operators.common.error'), 
+        description: t('operators.cutting.netWeightTooHigh'), 
         variant: "destructive" 
       });
       return;
@@ -136,7 +137,7 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-gray-600 text-lg">جاري تحميل رولات التقطيع...</p>
+          <p className="text-gray-600 text-lg">{t('operators.cutting.loadingRolls')}</p>
         </div>
       </div>
     );
@@ -146,7 +147,7 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
     }
 
     return (
-      <PageLayout title="لوحة عامل التقطيع" description="إدارة رولات التقطيع وإنهائها">
+      <PageLayout title={t('operators.cutting.title')} description={t('operators.cutting.description')}>
         {loadingContent}
       </PageLayout>
     );
@@ -157,31 +158,31 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <Card data-testid="card-active-orders">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">الأوامر النشطة</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('operators.common.activeOrders')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold" data-testid="stat-active-orders">{stats.totalOrders}</div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">أمر إنتاج</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{t('operators.common.productionOrder')}</p>
               </CardContent>
             </Card>
 
             <Card data-testid="card-total-rolls">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">إجمالي الرولات</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('operators.common.totalRolls')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold" data-testid="stat-total-rolls">{stats.totalRolls}</div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">رول</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{t('operators.common.roll')}</p>
               </CardContent>
             </Card>
 
             <Card data-testid="card-total-weight">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">إجمالي الوزن</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('operators.common.totalWeight')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold" data-testid="stat-total-weight">{formatNumberAr(stats.totalWeight)}</div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">كيلوجرام</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{t('operators.common.kilogram')}</p>
               </CardContent>
             </Card>
           </div>
@@ -191,10 +192,10 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
               <div className="text-center">
                 <Info className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  لا توجد رولات في مرحلة التقطيع
+                  {t('operators.cutting.noRolls')}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400" data-testid="text-no-rolls">
-                  لا توجد رولات جاهزة للتقطيع حالياً
+                  {t('operators.cutting.noRollsReady')}
                 </p>
               </div>
             </Card>
@@ -217,12 +218,12 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
                             {order.production_order_number}
                           </CardTitle>
                           <CardDescription data-testid={`text-order-ref-${order.production_order_id}`}>
-                            الطلب: {order.order_number}
+                            {t('operators.common.order')}: {order.order_number}
                           </CardDescription>
                         </div>
                         <Badge variant="secondary" className="bg-green-100 text-green-800">
                           <Scissors className="h-3 w-3 ml-1" />
-                          {order.total_rolls} رول
+                          {order.total_rolls} {t('operators.common.roll')}
                         </Badge>
                       </div>
                     </CardHeader>
@@ -230,27 +231,26 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <p className="text-gray-500 dark:text-gray-400">العميل</p>
+                          <p className="text-gray-500 dark:text-gray-400">{t('operators.common.customer')}</p>
                           <p className="font-medium" data-testid={`text-customer-${order.production_order_id}`}>{order.customer_name}</p>
                         </div>
                         <div>
-                          <p className="text-gray-500 dark:text-gray-400">المنتج</p>
+                          <p className="text-gray-500 dark:text-gray-400">{t('operators.common.product')}</p>
                           <p className="font-medium" data-testid={`text-product-${order.production_order_id}`}>{order.product_name}</p>
                         </div>
                       </div>
 
-                      {/* Product Details for Cutting */}
                       {(order.cutting_length_cm || order.punching) && (
                         <div className="grid grid-cols-2 gap-4 text-sm bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
                           {order.cutting_length_cm && (
                             <div>
-                              <p className="text-gray-500 dark:text-gray-400">الطول</p>
-                              <p className="font-medium" data-testid={`text-cutting-length-${order.production_order_id}`}>{order.cutting_length_cm} سم</p>
+                              <p className="text-gray-500 dark:text-gray-400">{t('operators.cutting.length')}</p>
+                              <p className="font-medium" data-testid={`text-cutting-length-${order.production_order_id}`}>{order.cutting_length_cm} cm</p>
                             </div>
                           )}
                           {order.punching && (
                             <div>
-                              <p className="text-gray-500 dark:text-gray-400">نوع التخريم</p>
+                              <p className="text-gray-500 dark:text-gray-400">{t('operators.cutting.punchingType')}</p>
                               <p className="font-medium" data-testid={`text-punching-${order.production_order_id}`}>{order.punching}</p>
                             </div>
                           )}
@@ -259,9 +259,9 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
 
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600 dark:text-gray-400">التقدم</span>
+                          <span className="text-gray-600 dark:text-gray-400">{t('operators.common.progress')}</span>
                           <span className="font-medium" data-testid={`text-progress-${order.production_order_id}`}>
-                            {completedRolls} / {order.total_rolls} رول
+                            {completedRolls} / {order.total_rolls} {t('operators.common.roll')}
                           </span>
                         </div>
                         <Progress value={progress} className="h-2" data-testid={`progress-bar-${order.production_order_id}`} />
@@ -269,12 +269,12 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
 
                       <div className="flex items-center gap-2 text-sm">
                         <Package className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-600 dark:text-gray-400">الوزن الإجمالي:</span>
-                        <span className="font-medium">{formatNumberAr(order.total_weight)} كجم</span>
+                        <span className="text-gray-600 dark:text-gray-400">{t('operators.common.totalWeight')}:</span>
+                        <span className="font-medium">{formatNumberAr(order.total_weight)} {t('operators.common.kg')}</span>
                       </div>
 
                       <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">الرولات المتاحة:</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('operators.common.availableRolls')}:</p>
                         <div className="space-y-2 max-h-48 overflow-y-auto">
                           {order.rolls.map((roll) => (
                             <div 
@@ -289,7 +289,7 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
                                   </span>
                                 </div>
                                 <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                  الوزن: {formatNumberAr(Number(roll.weight_kg))} كجم
+                                  {t('operators.common.weight')}: {formatNumberAr(Number(roll.weight_kg))} {t('operators.common.kg')}
                                 </div>
                               </div>
                               
@@ -300,7 +300,7 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
                                 data-testid={`button-cut-${roll.roll_id}`}
                               >
                                 <Scissors className="h-4 w-4 ml-1" />
-                                <span className="hidden sm:inline">قطع</span>
+                                <span className="hidden sm:inline">{t('operators.cutting.cut')}</span>
                               </Button>
                             </div>
                           ))}
@@ -321,10 +321,10 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Weight className="h-5 w-5 text-green-600" />
-            إدخال الوزن الصافي
+            {t('operators.cutting.enterNetWeight')}
           </DialogTitle>
           <DialogDescription>
-            أدخل الوزن الصافي بعد عملية التقطيع. سيتم حساب الهدر تلقائياً.
+            {t('operators.cutting.enterNetWeightDesc')}
           </DialogDescription>
         </DialogHeader>
         
@@ -333,20 +333,20 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
             <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400">رقم الرول</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('operators.cutting.rollNumber')}</p>
                   <p className="font-medium" data-testid="text-selected-roll-number">{selectedRoll.roll_number}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400">الوزن الخام</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('operators.cutting.grossWeight')}</p>
                   <p className="font-medium" data-testid="text-selected-roll-gross-weight">
-                    {formatNumberAr(Number(selectedRoll.weight_kg))} كجم
+                    {formatNumberAr(Number(selectedRoll.weight_kg))} {t('operators.common.kg')}
                   </p>
                 </div>
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="netWeight">الوزن الصافي (كجم)</Label>
+              <Label htmlFor="netWeight">{t('operators.cutting.netWeightKg')}</Label>
               <Input
                 id="netWeight"
                 type="number"
@@ -355,14 +355,14 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
                 max={selectedRoll.weight_kg.toString()}
                 value={netWeight}
                 onChange={(e) => setNetWeight(e.target.value)}
-                placeholder="أدخل الوزن الصافي"
+                placeholder={t('operators.cutting.enterNetWeightPlaceholder')}
                 className="text-right"
                 data-testid="input-net-weight"
               />
               <p className="text-xs text-gray-500 dark:text-gray-400" data-testid="text-expected-waste">
-                الهدر المتوقع: {formatNumberAr(
+                {t('operators.cutting.expectedWaste')}: {formatNumberAr(
                   Math.max(0, Number(selectedRoll.weight_kg) - Number(netWeight || 0))
-                )} كجم
+                )} {t('operators.common.kg')}
               </p>
             </div>
           </div>
@@ -375,7 +375,7 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
             disabled={completeCuttingMutation.isPending}
             data-testid="button-cancel-cutting"
           >
-            إلغاء
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleCompleteCutting}
@@ -386,12 +386,12 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
             {completeCuttingMutation.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin ml-2" />
-                جاري المعالجة...
+                {t('operators.cutting.processing')}
               </>
             ) : (
               <>
                 <CheckCircle2 className="h-4 w-4 ml-2" />
-                تأكيد القطع
+                {t('operators.cutting.confirmCut')}
               </>
             )}
           </Button>
@@ -410,7 +410,7 @@ export default function CuttingOperatorDashboard({ hideLayout = false }: Cutting
   }
 
   return (
-    <PageLayout title="لوحة عامل التقطيع" description="إدارة رولات التقطيع وإنهائها">
+    <PageLayout title={t('operators.cutting.title')} description={t('operators.cutting.description')}>
       {mainContent}
       {dialogContent}
     </PageLayout>

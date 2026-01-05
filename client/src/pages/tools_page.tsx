@@ -1,16 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import PageLayout from "../components/layout/PageLayout";
-
-/**
- * صفحة الأدوات — نسخة موسّعة وقابلة للاستبدال مباشرةً مكان الملف القديم
- * - RTL + TypeScript
- * - بدون تبعيات إضافية
- * - تحسينات UX + أدوات إنتاج متقدمة
- *
- * المسار المقترح: client/src/pages/tools.tsx
- */
-
-// ===================== أنواع التبويبات =====================
 
 type TabId =
   | "bag-weight"
@@ -23,38 +13,37 @@ type TabId =
   | "thickness"
   | "job-time";
 
-interface TabDef { id: TabId; label: string; }
+interface TabDef { id: TabId; labelKey: string; }
 
-const tabs: TabDef[] = [
-  { id: "bag-weight", label: "حاسبة وزن الأكياس" },
-  { id: "colors", label: "الألوان (CMYK / Pantone)" },
-  { id: "color-mix", label: "خلطات اللون (صورة/كود)" },
-  { id: "ink-usage", label: "حساب استخدام الحبر" },
-  { id: "order-cost", label: "تكلفة طلبية (سريع)" },
-  { id: "order-cost-advanced", label: "تكلفة طلبية (متقدم)" },
-  { id: "roll", label: "وزن/طول الرول" },
-  { id: "thickness", label: "تحويل السماكة" },
-  { id: "job-time", label: "زمن وتشغيل العملية" },
+const tabDefs: TabDef[] = [
+  { id: "bag-weight", labelKey: "tabs.bagWeight" },
+  { id: "colors", labelKey: "tabs.colors" },
+  { id: "color-mix", labelKey: "tabs.colorMix" },
+  { id: "ink-usage", labelKey: "tabs.inkUsage" },
+  { id: "order-cost", labelKey: "tabs.orderCost" },
+  { id: "order-cost-advanced", labelKey: "tabs.orderCostAdvanced" },
+  { id: "roll", labelKey: "tabs.roll" },
+  { id: "thickness", labelKey: "tabs.thickness" },
+  { id: "job-time", labelKey: "tabs.jobTime" },
 ];
 
-// ===================== الغلاف =====================
 export default function ToolsPage(): JSX.Element {
+  const { t } = useTranslation();
   return (
-    <PageLayout title="الأدوات" description="مجموعة من الحاسبات والمحوّلات المساعدة في الإنتاج والتكلفة والألوان">
+    <PageLayout title={t("tools.title")} description={t("tools.description")}>
       <ToolsContent />
     </PageLayout>
   );
 }
 
-// ===================== المحتوى =====================
 function ToolsContent(): JSX.Element {
+  const { t } = useTranslation();
   const STORAGE_KEY = "mpbf_tools_active_tab";
   const [active, setActive] = useState<TabId>(() => {
     const saved = (typeof window !== "undefined" && window.localStorage.getItem(STORAGE_KEY)) as TabId | null;
     return saved ?? "bag-weight";
   });
 
-  // مشاركة وزن الحقيبة (جم) وبعض القيم بين التبويبات
   const [sharedBagWeightG, setSharedBagWeightG] = useState<number>(0);
   const [sharedBagDims, setSharedBagDims] = useState<{ widthCm: number; lengthCm: number } | null>(null);
 
@@ -62,30 +51,28 @@ function ToolsContent(): JSX.Element {
 
   return (
     <div className="p-0 md:p-0 lg:p-0 max-w-7xl">
-      {/* Tabs */}
       <div className="overflow-x-auto">
         <div className="inline-flex gap-2 bg-gray-100 rounded-xl p-1 mb-6" role="tablist" aria-label="tools-tabs">
-          {tabs.map((t) => (
+          {tabDefs.map((tab) => (
             <button
-              key={t.id}
-              onClick={() => setActive(t.id)}
+              key={tab.id}
+              onClick={() => setActive(tab.id)}
               role="tab"
-              aria-selected={active === t.id}
+              aria-selected={active === tab.id}
               className={`px-3 py-2 rounded-lg text-sm md:text-base whitespace-nowrap transition ${
-                active === t.id ? "bg-white shadow font-semibold" : "hover:bg-white/60"
+                active === tab.id ? "bg-white shadow font-semibold" : "hover:bg-white/60"
               }`}
-              title={t.label}
+              title={t(`tools.${tab.labelKey}`)}
             >
-              {t.label}
+              {t(`tools.${tab.labelKey}`)}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Panels */}
       <div className="grid gap-6">
         {active === "bag-weight" && (
-          <Card title="حاسبة وزن الأكياس">
+          <Card title={t("tools.bagWeight.title")}>
             <BagWeightCalculator
               onBagWeight={(g) => setSharedBagWeightG(g)}
               onDims={(d) => setSharedBagDims(d)}
@@ -94,49 +81,49 @@ function ToolsContent(): JSX.Element {
         )}
 
         {active === "colors" && (
-          <Card title="الألوان (CMYK / Pantone)">
+          <Card title={t("tools.colors.title")}>
             <ColorTools />
           </Card>
         )}
 
         {active === "color-mix" && (
-          <Card title="خلطات اللون من صورة/كود">
+          <Card title={t("tools.colorMix.title")}>
             <ColorMixTools />
           </Card>
         )}
 
         {active === "ink-usage" && (
-          <Card title="تقدير استخدام الحبر">
+          <Card title={t("tools.inkUsage.title")}>
             <InkUsageCalculator sharedDims={sharedBagDims} />
           </Card>
         )}
 
         {active === "order-cost" && (
-          <Card title="حساب تكلفة طلبية — سريع">
+          <Card title={t("tools.orderCost.title")}>
             <OrderCostCalculator sharedBagWeightG={sharedBagWeightG} />
           </Card>
         )}
 
         {active === "order-cost-advanced" && (
-          <Card title="حساب تكلفة طلبية — متقدم (BOM)">
+          <Card title={t("tools.orderCostAdvanced.title")}>
             <OrderCostAdvanced sharedBagWeightG={sharedBagWeightG} />
           </Card>
         )}
 
         {active === "roll" && (
-          <Card title="حساب وزن/طول الرول">
+          <Card title={t("tools.roll.title")}>
             <RollTools />
           </Card>
         )}
 
         {active === "thickness" && (
-          <Card title="تحويل السماكة (ميكرون/مم/قيج)">
+          <Card title={t("tools.thickness.title")}>
             <ThicknessConverter />
           </Card>
         )}
 
         {active === "job-time" && (
-          <Card title="زمن العمليات وتخطيط التشغيل">
+          <Card title={t("tools.jobTime.title")}>
             <JobTimePlanner />
           </Card>
         )}
@@ -145,13 +132,13 @@ function ToolsContent(): JSX.Element {
   );
 }
 
-// ===================== عنصر بطاقة موحد =====================
 function Card({ title, children }: { title: string; children: React.ReactNode }): JSX.Element {
+  const { t } = useTranslation();
   return (
     <section className="bg-white rounded-2xl shadow p-4 md:p-6 border border-gray-100" aria-label={title}>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">{title}</h2>
-        <button className="text-xs px-2 py-1 rounded border hover:bg-gray-50" onClick={() => window.print()} title="طباعة">طباعة</button>
+        <button className="text-xs px-2 py-1 rounded border hover:bg-gray-50" onClick={() => window.print()} title={t("tools.print")}>{t("tools.print")}</button>
       </div>
       <div>{children}</div>
     </section>

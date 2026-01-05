@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from 'react-i18next';
 import PageLayout from "../components/layout/PageLayout";
 import {
   DndContext,
@@ -86,13 +87,14 @@ interface Machine {
   status: string;
 }
 
-// Sortable Item Component
 function SortableItem({ 
   item, 
-  machineId 
+  machineId,
+  t
 }: { 
   item: QueueItem | ProductionOrder; 
   machineId: string | null;
+  t: (key: string) => string;
 }) {
   const isQueueItem = "queue_id" in item;
   const id = isQueueItem ? `queue-${item.queue_id}` : `order-${item.id}`;
@@ -144,39 +146,36 @@ function SortableItem({
                 </span>
                 {!isQueueItem && (
                   <Badge variant={item.status === "active" ? "default" : "secondary"} data-testid={`badge-status-${itemId}`}>
-                    {item.status === "active" ? "نشط" : item.status === "in_production" ? "قيد الإنتاج" : "معلق"}
+                    {item.status === "active" ? t('production.statuses.active') : item.status === "in_production" ? t('production.statuses.in_production') : t('production.statuses.pending')}
                   </Badge>
                 )}
               </div>
               
-              {/* معلومات العميل */}
               {(isQueueItem ? item.customer_name_ar || item.customer_name : (item as ProductionOrder).customer_name_ar || (item as ProductionOrder).customer_name) && (
                 <div className="text-xs text-muted-foreground mb-1" data-testid={`text-customer-${itemId}`}>
-                  العميل: {isQueueItem ? item.customer_name_ar || item.customer_name : (item as ProductionOrder).customer_name_ar || (item as ProductionOrder).customer_name}
+                  {t('production.queues.customer')}: {isQueueItem ? item.customer_name_ar || item.customer_name : (item as ProductionOrder).customer_name_ar || (item as ProductionOrder).customer_name}
                 </div>
               )}
               
-              {/* معلومات المنتج */}
               {(isQueueItem ? item.size_caption : (item as ProductionOrder).size_caption) && (
                 <div className="text-xs text-muted-foreground mb-1" data-testid={`text-product-${itemId}`}>
-                  المنتج: {isQueueItem ? item.size_caption : (item as ProductionOrder).size_caption}
+                  {t('production.queues.product')}: {isQueueItem ? item.size_caption : (item as ProductionOrder).size_caption}
                 </div>
               )}
               
-              {/* المادة الخام */}
               {(isQueueItem ? item.raw_material : (item as ProductionOrder).raw_material) && (
                 <div className="text-xs text-muted-foreground mb-1" data-testid={`text-material-${itemId}`}>
-                  المادة: {isQueueItem ? item.raw_material : (item as ProductionOrder).raw_material}
+                  {t('production.queues.material')}: {isQueueItem ? item.raw_material : (item as ProductionOrder).raw_material}
                 </div>
               )}
               
               <div className="text-xs text-muted-foreground" data-testid={`text-quantity-${itemId}`}>
-                الكمية: {isQueueItem ? item.quantity_kg : item.final_quantity_kg} كجم
+                {t('production.queues.quantity')}: {isQueueItem ? item.quantity_kg : item.final_quantity_kg} {t('common.kg')}
               </div>
               
               {isQueueItem && item.assigned_by_name && (
                 <div className="text-xs text-muted-foreground mt-1" data-testid={`text-assigned-by-${itemId}`}>
-                  بواسطة: {item.assigned_by_name}
+                  {t('production.queues.assignedBy')}: {item.assigned_by_name}
                 </div>
               )}
             </div>
@@ -187,15 +186,16 @@ function SortableItem({
   );
 }
 
-// Machine Column Component
 function MachineColumn({ 
   machine, 
   items,
-  onItemsChange 
+  onItemsChange,
+  t
 }: { 
   machine: Machine | null; 
   items: (QueueItem | ProductionOrder)[];
   onItemsChange?: (items: any[]) => void;
+  t: (key: string) => string;
 }) {
   const machineId = machine?.id || "unassigned";
   const sortableItems = items.map(item => {
@@ -233,13 +233,13 @@ function MachineColumn({
           <div className="flex items-center gap-2">
             <Factory className="h-5 w-5" />
             <span data-testid={`text-machine-name-${machineId}`}>
-              {machine ? machine.name_ar || machine.name : "أوامر غير مخصصة"}
+              {machine ? machine.name_ar || machine.name : t('production.queues.unassignedOrders')}
             </span>
           </div>
           {machine && (
             <div className="flex items-center gap-2 text-sm">
               <span data-testid={`icon-machine-status-${machineId}`}>{getMachineIcon(machine.status)}</span>
-              <Badge variant="outline" data-testid={`badge-order-count-${machineId}`}>{items.length} أمر</Badge>
+              <Badge variant="outline" data-testid={`badge-order-count-${machineId}`}>{items.length} {t('production.queues.order')}</Badge>
             </div>
           )}
         </CardTitle>
@@ -254,7 +254,7 @@ function MachineColumn({
               {items.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8" data-testid={`text-no-orders-${machineId}`}>
                   <Package className="h-12 w-12 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">لا توجد أوامر إنتاج</p>
+                  <p className="text-sm">{t('production.queues.noProductionOrders')}</p>
                 </div>
               ) : (
                 items.map((item) => (
@@ -262,6 +262,7 @@ function MachineColumn({
                     key={"queue_id" in item ? `queue-${item.queue_id}` : `order-${item.id}`}
                     item={item}
                     machineId={machineId}
+                    t={t}
                   />
                 ))
               )}
@@ -274,6 +275,7 @@ function MachineColumn({
 }
 
 export default function ProductionQueues() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [localQueues, setLocalQueues] = useState<{ [key: string]: any[] }>({});
@@ -287,55 +289,45 @@ export default function ProductionQueues() {
     })
   );
 
-  // Fetch machines
   const { data: machines = [] } = useQuery<Machine[]>({
     queryKey: ["/api/machines"],
   });
 
-  // Fetch production orders
   const { data: productionOrders = [] } = useQuery<ProductionOrder[]>({
     queryKey: ["/api/production-orders"],
   });
 
-  // Fetch machine queues
   const { data: queuesData, isLoading } = useQuery<{ data: QueueItem[] }>({
     queryKey: ["/api/machine-queues"],
   });
 
-  // Fetch distribution suggestions
   const { data: suggestions } = useQuery<{ data: any[] }>({
     queryKey: ["/api/machine-queues/suggest"],
   });
 
-  // Fetch machine capacity stats  
   const { data: capacityStats } = useQuery<{ data: any[] }>({
     queryKey: ["/api/machines/capacity-stats"],
   });
 
-  // Organize data into queues
   useEffect(() => {
     if (queuesData?.data && machines && productionOrders) {
       const queues: { [key: string]: any[] } = {};
       
-      // Initialize queues for active machines
       const activeMachines = machines.filter(m => m.status === "active");
       activeMachines.forEach(machine => {
         queues[machine.id] = [];
       });
       
-      // Add queue items to their respective machines
       queuesData.data.forEach((item: QueueItem) => {
         if (queues[item.machine_id]) {
           queues[item.machine_id].push(item);
         }
       });
       
-      // Sort items by queue position
       Object.keys(queues).forEach(machineId => {
         queues[machineId].sort((a, b) => a.queue_position - b.queue_position);
       });
       
-      // Find unassigned production orders (active or in_production without queue assignment)
       const assignedOrderIds = new Set(queuesData.data.map(q => q.production_order_id));
       const unassignedOrders = productionOrders.filter(
         po => (po.status === "active" || po.status === "in_production" || po.status === "pending") && !assignedOrderIds.has(po.id)
@@ -347,7 +339,6 @@ export default function ProductionQueues() {
     }
   }, [queuesData, machines, productionOrders]);
 
-  // Assign to queue mutation
   const assignMutation = useMutation({
     mutationFn: async ({ productionOrderId, machineId, position }: any) => {
       return apiRequest("/api/machine-queues/assign", {
@@ -358,20 +349,19 @@ export default function ProductionQueues() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/machine-queues"] });
       toast({
-        title: "تم التخصيص",
-        description: "تم تخصيص أمر الإنتاج للماكينة بنجاح",
+        title: t('production.queues.assigned'),
+        description: t('production.queues.assignSuccess'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ",
-        description: error.message || "فشل تخصيص أمر الإنتاج",
+        title: t('production.queues.error'),
+        description: error.message || t('production.queues.assignError'),
         variant: "destructive",
       });
     },
   });
 
-  // Reorder queue mutation
   const reorderMutation = useMutation({
     mutationFn: async ({ queueId, newPosition }: any) => {
       return apiRequest("/api/machine-queues/reorder", {
@@ -384,14 +374,13 @@ export default function ProductionQueues() {
     },
     onError: (error: any) => {
       toast({
-        title: "خطأ",
-        description: error.message || "فشل إعادة الترتيب",
+        title: t('production.queues.error'),
+        description: error.message || t('production.queues.reorderError'),
         variant: "destructive",
       });
     },
   });
 
-  // Remove from queue mutation
   const removeMutation = useMutation({
     mutationFn: async (queueId: number) => {
       return apiRequest(`/api/machine-queues/${queueId}`, {
@@ -401,8 +390,8 @@ export default function ProductionQueues() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/machine-queues"] });
       toast({
-        title: "تمت الإزالة",
-        description: "تم إزالة أمر الإنتاج من الطابور",
+        title: t('production.queues.removed'),
+        description: t('production.queues.removeSuccess'),
       });
     },
   });
@@ -425,9 +414,7 @@ export default function ProductionQueues() {
     const sourceMachineId = activeData?.machineId;
     const targetMachineId = overData?.machineId || over.id;
 
-    // Handle moving items
     if (sourceMachineId !== targetMachineId) {
-      // Moving to different machine
       const activeItem = activeData?.item;
       
       if (!activeItem) {
@@ -438,17 +425,14 @@ export default function ProductionQueues() {
       const isQueueItem = "queue_id" in activeItem;
       
       if (targetMachineId === "unassigned") {
-        // Moving back to unassigned
         if (isQueueItem) {
           removeMutation.mutate(activeItem.queue_id);
         }
       } else {
-        // Moving to a machine
         const targetQueue = localQueues[targetMachineId] || [];
         const position = targetQueue.length;
         
         if (isQueueItem) {
-          // Moving from one machine to another - remove and reassign
           removeMutation.mutate(activeItem.queue_id);
           setTimeout(() => {
             assignMutation.mutate({
@@ -458,7 +442,6 @@ export default function ProductionQueues() {
             });
           }, 200);
         } else {
-          // Assigning unassigned order to machine
           assignMutation.mutate({
             productionOrderId: activeItem.id,
             machineId: targetMachineId,
@@ -467,7 +450,6 @@ export default function ProductionQueues() {
         }
       }
     } else if (sourceMachineId && sourceMachineId !== "unassigned") {
-      // Reordering within same machine
       const queue = localQueues[sourceMachineId] || [];
       const activeIndex = queue.findIndex(item => {
         const isQueue = "queue_id" in item;
@@ -484,13 +466,11 @@ export default function ProductionQueues() {
       if (activeIndex !== -1 && overIndex !== -1 && activeIndex !== overIndex) {
         const newQueue = arrayMove(queue, activeIndex, overIndex);
         
-        // Update local state optimistically
         setLocalQueues(prev => ({
           ...prev,
           [sourceMachineId]: newQueue,
         }));
 
-        // Update server
         const activeItem = queue[activeIndex];
         if ("queue_id" in activeItem) {
           reorderMutation.mutate({
@@ -504,18 +484,16 @@ export default function ProductionQueues() {
     setActiveId(null);
   };
 
-  // Apply suggestions
   const applySuggestions = async () => {
     if (!suggestions?.data || suggestions.data.length === 0) {
       toast({
-        title: "لا توجد اقتراحات",
-        description: "جميع أوامر الإنتاج مخصصة بالفعل",
+        title: t('production.queues.noSuggestions'),
+        description: t('production.queues.allAssigned'),
       });
       return;
     }
 
     try {
-      // Apply each suggestion
       for (const suggestion of suggestions.data) {
         await assignMutation.mutateAsync({
           productionOrderId: suggestion.production_order_id,
@@ -530,13 +508,12 @@ export default function ProductionQueues() {
         description: message.description,
       });
       
-      // Refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/machine-queues"] });
       queryClient.invalidateQueries({ queryKey: ["/api/machine-queues/suggest"] });
       queryClient.invalidateQueries({ queryKey: ["/api/production-orders"] });
     } catch (error) {
       toast({
-        title: "❌ خطأ في التوزيع",
+        title: "❌ " + t('production.queues.error'),
         description: toastMessages.queue.errors.distribution,
         variant: "destructive",
       });
@@ -545,11 +522,11 @@ export default function ProductionQueues() {
 
   if (isLoading) {
     return (
-      <PageLayout title="طوابير الإنتاج" description="قم بسحب وإفلات أوامر الإنتاج لتنظيم العمل على المكائن">
+      <PageLayout title={t('production.queues.title')} description={t('production.queues.description')}>
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-gray-600">جاري تحميل الطوابير...</p>
+            <p className="text-gray-600">{t('production.queues.loadingQueues')}</p>
           </div>
         </div>
       </PageLayout>
@@ -559,7 +536,6 @@ export default function ProductionQueues() {
   const activeMachines = machines.filter(m => m.status === "active");
   const unassignedCount = localQueues["unassigned"]?.length || 0;
 
-  // Calculate total capacity statistics
   const totalCapacityStats = capacityStats?.data?.reduce((acc, stat) => {
     acc.totalLoad += stat.currentLoad || 0;
     acc.totalCapacity += stat.maxCapacity || 0;
@@ -572,8 +548,7 @@ export default function ProductionQueues() {
     : 0;
 
   return (
-    <PageLayout title="طوابير الإنتاج" description="قم بسحب وإفلات أوامر الإنتاج لتنظيم العمل على المكائن">
-      {/* Smart Distribution Modal */}
+    <PageLayout title={t('production.queues.title')} description={t('production.queues.description')}>
       <SmartDistributionModal
         isOpen={isDistributionModalOpen}
         onClose={() => setIsDistributionModalOpen(false)}
@@ -592,8 +567,8 @@ export default function ProductionQueues() {
                 queryClient.invalidateQueries({ queryKey: ["/api/machine-queues"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/machines/capacity-stats"] });
                 toast({
-                  title: "✅ تم التحديث",
-                  description: "تم تحديث بيانات الطوابير بنجاح",
+                  title: "✅ " + t('production.queues.refreshed'),
+                  description: t('production.queues.refreshSuccess'),
                 });
               }}
               data-testid="button-refresh-queues"
@@ -607,34 +582,33 @@ export default function ProductionQueues() {
               data-testid="button-smart-distribution"
             >
               <Sparkles className="h-4 w-4" />
-              توزيع ذكي متقدم
+              {t('production.queues.smartDistribution')}
               {unassignedCount > 0 && (
                 <Badge variant="secondary" className="ml-2" data-testid="badge-unassigned-count">
-                  {unassignedCount} أمر
+                  {unassignedCount} {t('production.queues.order')}
                 </Badge>
               )}
             </Button>
           </div>
         </div>
 
-        {/* Capacity Statistics Bar */}
         {totalCapacityStats && totalCapacityStats.totalCapacity > 0 && (
           <Card className="mb-4" data-testid="card-capacity-stats">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">إحصائيات السعة الإجمالية</span>
+                  <span className="text-sm font-medium">{t('production.queues.totalCapacityStats')}</span>
                 </div>
                 <div className="flex items-center gap-4 text-sm">
                   <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground">الحمولة:</span>
+                    <span className="text-muted-foreground">{t('production.queues.load')}:</span>
                     <span className="font-medium" data-testid="text-total-load">
-                      {totalCapacityStats.totalLoad.toFixed(0)} / {totalCapacityStats.totalCapacity.toFixed(0)} كجم
+                      {totalCapacityStats.totalLoad.toFixed(0)} / {totalCapacityStats.totalCapacity.toFixed(0)} {t('common.kg')}
                     </span>
                   </div>
                   <Badge variant="outline" data-testid="badge-active-orders">
-                    {totalCapacityStats.totalOrders} أمر نشط
+                    {totalCapacityStats.totalOrders} {totalCapacityStats.totalOrders === 1 ? t('production.queues.activeOrder') : t('production.queues.activeOrders')}
                   </Badge>
                 </div>
               </div>
@@ -644,20 +618,18 @@ export default function ProductionQueues() {
                 data-testid="progress-utilization"
               />
               <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-                <span data-testid="text-utilization-percentage">نسبة الاستخدام: {overallUtilization.toFixed(1)}%</span>
+                <span data-testid="text-utilization-percentage">{t('production.queues.utilizationPercentage')}: {overallUtilization.toFixed(1)}%</span>
                 <span 
                   className={
                     overallUtilization > 90 ? "text-red-600" :
                     overallUtilization > 70 ? "text-yellow-600" :
-                    overallUtilization > 40 ? "text-blue-600" :
                     "text-green-600"
                   }
-                  data-testid="text-load-status"
+                  data-testid="text-utilization-status"
                 >
-                  {overallUtilization > 90 ? "حمولة زائدة" :
-                   overallUtilization > 70 ? "حمولة عالية" :
-                   overallUtilization > 40 ? "حمولة متوسطة" :
-                   "حمولة منخفضة"}
+                  {overallUtilization > 90 ? t('production.queues.overload') :
+                   overallUtilization > 70 ? t('production.queues.high') :
+                   t('production.queues.normal')}
                 </span>
               </div>
             </CardContent>
@@ -665,69 +637,28 @@ export default function ProductionQueues() {
         )}
       </div>
 
-      {activeMachines.length === 0 ? (
-        <Card className="p-8 text-center">
-          <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">لا توجد مكائن نشطة</h2>
-          <p className="text-muted-foreground">
-            يجب تفعيل مكينة واحدة على الأقل لإدارة طوابير الإنتاج
-          </p>
-        </Card>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {/* Unassigned orders column */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+          <MachineColumn
+            machine={null}
+            items={localQueues["unassigned"] || []}
+            t={t}
+          />
+          {activeMachines.map((machine) => (
             <MachineColumn
-              machine={null}
-              items={localQueues["unassigned"] || []}
+              key={machine.id}
+              machine={machine}
+              items={localQueues[machine.id] || []}
+              t={t}
             />
-            
-            {/* Machine columns */}
-            {activeMachines.map((machine) => (
-              <MachineColumn
-                key={machine.id}
-                machine={machine}
-                items={localQueues[machine.id] || []}
-              />
-            ))}
-          </div>
-
-          <DragOverlay>
-            {activeId && (() => {
-              // Find the active item
-              let activeItem: any = null;
-              Object.values(localQueues).forEach(queue => {
-                const found = queue.find(item => {
-                  const isQueue = "queue_id" in item;
-                  const itemId = isQueue ? `queue-${item.queue_id}` : `order-${item.id}`;
-                  return itemId === activeId;
-                });
-                if (found) activeItem = found;
-              });
-
-              return activeItem ? (
-                <Card className="shadow-2xl opacity-90">
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4" />
-                      <span className="font-medium">
-                        {"production_order_number" in activeItem 
-                          ? activeItem.production_order_number 
-                          : "أمر إنتاج"}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : null;
-            })()}
-          </DragOverlay>
-        </DndContext>
-      )}
+          ))}
+        </div>
+      </DndContext>
     </PageLayout>
   );
 }
