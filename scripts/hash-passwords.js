@@ -126,7 +126,6 @@ async function hashPasswords() {
     console.log(
       `🔓 Users with plaintext passwords: ${plaintextPasswordsFound}`,
     );
-    console.log(`⚠️  Users with no password: ${usersWithNoPassword}`);
     console.log(
       `✅ Users with properly hashed passwords: ${allUsers.length - plaintextPasswordsFound - usersWithNoPassword}`,
     );
