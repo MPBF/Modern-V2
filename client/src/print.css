@@ -25,15 +25,25 @@
 /* 4. وضع الطباعة الفعلي (الحل الآمن) */
 @media print {
 
-  /* الخطوة الأهم: إخفاء كل شيء باستخدام الشفافية وليس الإلغاء */
+  /* إخفاء كل شيء أولاً */
   body {
     visibility: hidden;
     background: #fff;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* إخفاء عناصر المعاينة بشكل كامل */
+  .no-print,
+  .print-preview-overlay {
+    display: none !important;
+    visibility: hidden !important;
   }
 
   /* إظهار منطقة الطباعة فقط */
   .print-area {
-    visibility: visible;
+    display: block !important;
+    visibility: visible !important;
     position: absolute;
     left: 0;
     top: 0;
@@ -47,12 +57,7 @@
 
   /* التأكد من ظهور محتويات منطقة الطباعة */
   .print-area * {
-    visibility: visible;
-  }
-
-  /* إخفاء عناصر المعاينة */
-  .no-print {
-    display: none !important;
+    visibility: visible !important;
   }
 
   /* ضمان طباعة الألوان */

@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState, useEffect } from "react";
+import { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X, Printer, Download, ExternalLink } from "lucide-react";
 import { Button } from "../ui/button";
@@ -110,6 +110,7 @@ export default function OrderPrintTemplate({
 
   const [isPrinting, setIsPrinting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const hasAutoTriggered = useRef(false);
 
   const customerProductsMap = useMemo(
     () => new Map(customerProducts?.map((cp) => [cp.id, cp]) || []),
@@ -332,26 +333,31 @@ export default function OrderPrintTemplate({
   }, [order?.order_number]);
 
   useEffect(() => {
-    if (mode === "html" && canPrint) {
+    if (hasAutoTriggered.current || !canPrint) return;
+    
+    if (mode === "html") {
+      hasAutoTriggered.current = true;
       const timer = setTimeout(() => {
         handleHtmlPrint();
       }, 500);
       return () => clearTimeout(timer);
     }
-    if (mode === "pdf" && canPrint) {
+    if (mode === "pdf") {
+      hasAutoTriggered.current = true;
       const timer = setTimeout(() => {
         handlePdfExport();
       }, 500);
       return () => clearTimeout(timer);
     }
-    if (mode === "standalone" && canPrint) {
+    if (mode === "standalone") {
+      hasAutoTriggered.current = true;
       const timer = setTimeout(() => {
         handleStandalone();
         onClose();
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [mode, canPrint, handleHtmlPrint, handlePdfExport, handleStandalone, onClose]);
+  }, [mode, canPrint]);
 
   return (
     <>
