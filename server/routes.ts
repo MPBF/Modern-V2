@@ -3389,7 +3389,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: req.body.status || "active",
       };
 
-      console.log("Processed user data:", processedData);
       const user = await storage.createUser(processedData);
       console.log("Created user:", user);
       res.json(user);
