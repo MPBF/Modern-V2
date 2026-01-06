@@ -7361,8 +7361,8 @@ export class DatabaseStorage implements IStorage {
       
       for (const tableName of allTables) {
         try {
-          // Query table count using raw SQL (same as backup logic)
-          const countResult: any = await db.execute(sql.raw(`SELECT COUNT(*) as count FROM "${tableName}"`));
+          // Query table count using sql.identifier for safe dynamic table names
+          const countResult: any = await db.execute(sql`SELECT COUNT(*) as count FROM ${sql.identifier(tableName)}`);
           const rowCount = parseInt(countResult.rows[0]?.count || '0');
           totalRecords += rowCount;
         } catch (err) {
