@@ -7413,8 +7413,8 @@ export class DatabaseStorage implements IStorage {
 
       for (const tableName of allTables) {
         try {
-          // Query table data directly using raw SQL
-          const tableDataQuery = await db.execute(sql.raw(`SELECT * FROM "${tableName}"`));
+          // Query table data using Drizzle's sql.identifier for safe dynamic table names
+          const tableDataQuery = await db.execute(sql`SELECT * FROM ${sql.identifier(tableName)}`);
           backupData.tables[tableName] = tableDataQuery.rows;
           backedUpTables++;
           console.log(`✓ تم نسخ الجدول: ${tableName} (${backedUpTables}/${allTables.length}) - ${tableDataQuery.rows.length} سجل`);
