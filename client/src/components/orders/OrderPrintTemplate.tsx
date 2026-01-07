@@ -158,9 +158,16 @@ export default function OrderPrintTemplate({
     }, 0);
   }, [sortedOrders]);
   const qrUrl = useMemo(() => {
-    const data = `Order:${order?.order_number}`;
-    return `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(data)}&color=000000`;
-  }, [order?.order_number]);
+    const qrData = [
+      `رقم الطلب: ${order?.order_number || '-'}`,
+      `العميل: ${customer?.name_ar || customer?.name || '-'}`,
+      `التاريخ: ${orderDateStr}`,
+      `التسليم: ${deliveryDateStr}`,
+      `الإجمالي: ${totalWeight.toFixed(2)} كجم`,
+      `المندوب: ${salesRep?.full_name || '-'}`,
+    ].join('\n');
+    return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}&color=000000`;
+  }, [order?.order_number, customer, orderDateStr, deliveryDateStr, totalWeight, salesRep]);
 
   // --- Handlers ---
   const handleHtmlPrint = useCallback(async () => {
