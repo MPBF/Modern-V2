@@ -103,18 +103,17 @@ export default function ProductionOrderPrintTemplate({
       <style>
         {`
           @media print {
-            /* Hide ALL elements by default */
-            body *, #root * {
-              visibility: hidden !important;
+            /* Hide preview elements */
+            .print-preview-overlay,
+            .print-preview-toolbar,
+            .print-preview-paper,
+            .no-print {
+              display: none !important;
             }
 
-            /* Show ONLY the production print area and its contents */
-            .production-print-area,
-            .production-print-area * {
-              visibility: visible !important;
-            }
-
+            /* Show and position the print area */
             .production-print-area {
+              display: block !important;
               position: absolute !important;
               left: 0 !important;
               top: 0 !important;
@@ -122,14 +121,6 @@ export default function ProductionOrderPrintTemplate({
               margin: 0 !important;
               padding: 5mm !important;
               background: white !important;
-            }
-
-            /* Ensure preview is completely hidden */
-            .print-preview-overlay,
-            .print-preview-toolbar,
-            .print-preview-paper {
-              display: none !important;
-              visibility: hidden !important;
             }
 
             @page {

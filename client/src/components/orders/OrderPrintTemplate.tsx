@@ -270,18 +270,17 @@ export default function OrderPrintTemplate({
       <style>
         {`
           @media print {
-            /* Hide ALL elements by default */
-            body *, #root * {
-              visibility: hidden !important;
+            /* Hide preview elements */
+            .print-preview-overlay,
+            .print-preview-toolbar,
+            .print-preview-paper,
+            .no-print {
+              display: none !important;
             }
 
-            /* Show ONLY the order print area and its contents */
-            .order-print-area,
-            .order-print-area * {
-              visibility: visible !important;
-            }
-
+            /* Show and position the print area */
             .order-print-area {
+              display: block !important;
               position: absolute !important;
               left: 0 !important;
               top: 0 !important;
@@ -289,14 +288,6 @@ export default function OrderPrintTemplate({
               margin: 0 !important;
               padding: 5mm !important;
               background: white !important;
-            }
-
-            /* Ensure preview is completely hidden */
-            .print-preview-overlay,
-            .print-preview-toolbar,
-            .print-preview-paper {
-              display: none !important;
-              visibility: hidden !important;
             }
 
             /* Force A4 Landscape */
@@ -388,13 +379,13 @@ function PrintContent({ data }: { data: any }) {
 
   // Inline styles for guaranteed print consistency
   const styles = {
-    page: { width: "100%", fontFamily: "Segoe UI, Tahoma, Arial, sans-serif", direction: "rtl" as const, color: "#000" },
+    page: { width: "100%", fontFamily: "Segoe UI, Tahoma, Arial, sans-serif", direction: "rtl" as const, color: "#000", fontWeight: 600 as const },
     header: { display: "flex", borderBottom: "2px solid #1a365d", paddingBottom: "10px", marginBottom: "15px" },
-    h1: { fontSize: "20px", color: "#1a365d", margin: 0, fontWeight: "bold" },
-    table: { width: "100%", borderCollapse: "collapse" as const, fontSize: "11px", marginBottom: "10px" },
-    th: { background: "#e8f4fd", border: "1px solid #999", padding: "6px", color: "black", fontWeight: "bold", textAlign: "center" as const },
-    td: { border: "1px solid #999", padding: "5px", textAlign: "center" as const },
-    metaBox: { fontSize: "12px", textAlign: "left" as const },
+    h1: { fontSize: "22px", color: "#1a365d", margin: 0, fontWeight: 800 as const },
+    table: { width: "100%", borderCollapse: "collapse" as const, fontSize: "12px", marginBottom: "10px", fontWeight: 600 as const },
+    th: { background: "#e8f4fd", border: "1px solid #666", padding: "6px", color: "black", fontWeight: 800 as const, textAlign: "center" as const },
+    td: { border: "1px solid #666", padding: "5px", textAlign: "center" as const, fontWeight: 600 as const },
+    metaBox: { fontSize: "13px", textAlign: "left" as const, fontWeight: 600 as const },
     footer: { display: "flex", justifyContent: "space-between", marginTop: "20px", borderTop: "1px solid #ccc", paddingTop: "10px" }
   };
 
@@ -444,14 +435,15 @@ function PrintContent({ data }: { data: any }) {
       <table style={styles.table}>
         <thead>
           <tr>
-            <th style={{ ...styles.th, width: "5%" }}>#</th>
-            <th style={{ ...styles.th, width: "20%", textAlign: "right" }}>الصنف</th>
-            <th style={{ ...styles.th, width: "10%" }}>المقاس</th>
-            <th style={{ ...styles.th, width: "15%" }}>المواصفات</th>
-            <th style={{ ...styles.th, width: "10%" }}>الخامة</th>
-            <th style={{ ...styles.th, width: "10%" }}>الطباعة</th>
-            <th style={{ ...styles.th, width: "10%" }}>الكمية</th>
-            <th style={{ ...styles.th, width: "20%" }}>ملاحظات</th>
+            <th style={{ ...styles.th, width: "4%" }}>#</th>
+            <th style={{ ...styles.th, width: "18%", textAlign: "right" }}>الصنف</th>
+            <th style={{ ...styles.th, width: "8%" }}>المقاس</th>
+            <th style={{ ...styles.th, width: "12%" }}>المواصفات</th>
+            <th style={{ ...styles.th, width: "8%" }}>الخامة</th>
+            <th style={{ ...styles.th, width: "6%" }}>الطباعة</th>
+            <th style={{ ...styles.th, width: "10%" }}>مقاس السلندر</th>
+            <th style={{ ...styles.th, width: "8%" }}>الكمية</th>
+            <th style={{ ...styles.th, width: "18%" }}>ملاحظات</th>
           </tr>
         </thead>
         <tbody>
@@ -464,21 +456,22 @@ function PrintContent({ data }: { data: any }) {
             return (
               <tr key={po.id}>
                 <td style={styles.td}>{idx + 1}</td>
-                <td style={{ ...styles.td, textAlign: "right", fontWeight: "bold" }}>
+                <td style={{ ...styles.td, textAlign: "right", fontWeight: 700 }}>
                   {item?.name_ar || item?.name || "-"}
-                  <div style={{ fontSize: "10px", color: "#666" }}>{cp?.size_caption}</div>
+                  <div style={{ fontSize: "10px", color: "#444", fontWeight: 600 }}>{cp?.size_caption}</div>
                 </td>
                 <td style={{ ...styles.td, direction: "ltr" }}>{cp?.width ? `${cp.width} cm` : "-"}</td>
                 <td style={styles.td}>
                    <div style={{ direction: "ltr" }}>{cp?.thickness ? `${cp.thickness} mic` : "-"}</div>
-                   <div style={{ fontSize: "10px" }}>{color.name_ar}</div>
+                   <div style={{ fontSize: "10px", fontWeight: 600 }}>{color.name_ar}</div>
                 </td>
-                <td style={{ ...styles.td, fontWeight: "bold" }}>{cp?.raw_material || "بيور"}</td>
+                <td style={{ ...styles.td, fontWeight: 700 }}>{cp?.raw_material || "بيور"}</td>
                 <td style={styles.td}>
-                   {cp?.is_printed ? <span style={{color:"green", fontWeight:"bold"}}>نعم</span> : "لا"}
+                   {cp?.is_printed ? <span style={{color:"#16a34a", fontWeight: 800, fontSize: "16px"}}>✓</span> : <span style={{color:"#dc2626", fontWeight: 800, fontSize: "16px"}}>✗</span>}
                 </td>
-                <td style={{ ...styles.td, fontWeight: "bold", fontSize: "12px" }}>{formatNumber(qty)}</td>
-                <td style={{ ...styles.td, fontSize: "10px", textAlign: "right" }}>{po.notes || "-"}</td>
+                <td style={{ ...styles.td, fontWeight: 700 }}>{cp?.printing_cylinder || "-"}</td>
+                <td style={{ ...styles.td, fontWeight: 800, fontSize: "13px" }}>{formatNumber(qty)}</td>
+                <td style={{ ...styles.td, fontSize: "10px", textAlign: "right", fontWeight: 600 }}>{po.notes || "-"}</td>
               </tr>
             );
           })}
