@@ -229,29 +229,31 @@ export default function OrderPrintTemplate({
   }, [canPrint, isExporting, order?.order_number]);
 
   const handleStandalone = useCallback(() => {
-    const printArea = document.querySelector(".print-area");
+    const printArea = document.querySelector(".order-print-area");
     if (!printArea) return;
     const newWindow = window.open("", "_blank");
     if (!newWindow) return;
 
-    // HTML content for standalone window (simplified for brevity as logic is same)
+    // HTML content for standalone window
     newWindow.document.write(`
       <!DOCTYPE html>
       <html lang="ar" dir="rtl">
         <head>
-          <title>Order #${order?.order_number}</title>
+          <title>أمر تشغيل #${order?.order_number}</title>
           <style>
-            @page { size: A4 landscape; margin: 0; }
-            body { margin: 0; padding: 20px; font-family: sans-serif; direction: rtl; }
-            .print-page { width: 100%; max-width: 100%; }
-            /* Add other critical CSS here if needed */
+            @page { size: A4 landscape; margin: 5mm; }
+            body { margin: 0; padding: 20px; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; font-weight: 600; }
+            .print-content-root { width: 100%; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px; }
+            th { background: #e8f4fd; border: 1px solid #666; padding: 6px; font-weight: 800; text-align: center; }
+            td { border: 1px solid #666; padding: 5px; text-align: center; font-weight: 600; }
+            img { max-width: 100%; }
           </style>
         </head>
         <body>${printArea.innerHTML}</body>
       </html>
     `);
     newWindow.document.close();
-    newWindow.print();
   }, [order?.order_number]);
 
   // --- Auto Trigger Effect ---
@@ -265,7 +267,7 @@ export default function OrderPrintTemplate({
       } else if (mode === "pdf") {
         setTimeout(handlePdfExport, 500);
       } else if (mode === "standalone") {
-        setTimeout(() => { handleStandalone(); onClose(); }, 300);
+        setTimeout(() => { handleStandalone(); }, 300);
       }
     };
     trigger();
