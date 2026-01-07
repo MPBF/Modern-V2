@@ -20,18 +20,6 @@
   .print-preview-paper,
   .toolbar {
     display: none !important;
-    visibility: hidden !important;
-    height: 0 !important;
-  }
-
-  /* إظهار منطقة الطباعة فقط - استخدام الأسماء المحددة لكل مكون */
-  .order-print-area,
-  .production-print-area {
-    display: block !important;
-    visibility: visible !important;
-    transform-origin: top left;
-    /* يتم ضبط قيمة --print-scale من المكوّن تلقائيًا */
-    transform: scale(var(--print-scale, 1));
   }
 }
 

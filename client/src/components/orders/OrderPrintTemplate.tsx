@@ -265,41 +265,35 @@ export default function OrderPrintTemplate({
   }, [mode, canPrint, handleHtmlPrint, handlePdfExport, handleStandalone, onClose]);
 
   return (
-    <>
-      {/* This Style block is CRITICAL for isolating the print area.
-        It hides the entire body but shows the .print-area div.
-      */}
+    <div className="order-print-container">
+      {/* This Style block is CRITICAL for isolating the print area. */}
       <style>
         {`
           @media print {
-            /* Hide everything by default */
-            body * {
-              visibility: hidden;
-            }
-
-            /* Hide the preview interface specifically */
-            .print-preview-overlay, 
-            .print-preview-toolbar, 
-            .print-preview-paper,
-            .no-print {
+            /* Hide EVERYTHING first */
+            body > * {
               display: none !important;
             }
 
-            /* Show ONLY this specific print area and its children */
-            .order-print-area, .order-print-area * {
-              visibility: visible;
+            /* Show ONLY the order print container */
+            body > .order-print-container {
+              display: block !important;
             }
 
-            /* Position the print area to fill the page */
-            .order-print-area {
-              position: fixed;
+            .order-print-container .order-print-area {
+              display: block !important;
+              position: absolute;
               left: 0;
               top: 0;
               width: 100%;
               margin: 0;
-              padding: 5mm; /* Add some padding for the paper edge */
+              padding: 5mm;
               background: white;
-              z-index: 9999;
+            }
+
+            /* Hide preview elements completely */
+            .order-print-container .print-preview-overlay {
+              display: none !important;
             }
 
             /* Force A4 Landscape */
@@ -381,7 +375,7 @@ export default function OrderPrintTemplate({
             data={{ order, customer, salesRep, productionOrders: sortedOrders, customerProductsMap, itemsMap, totalWeight, orderDateStr, deliveryDateStr, qrUrl }} 
           />
       </div>
-    </>
+    </div>
   );
 }
 

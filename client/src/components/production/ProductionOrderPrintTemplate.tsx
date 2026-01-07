@@ -98,39 +98,35 @@ export default function ProductionOrderPrintTemplate({
       : 0;
 
   return (
-    <>
+    <div className="production-print-container">
       {/* Scoped print styles for this component */}
       <style>
         {`
           @media print {
-            /* Hide everything by default */
-            body * {
-              visibility: hidden;
-            }
-
-            /* Hide the preview interface */
-            .print-preview-overlay, 
-            .print-preview-toolbar, 
-            .print-preview-paper,
-            .no-print {
+            /* Hide EVERYTHING first */
+            body > * {
               display: none !important;
             }
 
-            /* Show ONLY this specific production print area */
-            .production-print-area, .production-print-area * {
-              visibility: visible;
+            /* Show ONLY the production print container */
+            body > .production-print-container {
+              display: block !important;
             }
 
-            /* Position the print area */
-            .production-print-area {
-              position: fixed;
+            .production-print-container .production-print-area {
+              display: block !important;
+              position: absolute;
               left: 0;
               top: 0;
               width: 100%;
               margin: 0;
               padding: 5mm;
               background: white;
-              z-index: 9999;
+            }
+
+            /* Hide preview elements completely */
+            .production-print-container .print-preview-overlay {
+              display: none !important;
             }
 
             @page {
@@ -206,7 +202,7 @@ export default function ProductionOrderPrintTemplate({
           rolls={rolls}
         />
       </div>
-    </>
+    </div>
   );
 }
 
