@@ -178,7 +178,7 @@ export default function ProductionOrderPrintTemplate({
       </div>
 
       {/* المحتوى الفعلي للطباعة - مخفي على الشاشة ويظهر فقط عند الطباعة */}
-      <div className="production-print-area">
+      <div className="production-print-area" style={{ position: 'absolute', left: '-9999px', top: 0 }}>
         <PrintContentInner
           productionOrder={productionOrder}
           order={order}

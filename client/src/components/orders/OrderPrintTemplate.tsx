@@ -368,10 +368,8 @@ export default function OrderPrintTemplate({
       </div>
 
       {/* --- ACTUAL PRINT AREA (Hidden on Screen, Visible on Print) --- */}
-      {/* Note: We render this separately so we can apply the 'position: fixed' hack 
-         without messing up the scrollable preview overlay.
-      */}
-      <div className="order-print-area" style={{ display: isPrinting ? 'block' : 'none' }}>
+      {/* Always rendered but hidden off-screen. CSS @media print will show it. */}
+      <div className="order-print-area" style={{ position: 'absolute', left: '-9999px', top: 0 }}>
          <PrintContent 
             data={{ order, customer, salesRep, productionOrders: sortedOrders, customerProductsMap, itemsMap, totalWeight, orderDateStr, deliveryDateStr, qrUrl }} 
           />
