@@ -270,30 +270,33 @@ export default function OrderPrintTemplate({
       <style>
         {`
           @media print {
-            /* Hide EVERYTHING first */
-            body > * {
+            /* Hide ALL elements by default */
+            body *, #root * {
+              visibility: hidden !important;
+            }
+
+            /* Show ONLY the order print area and its contents */
+            .order-print-area,
+            .order-print-area * {
+              visibility: visible !important;
+            }
+
+            .order-print-area {
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 100% !important;
+              margin: 0 !important;
+              padding: 5mm !important;
+              background: white !important;
+            }
+
+            /* Ensure preview is completely hidden */
+            .print-preview-overlay,
+            .print-preview-toolbar,
+            .print-preview-paper {
               display: none !important;
-            }
-
-            /* Show ONLY the order print container */
-            body > .order-print-container {
-              display: block !important;
-            }
-
-            .order-print-container .order-print-area {
-              display: block !important;
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-              margin: 0;
-              padding: 5mm;
-              background: white;
-            }
-
-            /* Hide preview elements completely */
-            .order-print-container .print-preview-overlay {
-              display: none !important;
+              visibility: hidden !important;
             }
 
             /* Force A4 Landscape */
