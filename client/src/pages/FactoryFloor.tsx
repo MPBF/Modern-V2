@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
-import PageLayout from "@/components/layout/PageLayout";
-import FactoryFloorMap from "@/components/factory/FactoryFloorMap";
+import PageLayout from "../components/layout/PageLayout";
+import FactoryFloorMap from "../components/factory/FactoryFloorMap";
 
 export default function FactoryFloor() {
   const { t } = useTranslation();
