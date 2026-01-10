@@ -65,15 +65,20 @@ async function getSystemPrompt(): Promise<string> {
   const settings = await db.select().from(ai_agent_settings);
   const knowledge = await db.select().from(ai_agent_knowledge).where(eq(ai_agent_knowledge.is_active, true));
   
-  const customPrompt = settings.find(s => s.key === "system_prompt")?.value || "";
+  const agentName = settings.find(s => s.key === "agent_name")?.value || "المساعد الذكي";
+  const companyName = settings.find(s => s.key === "company_name")?.value || "مصنع الأكياس البلاستيكية";
+  const defaultGreeting = settings.find(s => s.key === "default_greeting")?.value || "";
+  const responseStyle = settings.find(s => s.key === "response_style")?.value || "ودي ومحترف";
+  const customInstructions = settings.find(s => s.key === "custom_instructions")?.value || "";
   const vatRate = settings.find(s => s.key === "vat_rate")?.value || "0.15";
   
   let knowledgeText = "";
   if (knowledge.length > 0) {
-    knowledgeText = "\n\nالمعلومات المتاحة:\n" + knowledge.map(k => `- ${k.title}: ${k.content}`).join("\n");
+    knowledgeText = "\n\n### المعلومات المتاحة من قاعدة المعرفة:\n" + 
+      knowledge.map(k => `**${k.title}** (${k.category}): ${k.content}`).join("\n\n");
   }
 
-  return `أنت مساعد ذكي لنظام إدارة مصنع أكياس بلاستيك. يمكنك:
+  return `أنت ${agentName}، مساعد ذكي لشركة ${companyName}. يمكنك:
 1. الإجابة على أسئلة حول الطلبات وحالتها
 2. الإجابة على أسئلة حول الإنتاج وأوامر الإنتاج
 3. الإجابة على أسئلة حول كميات الإنتاج
@@ -81,6 +86,8 @@ async function getSystemPrompt(): Promise<string> {
 5. تحويل العملات (العملة الأساسية: الريال السعودي SAR)
 6. قراءة وتحليل الملفات المرفقة
 
+${defaultGreeting ? `رسالة الترحيب: ${defaultGreeting}\n` : ""}
+أسلوب الرد: ${responseStyle}
 العملة الأساسية هي الريال السعودي (ر.س). نسبة ضريبة القيمة المضافة: ${parseFloat(vatRate) * 100}%
 
 عند سؤالك عن طلب معين، استخدم الأدوات المتاحة للحصول على البيانات من قاعدة البيانات.
@@ -89,7 +96,7 @@ async function getSystemPrompt(): Promise<string> {
 - الرقم الضريبي (14 رقم)
 - الأصناف (الاسم، الوحدة، السعر، الكمية)
 
-${customPrompt}
+${customInstructions ? `### تعليمات إضافية:\n${customInstructions}\n` : ""}
 ${knowledgeText}
 
 قم بالرد باللغة العربية دائماً.`;
@@ -748,18 +755,28 @@ export function registerAiAgentRoutes(app: Express): void {
 
   // ===== رفع الملفات وقراءتها =====
   app.post("/api/ai-agent/upload", upload.single("file"), async (req: Request, res: Response) => {
+    const file = req.file;
+    const filePath = file?.path;
+    
+    const cleanupFile = () => {
+      if (filePath && fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (e) {
+          console.error("Failed to cleanup temp file:", e);
+        }
+      }
+    };
+    
     try {
-      const file = req.file;
       if (!file) {
         return res.status(400).json({ error: "لم يتم رفع أي ملف" });
       }
 
       let content = "";
-      const filePath = file.path;
 
       if (file.mimetype.startsWith("image/")) {
-        // للصور: استخدام OpenAI Vision API
-        const imageBuffer = fs.readFileSync(filePath);
+        const imageBuffer = fs.readFileSync(filePath!);
         const base64Image = imageBuffer.toString("base64");
         const imageUrl = `data:${file.mimetype};base64,${base64Image}`;
         
@@ -779,13 +796,11 @@ export function registerAiAgentRoutes(app: Express): void {
         content = visionResponse.choices[0]?.message?.content || "لم يتم التعرف على محتوى الصورة";
         
       } else if (file.mimetype === "text/plain" || file.mimetype === "text/csv") {
-        // للملفات النصية
-        content = fs.readFileSync(filePath, "utf-8");
+        content = fs.readFileSync(filePath!, "utf-8");
         
       } else if (file.mimetype.includes("spreadsheet") || file.mimetype.includes("excel")) {
-        // لملفات Excel
         const workbook = new XLSX.Workbook();
-        await workbook.xlsx.readFile(filePath);
+        await workbook.xlsx.readFile(filePath!);
         const worksheet = workbook.worksheets[0];
         
         const rows: string[][] = [];
@@ -806,21 +821,20 @@ export function registerAiAgentRoutes(app: Express): void {
         }
         
       } else if (file.mimetype === "application/pdf") {
-        // لملفات PDF - نقرأها كنص (يحتاج مكتبة PDF parser)
         content = `ملف PDF تم رفعه: ${file.originalname}. لقراءة محتوى PDF، يرجى استخدام أداة متخصصة.`;
       }
 
-      // حذف الملف المؤقت
-      fs.unlinkSync(filePath);
+      cleanupFile();
 
       res.json({
         success: true,
         filename: file.originalname,
         mimetype: file.mimetype,
         size: file.size,
-        content: content.substring(0, 10000) // حد أقصى 10000 حرف
+        content: content.substring(0, 10000)
       });
     } catch (error) {
+      cleanupFile();
       console.error("File upload error:", error);
       res.status(500).json({ error: "فشل في معالجة الملف" });
     }
