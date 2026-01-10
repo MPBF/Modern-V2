@@ -44,6 +44,9 @@ export type PermissionKey =
   | 'view_tools'
   | 'view_production_reports'
   | 'view_orders'
+  | 'view_ai_agent'
+  | 'use_ai_agent'
+  | 'manage_ai_agent'
   | 'admin'; // Super admin permission
 
 export interface Permission {
@@ -349,6 +352,29 @@ export const PERMISSIONS: Permission[] = [
     description: 'View orders without editing permissions'
   },
   
+  // AI Agent
+  { 
+    id: 'view_ai_agent', 
+    name: 'View AI Agent', 
+    name_ar: 'عرض الوكيل الذكي', 
+    category: 'الوكيل الذكي',
+    description: 'Access to view AI agent interface'
+  },
+  { 
+    id: 'use_ai_agent', 
+    name: 'Use AI Agent', 
+    name_ar: 'استخدام الوكيل الذكي', 
+    category: 'الوكيل الذكي',
+    description: 'Use AI agent chat and tools'
+  },
+  { 
+    id: 'manage_ai_agent', 
+    name: 'Manage AI Agent', 
+    name_ar: 'إدارة الوكيل الذكي', 
+    category: 'الوكيل الذكي',
+    description: 'Manage AI agent settings and knowledge base'
+  },
+  
   // Admin
   { 
     id: 'admin', 
@@ -401,6 +427,10 @@ export const ROUTE_PERMISSIONS: Record<string, PermissionKey[]> = {
   '/twilio-content': ['manage_whatsapp', 'admin'],
   '/whatsapp-template-test': ['manage_whatsapp', 'admin'],
   '/whatsapp-webhooks': ['manage_whatsapp', 'admin'],
+  
+  // AI Agent
+  '/ai-agent': ['view_ai_agent', 'use_ai_agent'],
+  '/ai-agent-settings': ['manage_ai_agent', 'admin'],
 };
 
 // Settings tabs permissions
@@ -465,5 +495,6 @@ export const PERMISSION_CATEGORIES = [
   'التقارير',
   'المراقبة',
   'التكامل',
+  'الوكيل الذكي',
   'النظام'
 ];

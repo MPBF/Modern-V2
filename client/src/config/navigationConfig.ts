@@ -138,6 +138,15 @@ export const navigationItems: NavigationItem[] = [
     group: 'primary',
   },
   {
+    name: "إعدادات الوكيل",
+    name_ar: "إعدادات الوكيل",
+    name_en: "AI Settings",
+    icon: Settings,
+    path: "/ai-agent-settings",
+    priority: 13,
+    group: 'admin',
+  },
+  {
     name: "الإعدادات",
     name_ar: "الإعدادات",
     name_en: "Settings",
