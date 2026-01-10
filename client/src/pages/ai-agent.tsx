@@ -12,12 +12,17 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { useToast } from "../hooks/use-toast";
 import { apiRequest } from "../lib/queryClient";
-import { Bot, Send, FileText, Loader2, Download, History, User } from "lucide-react";
+import { Bot, Send, FileText, Loader2, Download, History, User, Paperclip, X, Image, FileSpreadsheet, File } from "lucide-react";
 import type { Quote } from "../../../shared/schema";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+  fileInfo?: {
+    filename: string;
+    mimetype: string;
+    size: number;
+  };
 }
 
 function ChatPanel() {
@@ -26,7 +31,10 @@ function ChatPanel() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -34,19 +42,93 @@ function ChatPanel() {
     }
   }, [messages]);
 
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ title: "خطأ", description: "حجم الملف يجب أن يكون أقل من 10 ميجابايت", variant: "destructive" });
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
 
-    const userMessage: Message = { role: "user", content: input.trim() };
+  const clearFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const getFileIcon = (mimetype: string) => {
+    if (mimetype.startsWith("image/")) return <Image className="h-4 w-4" />;
+    if (mimetype.includes("spreadsheet") || mimetype.includes("excel")) return <FileSpreadsheet className="h-4 w-4" />;
+    return <File className="h-4 w-4" />;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} بايت`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} كيلوبايت`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} ميجابايت`;
+  };
+
+  const sendMessage = async () => {
+    if ((!input.trim() && !selectedFile) || isLoading) return;
+
+    let messageContent = input.trim();
+    let fileContent = "";
+    let fileInfo: Message["fileInfo"] | undefined;
+
+    if (selectedFile) {
+      setIsUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        
+        const uploadResponse = await fetch("/api/ai-agent/upload", {
+          method: "POST",
+          body: formData,
+        });
+        
+        const uploadResult = await uploadResponse.json();
+        if (uploadResult.error) {
+          toast({ title: "خطأ", description: uploadResult.error, variant: "destructive" });
+          setIsUploading(false);
+          return;
+        }
+        
+        fileContent = `\n\n[محتوى الملف "${uploadResult.filename}":\n${uploadResult.content}]`;
+        fileInfo = {
+          filename: uploadResult.filename,
+          mimetype: uploadResult.mimetype,
+          size: uploadResult.size,
+        };
+        clearFile();
+      } catch (error) {
+        toast({ title: "خطأ", description: "فشل في رفع الملف", variant: "destructive" });
+        setIsUploading(false);
+        return;
+      }
+      setIsUploading(false);
+    }
+
+    const fullContent = messageContent + fileContent;
+    const userMessage: Message = { 
+      role: "user", 
+      content: messageContent || `تم إرسال ملف: ${fileInfo?.filename}`,
+      fileInfo 
+    };
+    
     setMessages(prev => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
     try {
+      const messagesForApi = [...messages, { role: "user" as const, content: fullContent }];
       const response = await fetch("/api/ai-agent/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
+        body: JSON.stringify({ messages: messagesForApi }),
       });
 
       const reader = response.body?.getReader();
@@ -109,6 +191,7 @@ function ChatPanel() {
               <li>• الاستعلام عن الطلبات وحالتها</li>
               <li>• معرفة حالة الإنتاج وأوامر الإنتاج</li>
               <li>• إنشاء عروض أسعار للعملاء</li>
+              <li>• تحليل الملفات والصور</li>
             </ul>
           </div>
         ) : (
@@ -119,6 +202,13 @@ function ChatPanel() {
                   {msg.role === "user" ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                 </div>
                 <div className={`max-w-[80%] rounded-lg p-3 ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                  {msg.fileInfo && (
+                    <div className="flex items-center gap-2 mb-2 p-2 rounded bg-black/10 dark:bg-white/10">
+                      {getFileIcon(msg.fileInfo.mimetype)}
+                      <span className="text-xs font-medium">{msg.fileInfo.filename}</span>
+                      <span className="text-xs opacity-70">({formatFileSize(msg.fileInfo.size)})</span>
+                    </div>
+                  )}
                   <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
                 </div>
               </div>
@@ -137,16 +227,44 @@ function ChatPanel() {
         )}
       </ScrollArea>
       <Separator />
+      {selectedFile && (
+        <div className="px-4 pt-2">
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted">
+            {getFileIcon(selectedFile.type)}
+            <span className="text-sm flex-1 truncate">{selectedFile.name}</span>
+            <span className="text-xs text-muted-foreground">{formatFileSize(selectedFile.size)}</span>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={clearFile}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
       <div className="p-4 flex gap-2">
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileSelect}
+          accept="image/*,.txt,.csv,.xlsx,.xls,.pdf"
+          className="hidden"
+        />
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="h-[60px] w-[60px] shrink-0"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isLoading || isUploading}
+        >
+          {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-5 w-5" />}
+        </Button>
         <Textarea
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="اكتب رسالتك هنا..."
+          placeholder="اكتب رسالتك هنا أو أرفق ملفاً..."
           className="min-h-[60px] resize-none"
           disabled={isLoading}
         />
-        <Button onClick={sendMessage} disabled={!input.trim() || isLoading} size="icon" className="h-[60px] w-[60px]">
+        <Button onClick={sendMessage} disabled={(!input.trim() && !selectedFile) || isLoading} size="icon" className="h-[60px] w-[60px]">
           {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
         </Button>
       </div>

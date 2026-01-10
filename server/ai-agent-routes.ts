@@ -1,13 +1,12 @@
 import type { Express, Request, Response } from "express";
 import OpenAI from "openai";
 import { db } from "./db";
-import { orders, production_orders, rolls, quotes, quote_items, customers, ai_agent_settings, ai_agent_knowledge } from "@shared/schema";
+import { orders, production_orders, rolls, quotes, quote_items, customers, ai_agent_settings, ai_agent_knowledge, quote_templates } from "@shared/schema";
 import { eq, desc, sql, and, gte, lte, count, sum } from "drizzle-orm";
 import multer, { FileFilterCallback } from "multer";
 import * as XLSX from "exceljs";
 import * as fs from "fs";
 import * as path from "path";
-import type { Request } from "express";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -178,7 +177,7 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
               type: "object",
               properties: {
                 item_name: { type: "string", description: "اسم الصنف" },
-                unit: { type: "string", enum: ["كيلو", "قطعة", "كرتون", "بندل"], description: "الوحدة" },
+                unit: { type: "string", enum: ["كيلو", "كجم", "طن", "قطعة", "كرتون", "بندل", "رول"], description: "الوحدة" },
                 unit_price: { type: "number", description: "سعر الوحدة قبل الضريبة" },
                 quantity: { type: "number", description: "الكمية" }
               },
@@ -213,6 +212,14 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "get_exchange_rates",
       description: "الحصول على أسعار صرف العملات مقارنة بالريال السعودي",
+      parameters: { type: "object", properties: {} }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_quote_templates",
+      description: "الحصول على نماذج عروض الأسعار الجاهزة. استخدم هذه الأداة لمعرفة المنتجات والأسعار المتاحة قبل إنشاء عرض سعر",
       parameters: { type: "object", properties: {} }
     }
   }
@@ -439,6 +446,34 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
           base_currency_name: "ريال سعودي",
           rates,
           last_updated: new Date().toISOString()
+        });
+      }
+
+      case "get_quote_templates": {
+        const activeTemplates = await db.select().from(quote_templates)
+          .where(eq(quote_templates.is_active, true))
+          .orderBy(quote_templates.name);
+        
+        if (activeTemplates.length === 0) {
+          return JSON.stringify({
+            templates: [],
+            message: "لا توجد نماذج عروض أسعار متاحة حالياً"
+          });
+        }
+        
+        return JSON.stringify({
+          templates: activeTemplates.map(t => ({
+            id: t.id,
+            name: t.name,
+            product_name: t.product_name,
+            product_description: t.product_description,
+            unit_price: t.unit_price,
+            unit: t.unit,
+            min_quantity: t.min_quantity,
+            category: t.category
+          })),
+          count: activeTemplates.length,
+          message: `يوجد ${activeTemplates.length} نموذج متاح لعروض الأسعار`
         });
       }
 
@@ -925,6 +960,91 @@ export function registerAiAgentRoutes(app: Express): void {
     } catch (error) {
       console.error("Error deleting knowledge:", error);
       res.status(500).json({ error: "فشل في الحذف" });
+    }
+  });
+
+  // ===== نماذج عروض الأسعار =====
+  app.get("/api/quote-templates", async (_req: Request, res: Response) => {
+    try {
+      const templates = await db.select().from(quote_templates).orderBy(desc(quote_templates.created_at));
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching quote templates:", error);
+      res.status(500).json({ error: "فشل في جلب النماذج" });
+    }
+  });
+
+  app.get("/api/quote-templates/active", async (_req: Request, res: Response) => {
+    try {
+      const templates = await db.select().from(quote_templates)
+        .where(eq(quote_templates.is_active, true))
+        .orderBy(quote_templates.name);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching active quote templates:", error);
+      res.status(500).json({ error: "فشل في جلب النماذج النشطة" });
+    }
+  });
+
+  app.post("/api/quote-templates", async (req: Request, res: Response) => {
+    try {
+      const { name, description, product_name, product_description, unit_price, unit, min_quantity, specifications, category } = req.body;
+      const [newTemplate] = await db.insert(quote_templates).values({
+        name,
+        description,
+        product_name,
+        product_description,
+        unit_price: String(unit_price),
+        unit: unit || "كجم",
+        min_quantity: min_quantity ? String(min_quantity) : null,
+        specifications,
+        category,
+        is_active: true
+      }).returning();
+      res.json(newTemplate);
+    } catch (error) {
+      console.error("Error creating quote template:", error);
+      res.status(500).json({ error: "فشل في إنشاء النموذج" });
+    }
+  });
+
+  app.put("/api/quote-templates/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { name, description, product_name, product_description, unit_price, unit, min_quantity, specifications, category, is_active } = req.body;
+      
+      const [updated] = await db.update(quote_templates)
+        .set({
+          name,
+          description,
+          product_name,
+          product_description,
+          unit_price: String(unit_price),
+          unit,
+          min_quantity: min_quantity ? String(min_quantity) : null,
+          specifications,
+          category,
+          is_active,
+          updated_at: new Date()
+        })
+        .where(eq(quote_templates.id, id))
+        .returning();
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating quote template:", error);
+      res.status(500).json({ error: "فشل في تحديث النموذج" });
+    }
+  });
+
+  app.delete("/api/quote-templates/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      await db.delete(quote_templates).where(eq(quote_templates.id, id));
+      res.json({ success: true, message: "تم حذف النموذج بنجاح" });
+    } catch (error) {
+      console.error("Error deleting quote template:", error);
+      res.status(500).json({ error: "فشل في حذف النموذج" });
     }
   });
 }

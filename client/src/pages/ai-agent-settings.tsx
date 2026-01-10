@@ -13,7 +13,7 @@ import { Switch } from "../components/ui/switch";
 import { Label } from "../components/ui/label";
 import { useToast } from "../hooks/use-toast";
 import { apiRequest } from "../lib/queryClient";
-import { Plus, Edit, Trash2, Save, Settings, BookOpen, Sparkles } from "lucide-react";
+import { Plus, Edit, Trash2, Save, Settings, BookOpen, Sparkles, FileText } from "lucide-react";
 
 interface Setting {
   id: number;
@@ -34,6 +34,22 @@ interface Knowledge {
   updated_at: string;
 }
 
+interface QuoteTemplate {
+  id: number;
+  name: string;
+  description: string | null;
+  product_name: string;
+  product_description: string | null;
+  unit_price: string;
+  unit: string;
+  min_quantity: string | null;
+  specifications: Record<string, string> | null;
+  is_active: boolean;
+  category: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function AiAgentSettings() {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -42,7 +58,19 @@ export default function AiAgentSettings() {
   const [newKnowledge, setNewKnowledge] = useState({ title: "", content: "", category: "general" });
   const [editingKnowledge, setEditingKnowledge] = useState<Knowledge | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isAddTemplateDialogOpen, setIsAddTemplateDialogOpen] = useState(false);
   const [customInstructions, setCustomInstructions] = useState("");
+  const [newTemplate, setNewTemplate] = useState({
+    name: "",
+    description: "",
+    product_name: "",
+    product_description: "",
+    unit_price: "",
+    unit: "كجم",
+    min_quantity: "",
+    category: ""
+  });
+  const [editingTemplate, setEditingTemplate] = useState<QuoteTemplate | null>(null);
 
   const { data: settings = [], isLoading: loadingSettings } = useQuery<Setting[]>({
     queryKey: ["/api/ai-agent/settings"]
@@ -50,6 +78,10 @@ export default function AiAgentSettings() {
 
   const { data: knowledge = [], isLoading: loadingKnowledge } = useQuery<Knowledge[]>({
     queryKey: ["/api/ai-agent/knowledge"]
+  });
+
+  const { data: templates = [], isLoading: loadingTemplates } = useQuery<QuoteTemplate[]>({
+    queryKey: ["/api/quote-templates"]
   });
 
   const updateSettingMutation = useMutation({
@@ -96,6 +128,39 @@ export default function AiAgentSettings() {
     }
   });
 
+  const addTemplateMutation = useMutation({
+    mutationFn: async (data: typeof newTemplate) => {
+      return apiRequest("/api/quote-templates", { method: "POST", body: JSON.stringify(data) });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quote-templates"] });
+      setNewTemplate({ name: "", description: "", product_name: "", product_description: "", unit_price: "", unit: "كجم", min_quantity: "", category: "" });
+      setIsAddTemplateDialogOpen(false);
+      toast({ title: "تمت الإضافة", description: "تم إضافة نموذج عرض السعر بنجاح" });
+    }
+  });
+
+  const updateTemplateMutation = useMutation({
+    mutationFn: async (data: QuoteTemplate) => {
+      return apiRequest(`/api/quote-templates/${data.id}`, { method: "PUT", body: JSON.stringify(data) });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quote-templates"] });
+      setEditingTemplate(null);
+      toast({ title: "تم التحديث", description: "تم تحديث النموذج بنجاح" });
+    }
+  });
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest(`/api/quote-templates/${id}`, { method: "DELETE" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quote-templates"] });
+      toast({ title: "تم الحذف", description: "تم حذف النموذج بنجاح" });
+    }
+  });
+
   const categoryLabels: Record<string, string> = {
     general: "عام",
     products: "المنتجات",
@@ -126,14 +191,18 @@ export default function AiAgentSettings() {
         </div>
 
         <Tabs defaultValue="settings" dir="rtl">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
-              الإعدادات الأساسية
+              الإعدادات
             </TabsTrigger>
             <TabsTrigger value="knowledge" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
               قاعدة المعرفة
+            </TabsTrigger>
+            <TabsTrigger value="templates" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              نماذج الأسعار
             </TabsTrigger>
           </TabsList>
 
@@ -393,6 +462,231 @@ export default function AiAgentSettings() {
                             <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
                               {item.content.length > 200 ? item.content.slice(0, 200) + "..." : item.content}
                             </p>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="templates">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>نماذج عروض الأسعار</CardTitle>
+                  <CardDescription>نماذج جاهزة يستخدمها الوكيل الذكي لإنشاء عروض أسعار سريعة</CardDescription>
+                </div>
+                <Dialog open={isAddTemplateDialogOpen} onOpenChange={setIsAddTemplateDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 ml-2" />
+                      إضافة نموذج
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-lg" dir="rtl">
+                    <DialogHeader>
+                      <DialogTitle>إضافة نموذج عرض سعر</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-4 max-h-[60vh] overflow-y-auto">
+                      <div>
+                        <Label>اسم النموذج</Label>
+                        <Input
+                          value={newTemplate.name}
+                          onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
+                          placeholder="مثال: أكياس تسوق بلاستيك"
+                        />
+                      </div>
+                      <div>
+                        <Label>اسم المنتج</Label>
+                        <Input
+                          value={newTemplate.product_name}
+                          onChange={(e) => setNewTemplate({ ...newTemplate, product_name: e.target.value })}
+                          placeholder="مثال: أكياس بلاستيك HDPE"
+                        />
+                      </div>
+                      <div>
+                        <Label>وصف المنتج</Label>
+                        <Textarea
+                          value={newTemplate.product_description}
+                          onChange={(e) => setNewTemplate({ ...newTemplate, product_description: e.target.value })}
+                          placeholder="وصف تفصيلي للمنتج..."
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>سعر الوحدة (ريال)</Label>
+                          <Input
+                            type="number"
+                            value={newTemplate.unit_price}
+                            onChange={(e) => setNewTemplate({ ...newTemplate, unit_price: e.target.value })}
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div>
+                          <Label>الوحدة</Label>
+                          <Select
+                            value={newTemplate.unit}
+                            onValueChange={(value) => setNewTemplate({ ...newTemplate, unit: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="كجم">كجم</SelectItem>
+                              <SelectItem value="طن">طن</SelectItem>
+                              <SelectItem value="قطعة">قطعة</SelectItem>
+                              <SelectItem value="كرتون">كرتون</SelectItem>
+                              <SelectItem value="رول">رول</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div>
+                        <Label>الحد الأدنى للكمية</Label>
+                        <Input
+                          type="number"
+                          value={newTemplate.min_quantity}
+                          onChange={(e) => setNewTemplate({ ...newTemplate, min_quantity: e.target.value })}
+                          placeholder="اختياري"
+                        />
+                      </div>
+                      <div>
+                        <Label>التصنيف</Label>
+                        <Input
+                          value={newTemplate.category}
+                          onChange={(e) => setNewTemplate({ ...newTemplate, category: e.target.value })}
+                          placeholder="مثال: أكياس تسوق"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setIsAddTemplateDialogOpen(false)}>
+                          إلغاء
+                        </Button>
+                        <Button
+                          onClick={() => addTemplateMutation.mutate(newTemplate)}
+                          disabled={addTemplateMutation.isPending || !newTemplate.name || !newTemplate.product_name || !newTemplate.unit_price}
+                        >
+                          إضافة
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                {loadingTemplates ? (
+                  <div className="text-center py-8 text-muted-foreground">جاري التحميل...</div>
+                ) : templates.length === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">لا توجد نماذج عروض أسعار بعد</p>
+                    <p className="text-sm text-muted-foreground">أضف نماذج لتسهيل إنشاء عروض الأسعار</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {templates.map((template) => (
+                      <div
+                        key={template.id}
+                        className={`border rounded-lg p-4 ${!template.is_active ? "opacity-50" : ""}`}
+                      >
+                        {editingTemplate?.id === template.id ? (
+                          <div className="space-y-4">
+                            <Input
+                              value={editingTemplate.name}
+                              onChange={(e) => setEditingTemplate({ ...editingTemplate, name: e.target.value })}
+                              placeholder="اسم النموذج"
+                            />
+                            <Input
+                              value={editingTemplate.product_name}
+                              onChange={(e) => setEditingTemplate({ ...editingTemplate, product_name: e.target.value })}
+                              placeholder="اسم المنتج"
+                            />
+                            <div className="grid grid-cols-2 gap-4">
+                              <Input
+                                type="number"
+                                value={editingTemplate.unit_price}
+                                onChange={(e) => setEditingTemplate({ ...editingTemplate, unit_price: e.target.value })}
+                                placeholder="السعر"
+                              />
+                              <Select
+                                value={editingTemplate.unit}
+                                onValueChange={(value) => setEditingTemplate({ ...editingTemplate, unit: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="كجم">كجم</SelectItem>
+                                  <SelectItem value="طن">طن</SelectItem>
+                                  <SelectItem value="قطعة">قطعة</SelectItem>
+                                  <SelectItem value="كرتون">كرتون</SelectItem>
+                                  <SelectItem value="رول">رول</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={editingTemplate.is_active}
+                                  onCheckedChange={(checked) => setEditingTemplate({ ...editingTemplate, is_active: checked })}
+                                />
+                                <Label>مفعّل</Label>
+                              </div>
+                              <div className="flex-1" />
+                              <Button variant="outline" size="sm" onClick={() => setEditingTemplate(null)}>
+                                إلغاء
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => updateTemplateMutation.mutate(editingTemplate)}
+                                disabled={updateTemplateMutation.isPending}
+                              >
+                                حفظ
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h4 className="font-medium">{template.name}</h4>
+                                <p className="text-sm text-muted-foreground">{template.product_name}</p>
+                                <div className="flex gap-2 mt-2">
+                                  <span className="text-sm font-medium text-primary">
+                                    {Number(template.unit_price).toLocaleString("ar-SA")} ريال/{template.unit}
+                                  </span>
+                                  {template.min_quantity && (
+                                    <span className="text-xs text-muted-foreground">
+                                      (الحد الأدنى: {template.min_quantity} {template.unit})
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setEditingTemplate(template)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive"
+                                  onClick={() => {
+                                    if (confirm("هل أنت متأكد من حذف هذا النموذج؟")) {
+                                      deleteTemplateMutation.mutate(template.id);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
                           </>
                         )}
                       </div>

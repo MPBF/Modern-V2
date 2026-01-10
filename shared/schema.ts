@@ -3024,5 +3024,33 @@ export const insertAiAgentKnowledgeSchema = createInsertSchema(ai_agent_knowledg
   updated_at: true,
 });
 
+// ===== نماذج عروض الأسعار =====
+
+export const quote_templates = pgTable("quote_templates", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  product_name: varchar("product_name", { length: 255 }).notNull(),
+  product_description: text("product_description"),
+  unit_price: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  unit: varchar("unit", { length: 50 }).notNull().default("كجم"),
+  min_quantity: decimal("min_quantity", { precision: 10, scale: 2 }),
+  specifications: jsonb("specifications").$type<Record<string, string>>(),
+  is_active: boolean("is_active").default(true).notNull(),
+  category: varchar("category", { length: 100 }),
+  created_at: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updated_at: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  created_by: integer("created_by").references(() => users.id),
+});
+
+export type QuoteTemplate = typeof quote_templates.$inferSelect;
+export type InsertQuoteTemplate = typeof quote_templates.$inferInsert;
+
+export const insertQuoteTemplateSchema = createInsertSchema(quote_templates).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
 // Chat models for OpenAI integration
 export * from "./models/chat";
