@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -29,12 +30,6 @@ interface RollWithDetails extends Roll {
   employee_name?: string;
 }
 
-const stageLabels = {
-  film: "مرحلة الفيلم",
-  printing: "مرحلة الطباعة",
-  cutting: "مرحلة التقطيع",
-};
-
 const nextStage = {
   film: "printing",
   printing: "cutting",
@@ -42,6 +37,7 @@ const nextStage = {
 };
 
 export default function RollsTable({ stage }: RollsTableProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -50,6 +46,10 @@ export default function RollsTable({ stage }: RollsTableProps) {
     queryKey: ["/api/rolls", stage],
     queryFn: () => fetch(`/api/rolls?stage=${stage}`).then((res) => res.json()),
   });
+
+  const getStageLabel = (stageKey: string) => {
+    return t(`production.stageNames.${stageKey}`);
+  };
 
   const updateRollMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
@@ -82,16 +82,16 @@ export default function RollsTable({ stage }: RollsTableProps) {
       queryClient.refetchQueries({ queryKey: ["/api/rolls"], type: "active" });
 
       toast({
-        title: "تم تحديث الرول بنجاح",
+        title: t("production.rolls.updateSuccess"),
         description: updates.stage
-          ? `تم نقل الرول إلى ${stageLabels[updates.stage as keyof typeof stageLabels]}`
-          : "تم تحديث بيانات الرول",
+          ? `${t("production.rolls.movedToStage")} ${getStageLabel(updates.stage)}`
+          : t("production.rolls.dataUpdated"),
       });
     },
     onError: () => {
       toast({
-        title: "خطأ في التحديث",
-        description: "فشل في تحديث الرول",
+        title: t("production.rolls.updateError"),
+        description: t("production.rolls.updateFailed"),
         variant: "destructive",
       });
     },
@@ -123,24 +123,22 @@ export default function RollsTable({ stage }: RollsTableProps) {
       const response = await fetch(`/api/rolls/${rollId}/label`);
       const labelData = await response.json();
 
-      // إنشاء نافذة طباعة جديدة
       const printWindow = window.open("", "_blank", "width=400,height=500");
       if (!printWindow) {
         toast({
-          title: "خطأ في فتح نافذة الطباعة",
-          description: "تأكد من السماح للنوافذ المنبثقة",
+          title: t("production.rolls.printWindowError"),
+          description: t("production.rolls.allowPopups"),
           variant: "destructive",
         });
         return;
       }
 
-      // HTML للليبل بمقاس 4" × 5"
       const labelHTML = `
         <!DOCTYPE html>
         <html dir="rtl">
         <head>
           <meta charset="UTF-8">
-          <title>ليبل الرول - ${labelData.roll_number}</title>
+          <title>${t("production.rolls.rollLabel")} - ${labelData.roll_number}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
@@ -218,38 +216,38 @@ export default function RollsTable({ stage }: RollsTableProps) {
         </head>
         <body>
           <div class="header">
-            <div class="title">ليبل الرول</div>
+            <div class="title">${t("production.rolls.rollLabel")}</div>
             <div class="subtitle">${labelData.label_dimensions.width} × ${labelData.label_dimensions.height}</div>
           </div>
           
           <div class="content">
             <div class="info-section">
               <div class="info-row">
-                <span class="label">رقم الرول:</span>
+                <span class="label">${t("production.rollNumber")}:</span>
                 <span class="value">${labelData.roll_number}</span>
               </div>
               <div class="info-row">
-                <span class="label">أمر الإنتاج:</span>
+                <span class="label">${t("production.orderNumber")}:</span>
                 <span class="value">${labelData.production_order_number}</span>
               </div>
               <div class="info-row">
-                <span class="label">العميل:</span>
+                <span class="label">${t("orders.customer")}:</span>
                 <span class="value">${labelData.customer_name}</span>
               </div>
               <div class="info-row">
-                <span class="label">الوزن:</span>
+                <span class="label">${t("common.weight")}:</span>
                 <span class="value">${labelData.weight_kg}</span>
               </div>
               <div class="info-row">
-                <span class="label">المرحلة:</span>
+                <span class="label">${t("production.stage")}:</span>
                 <span class="value">${labelData.stage}</span>
               </div>
               <div class="info-row">
-                <span class="label">الماكينة:</span>
+                <span class="label">${t("production.machine")}:</span>
                 <span class="value">${labelData.machine_name}</span>
               </div>
               <div class="info-row">
-                <span class="label">تاريخ الإنتاج:</span>
+                <span class="label">${t("production.rolls.productionDate")}:</span>
                 <span class="value">${labelData.created_at}</span>
               </div>
             </div>
@@ -260,7 +258,7 @@ export default function RollsTable({ stage }: RollsTableProps) {
             <div class="qr-section">
               <img src="data:image/png;base64,${labelData.qr_png_base64}" 
                    alt="QR Code" class="qr-code" />
-              <div style="font-size: 8px; margin-top: 3px;">امسح للمعلومات</div>
+              <div style="font-size: 8px; margin-top: 3px;">${t("production.rolls.scanForInfo")}</div>
             </div>
             `
                 : ""
@@ -268,7 +266,7 @@ export default function RollsTable({ stage }: RollsTableProps) {
           </div>
           
           <div class="footer">
-            تاريخ الطباعة: ${new Date().toLocaleDateString("ar")} | نظام إدارة الإنتاج
+            ${t("production.rolls.printDate")}: ${new Date().toLocaleDateString("ar")} | ${t("common.appName")}
           </div>
         </body>
         </html>
@@ -277,19 +275,17 @@ export default function RollsTable({ stage }: RollsTableProps) {
       printWindow.document.write(labelHTML);
       printWindow.document.close();
 
-      // انتظار تحميل الصور ثم طباعة
       setTimeout(() => {
         printWindow.print();
         printWindow.close();
       }, 500);
 
       toast({
-        title: "تم إرسال الليبل للطباعة",
-        description: `ليبل الرول ${labelData.roll_number}`,
+        title: t("production.rolls.labelSentToPrint"),
+        description: `${t("production.rolls.rollLabel")} ${labelData.roll_number}`,
         variant: "default",
       });
       
-      // تحديث البيانات بعد الطباعة
       queryClient.invalidateQueries({ queryKey: ["/api/rolls"] });
       queryClient.invalidateQueries({ queryKey: ["/api/production-orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/production/hierarchical-orders"] });
@@ -299,15 +295,15 @@ export default function RollsTable({ stage }: RollsTableProps) {
     } catch (error) {
       console.error("Error printing label:", error);
       toast({
-        title: "خطأ في طباعة الليبل",
-        description: "حدث خطأ أثناء توليد الليبل للطباعة",
+        title: t("production.rolls.labelPrintError"),
+        description: t("production.rolls.labelGenerationError"),
         variant: "destructive",
       });
     }
   };
 
-  const getStatusColor = (stage: string) => {
-    switch (stage) {
+  const getStatusColor = (stageValue: string) => {
+    switch (stageValue) {
       case "done":
         return "bg-green-100 text-green-800";
       case "cutting":
@@ -320,23 +316,23 @@ export default function RollsTable({ stage }: RollsTableProps) {
     }
   };
 
-  const getStatusText = (stage: string) => {
-    switch (stage) {
+  const getStatusText = (stageValue: string) => {
+    switch (stageValue) {
       case "done":
-        return "مكتمل";
+        return t("production.statuses.completed");
       case "cutting":
-        return "مرحلة التقطيع";
+        return t("production.stageNames.cutting");
       case "printing":
-        return "مرحلة الطباعة";
+        return t("production.stageNames.printing");
       case "film":
-        return "مرحلة الفيلم";
+        return t("production.stageNames.film");
       default:
-        return stage;
+        return stageValue;
     }
   };
 
-  const getStatusIcon = (stage: string) => {
-    switch (stage) {
+  const getStatusIcon = (stageValue: string) => {
+    switch (stageValue) {
       case "done":
         return <CheckCircle className="w-4 h-4 text-green-600" />;
       case "cutting":
@@ -355,7 +351,7 @@ export default function RollsTable({ stage }: RollsTableProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="w-5 h-5" />
-            الرولات - {stageLabels[stage as keyof typeof stageLabels]}
+            {t("production.rolls.title")} - {getStageLabel(stage)}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -383,13 +379,13 @@ export default function RollsTable({ stage }: RollsTableProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="w-5 h-5" />
-            الرولات - {stageLabels[stage as keyof typeof stageLabels]}
+            {t("production.rolls.title")} - {getStageLabel(stage)}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
             <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">لا توجد رولات في هذه المرحلة</p>
+            <p className="text-gray-500">{t("production.rolls.noRollsInStage")}</p>
           </div>
         </CardContent>
       </Card>
@@ -401,7 +397,7 @@ export default function RollsTable({ stage }: RollsTableProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Package className="w-5 h-5" />
-          الرولات - {stageLabels[stage as keyof typeof stageLabels]}
+          {t("production.rolls.title")} - {getStageLabel(stage)}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -411,25 +407,25 @@ export default function RollsTable({ stage }: RollsTableProps) {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  رقم الرول
+                  {t("production.rollNumber")}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  أمر التشغيل
+                  {t("production.rolls.productionOrder")}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  الوزن (كجم)
+                  {t("production.rolls.weightKg")}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  المكينة
+                  {t("production.machine")}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  المسؤول/التوقيت
+                  {t("production.rolls.responsibleTiming")}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  الحالة
+                  {t("common.status")}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  الإجراءات
+                  {t("common.actions")}
                 </th>
               </tr>
             </thead>
@@ -437,27 +433,26 @@ export default function RollsTable({ stage }: RollsTableProps) {
               {rolls.map((roll) => (
                 <tr key={roll.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {roll.roll_number || "غير محدد"}
+                    {roll.roll_number || t("common.notSpecified")}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {roll.production_order_number || "غير محدد"}
+                    {roll.production_order_number || t("common.notSpecified")}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {roll.weight_kg
                       ? parseFloat(roll.weight_kg.toString()).toFixed(1)
-                      : "غير محدد"}
+                      : t("common.notSpecified")}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {roll.machine_name_ar || roll.machine_name || "غير محدد"}
+                    {roll.machine_name_ar || roll.machine_name || t("common.notSpecified")}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div className="space-y-1">
-                      {/* إنتاج */}
                       <div className="flex items-center gap-1 text-xs">
                         <span className="font-medium text-blue-600">
-                          إنتاج:
+                          {t("production.rolls.production")}:
                         </span>
-                        <span>{`مستخدم ${roll.created_by || "غير محدد"}`}</span>
+                        <span>{`${t("production.rolls.user")} ${roll.created_by || t("common.notSpecified")}`}</span>
                       </div>
                       <div className="text-xs text-gray-400">
                         {roll.created_at
@@ -465,13 +460,12 @@ export default function RollsTable({ stage }: RollsTableProps) {
                           : ""}
                       </div>
 
-                      {/* طباعة */}
                       {roll.printed_by && (
                         <div className="flex items-center gap-1 text-xs">
                           <span className="font-medium text-green-600">
-                            طباعة:
+                            {t("production.rolls.printing")}:
                           </span>
-                          <span>{`مستخدم ${roll.printed_by}`}</span>
+                          <span>{`${t("production.rolls.user")} ${roll.printed_by}`}</span>
                         </div>
                       )}
                       {roll.printed_at && (
@@ -480,13 +474,12 @@ export default function RollsTable({ stage }: RollsTableProps) {
                         </div>
                       )}
 
-                      {/* قص */}
                       {roll.cut_by && (
                         <div className="flex items-center gap-1 text-xs">
                           <span className="font-medium text-purple-600">
-                            قص:
+                            {t("production.rolls.cutting")}:
                           </span>
-                          <span>{`مستخدم ${roll.cut_by}`}</span>
+                          <span>{`${t("production.rolls.user")} ${roll.cut_by}`}</span>
                         </div>
                       )}
                       {roll.cut_completed_at && (
@@ -511,7 +504,6 @@ export default function RollsTable({ stage }: RollsTableProps) {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center space-x-2 space-x-reverse">
-                      {/* زر طباعة الليبل */}
                       <Button
                         size="sm"
                         variant="outline"
@@ -520,10 +512,9 @@ export default function RollsTable({ stage }: RollsTableProps) {
                         data-testid={`button-print-label-${roll.id}`}
                       >
                         <Tag className="w-3 h-3" />
-                        ليبل
+                        {t("production.rolls.label")}
                       </Button>
 
-                      {/* زر QR */}
                       <Button
                         size="sm"
                         variant="outline"
@@ -537,7 +528,6 @@ export default function RollsTable({ stage }: RollsTableProps) {
                         QR
                       </Button>
 
-                      {/* زر نقل المرحلة */}
                       {(roll.stage || "") !== "done" ? (
                         <Button
                           size="sm"
@@ -553,12 +543,12 @@ export default function RollsTable({ stage }: RollsTableProps) {
                           ] ? (
                             <>
                               <ArrowRight className="w-3 h-3" />
-                              نقل للمرحلة التالية
+                              {t("production.rolls.moveToNextStage")}
                             </>
                           ) : (
                             <>
                               <CheckCircle className="w-3 h-3" />
-                              إنهاء
+                              {t("production.rolls.finish")}
                             </>
                           )}
                         </Button>
@@ -567,7 +557,7 @@ export default function RollsTable({ stage }: RollsTableProps) {
                           variant="secondary"
                           className="bg-green-100 text-green-800"
                         >
-                          مكتمل
+                          {t("production.statuses.completed")}
                         </Badge>
                       )}
                     </div>
@@ -597,40 +587,39 @@ export default function RollsTable({ stage }: RollsTableProps) {
               
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
-                  <span className="text-muted-foreground text-xs">الوزن:</span>
-                  <div className="font-medium">{roll.weight_kg ? parseFloat(roll.weight_kg.toString()).toFixed(1) : "0"} كجم</div>
+                  <span className="text-muted-foreground text-xs">{t("common.weight")}:</span>
+                  <div className="font-medium">{roll.weight_kg ? parseFloat(roll.weight_kg.toString()).toFixed(1) : "0"} {t("common.kg")}</div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground text-xs">الماكينة:</span>
+                  <span className="text-muted-foreground text-xs">{t("production.machine")}:</span>
                   <div className="font-medium text-xs">{roll.machine_name_ar || roll.machine_name}</div>
                 </div>
               </div>
               
               <div className="text-xs bg-gray-50 p-2 rounded">
-                <div className="font-medium mb-1">المسؤولون:</div>
+                <div className="font-medium mb-1">{t("production.rolls.responsible")}:</div>
                 <div className="space-y-1 text-gray-700">
-                  {roll.created_by && <div>إنتاج: {roll.created_by}</div>}
-                  {roll.printed_by && <div className="text-green-600">طباعة: {roll.printed_by}</div>}
-                  {roll.cut_by && <div className="text-purple-600">قص: {roll.cut_by}</div>}
+                  {roll.created_by && <div>{t("production.rolls.production")}: {roll.created_by}</div>}
+                  {roll.printed_by && <div className="text-green-600">{t("production.rolls.printing")}: {roll.printed_by}</div>}
+                  {roll.cut_by && <div className="text-purple-600">{t("production.rolls.cutting")}: {roll.cut_by}</div>}
                 </div>
               </div>
               
-              <div className="flex gap-1 overflow-x-auto">
-                <Button size="sm" variant="outline" onClick={() => printLabel(roll.id)} className="text-xs flex-shrink-0">
-                  <Tag className="w-3 h-3 ml-1" />
-                  ليبل
+              <div className="flex gap-2 flex-wrap">
+                <Button size="sm" variant="outline" onClick={() => printLabel(roll.id)}>
+                  <Tag className="w-3 h-3 mr-1" />{t("production.rolls.label")}
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => window.open(`/api/rolls/${roll.id}/qr`, "_blank")} className="text-xs flex-shrink-0">
-                  <QrCode className="w-3 h-3 ml-1" />
-                  QR
+                <Button size="sm" variant="outline" onClick={() => window.open(`/api/rolls/${roll.id}/qr`, "_blank")}>
+                  <QrCode className="w-3 h-3 mr-1" />QR
                 </Button>
-                {(roll.stage || "") !== "done" ? (
-                  <Button size="sm" onClick={() => moveToNextStage(roll.id, roll.stage || "film")} disabled={updateRollMutation.isPending} className="text-xs flex-shrink-0">
-                    <ArrowRight className="w-3 h-3 ml-1" />
-                    {nextStage[(roll.stage || "film") as keyof typeof nextStage] ? "التالي" : "إنهاء"}
+                {(roll.stage || "") !== "done" && (
+                  <Button size="sm" onClick={() => moveToNextStage(roll.id, roll.stage || "film")} disabled={updateRollMutation.isPending}>
+                    {nextStage[(roll.stage || "film") as keyof typeof nextStage] ? (
+                      <><ArrowRight className="w-3 h-3 mr-1" />{t("production.rolls.next")}</>
+                    ) : (
+                      <><CheckCircle className="w-3 h-3 mr-1" />{t("production.rolls.finish")}</>
+                    )}
                   </Button>
-                ) : (
-                  <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">مكتمل</Badge>
                 )}
               </div>
             </div>

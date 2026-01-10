@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -31,6 +32,7 @@ export default function ProductionQueue({
   queueType,
   items,
 }: ProductionQueueProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [processingId, setProcessingId] = useState<number | null>(null);
@@ -77,7 +79,7 @@ export default function ProductionQueue({
 
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.message || "فشل في تسجيل الطباعة");
+          throw new Error(error.message || t("production.queue.printingFailed"));
         }
 
         return response.json();
@@ -97,7 +99,7 @@ export default function ProductionQueue({
 
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.message || "فشل في تسجيل التقطيع");
+          throw new Error(error.message || t("production.queue.cuttingFailed"));
         }
 
         return response.json();
@@ -105,9 +107,9 @@ export default function ProductionQueue({
     },
     onSuccess: () => {
       toast({
-        title: "تم بنجاح",
+        title: t("messages.success"),
         description:
-          queueType === "printing" ? "تم تسجيل الطباعة" : "تم تسجيل التقطيع",
+          queueType === "printing" ? t("production.queue.printingRegistered") : t("production.queue.cuttingRegistered"),
       });
       queryClient.invalidateQueries({
         queryKey: [`/api/production/${queueType}-queue`],
@@ -121,7 +123,7 @@ export default function ProductionQueue({
     },
     onError: (error: Error) => {
       toast({
-        title: "خطأ",
+        title: t("common.error"),
         description: error.message,
         variant: "destructive",
       });
@@ -137,8 +139,8 @@ export default function ProductionQueue({
   const handlePrintConfirm = () => {
     if (!selectedPrintingMachine) {
       toast({
-        title: "خطأ",
-        description: "يرجى اختيار ماكينة الطباعة",
+        title: t("common.error"),
+        description: t("production.queue.selectPrintingMachine"),
         variant: "destructive",
       });
       return;
@@ -159,9 +161,9 @@ export default function ProductionQueue({
 
   const getStatusBadge = (item: any) => {
     if (queueType === "printing") {
-      return <Badge variant="outline">جاهز للطباعة</Badge>;
+      return <Badge variant="outline">{t("production.queue.readyForPrinting")}</Badge>;
     } else if (queueType === "cutting") {
-      return <Badge variant="outline">جاهز للتقطيع</Badge>;
+      return <Badge variant="outline">{t("production.queue.readyForCutting")}</Badge>;
     }
     return null;
   };
@@ -178,7 +180,7 @@ export default function ProductionQueue({
           data-testid={`button-print-${item.id}`}
         >
           <Play className="h-4 w-4 mr-1" />
-          {isProcessing ? "جاري الطباعة..." : "طباعة"}
+          {isProcessing ? t("production.queue.printing") : t("production.stages.printing")}
         </Button>
       );
     } else if (queueType === "cutting") {
@@ -190,7 +192,7 @@ export default function ProductionQueue({
           data-testid={`button-cut-${item.id}`}
         >
           <Scissors className="h-4 w-4 mr-1" />
-          {isProcessing ? "جاري التقطيع..." : "تقطيع"}
+          {isProcessing ? t("production.queue.cutting") : t("production.stages.cutting")}
         </Button>
       );
     }
@@ -203,7 +205,7 @@ export default function ProductionQueue({
         <CardContent className="p-6 text-center">
           <div className="text-gray-500">
             <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>لا توجد عناصر في قائمة الانتظار</p>
+            <p>{t("production.queue.noItemsInQueue")}</p>
           </div>
         </CardContent>
       </Card>
@@ -224,16 +226,16 @@ export default function ProductionQueue({
                       className="font-medium"
                       data-testid={`text-roll-number-${item.id}`}
                     >
-                      {item.roll_number || `رول ${item.id}`}
+                      {item.roll_number || `${t("production.roll")} ${item.id}`}
                     </p>
                     <p className="text-sm text-gray-500">
-                      الوزن:{" "}
+                      {t("common.weight")}:{" "}
                       {parseFloat(item.weight_kg || item.weight || 0).toFixed(2)}{" "}
-                      كجم
+                      {t("common.kg")}
                     </p>
                     {item.film_machine_id && (
                       <p className="text-xs text-gray-400">
-                        ماكينة الفيلم: {item.film_machine_id}
+                        {t("production.queue.filmMachine")}: {item.film_machine_id}
                       </p>
                     )}
                   </div>
@@ -253,22 +255,22 @@ export default function ProductionQueue({
       <Dialog open={printingModalOpen} onOpenChange={setPrintingModalOpen}>
         <DialogContent className="max-w-md" aria-describedby="printing-machine-description">
           <DialogHeader>
-            <DialogTitle>اختيار ماكينة الطباعة</DialogTitle>
+            <DialogTitle>{t("production.queue.selectPrintingMachineTitle")}</DialogTitle>
             <DialogDescription id="printing-machine-description">
-              اختر الماكينة التي ستستخدم لطباعة هذا الرول
+              {t("production.queue.selectMachineDescription")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="printing-machine">ماكينة الطباعة *</Label>
+              <Label htmlFor="printing-machine">{t("production.queue.printingMachineLabel")} *</Label>
               <Select
                 value={selectedPrintingMachine}
                 onValueChange={setSelectedPrintingMachine}
                 disabled={printingMachines.length === 0}
               >
                 <SelectTrigger id="printing-machine" data-testid="select-printing-machine">
-                  <SelectValue placeholder={printingMachines.length === 0 ? "لا توجد مكائن طباعة متاحة" : "اختر ماكينة الطباعة"} />
+                  <SelectValue placeholder={printingMachines.length === 0 ? t("production.queue.noPrintingMachines") : t("production.queue.selectPrintingMachine")} />
                 </SelectTrigger>
                 <SelectContent>
                   {printingMachines.length > 0 ? (
@@ -279,14 +281,14 @@ export default function ProductionQueue({
                     ))
                   ) : (
                     <SelectItem value="none" disabled>
-                      لا توجد مكائن طباعة متاحة
+                      {t("production.queue.noPrintingMachines")}
                     </SelectItem>
                   )}
                 </SelectContent>
               </Select>
               {printingMachines.length === 0 && (
                 <p className="text-sm text-amber-600">
-                  تنبيه: لا توجد مكائن طباعة نشطة حالياً. يرجى تفعيل ماكينة طباعة أولاً.
+                  {t("production.queue.noPrintingMachinesWarning")}
                 </p>
               )}
             </div>
@@ -301,14 +303,14 @@ export default function ProductionQueue({
               }}
               data-testid="button-cancel-printing"
             >
-              إلغاء
+              {t("common.cancel")}
             </Button>
             <Button
               onClick={handlePrintConfirm}
               disabled={!selectedPrintingMachine || processItemMutation.isPending}
               data-testid="button-confirm-printing"
             >
-              {processItemMutation.isPending ? "جاري الطباعة..." : "تأكيد الطباعة"}
+              {processItemMutation.isPending ? t("production.queue.printing") : t("production.queue.confirmPrinting")}
             </Button>
           </div>
         </DialogContent>

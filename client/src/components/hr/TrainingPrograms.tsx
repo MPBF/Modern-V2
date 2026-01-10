@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
@@ -42,6 +43,7 @@ interface TrainingEnrollment {
 }
 
 export default function TrainingPrograms() {
+  const { t } = useTranslation();
   const [selectedProgram, setSelectedProgram] = useState<number | null>(null);
 
   const { data: programs = [], isLoading: programsLoading } = useQuery<
@@ -74,11 +76,11 @@ export default function TrainingPrograms() {
   const getDifficultyText = (level: string) => {
     switch (level) {
       case "beginner":
-        return "مبتدئ";
+        return t("hr.training.beginner");
       case "intermediate":
-        return "متوسط";
+        return t("hr.training.intermediate");
       case "advanced":
-        return "متقدم";
+        return t("hr.training.advanced");
       default:
         return level;
     }
@@ -102,13 +104,13 @@ export default function TrainingPrograms() {
   const getStatusText = (status: string) => {
     switch (status) {
       case "completed":
-        return "مكتمل";
+        return t("hr.training.completed");
       case "in_progress":
-        return "قيد التنفيذ";
+        return t("hr.training.inProgress");
       case "not_started":
-        return "لم يبدأ";
+        return t("hr.training.notStarted");
       case "dropped":
-        return "متوقف";
+        return t("hr.training.dropped");
       default:
         return status;
     }
@@ -132,7 +134,7 @@ export default function TrainingPrograms() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            جاري تحميل البرامج التدريبية...
+            {t("hr.training.loadingPrograms")}
           </p>
         </div>
       </div>
@@ -145,15 +147,15 @@ export default function TrainingPrograms() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            منصة التدريب الإلكتروني
+            {t("hr.training.title")}
           </h2>
           <p className="text-gray-600 dark:text-gray-300">
-            إدارة البرامج التدريبية وتتبع تقدم الموظفين
+            {t("hr.training.description")}
           </p>
         </div>
         <Button className="bg-blue-600 hover:bg-blue-700 text-white">
           <Plus className="w-4 h-4 ml-2" />
-          برنامج تدريبي جديد
+          {t("hr.training.newProgram")}
         </Button>
       </div>
 
@@ -164,7 +166,7 @@ export default function TrainingPrograms() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  إجمالي البرامج
+                  {t("hr.training.totalPrograms")}
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {formatNumber(programs.length)}
@@ -180,7 +182,7 @@ export default function TrainingPrograms() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  البرامج النشطة
+                  {t("hr.training.activePrograms")}
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {formatNumber(programs.filter((p) => p.is_active).length)}
@@ -196,7 +198,7 @@ export default function TrainingPrograms() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  إجمالي التسجيلات
+                  {t("hr.training.totalEnrollments")}
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {formatNumber(enrollments.length)}
@@ -212,7 +214,7 @@ export default function TrainingPrograms() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  معدل الإنجاز
+                  {t("hr.training.completionRate")}
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {formatPercentage(
@@ -251,7 +253,7 @@ export default function TrainingPrograms() {
                   </Badge>
                 </div>
                 <Badge variant={program.is_active ? "default" : "secondary"}>
-                  {program.is_active ? "نشط" : "معطل"}
+                  {program.is_active ? t("hr.training.active") : t("hr.training.inactive")}
                 </Badge>
               </div>
             </CardHeader>
@@ -260,23 +262,23 @@ export default function TrainingPrograms() {
               <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">
                 {program.description_ar ||
                   program.description ||
-                  "لا يوجد وصف متاح"}
+                  t("hr.training.noDescription")}
               </p>
 
               <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
                 <div className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
-                  <span>{program.duration_hours} ساعة</span>
+                  <span>{program.duration_hours} {t("hr.training.hours")}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Users className="w-4 h-4" />
-                  <span>{program.max_participants || "غير محدود"}</span>
+                  <span>{program.max_participants || t("hr.training.unlimited")}</span>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span>معدل الإنجاز</span>
+                  <span>{t("hr.training.completionRate")}</span>
                   <span>{getEnrollmentProgress(program.id)}%</span>
                 </div>
                 <Progress
@@ -288,7 +290,7 @@ export default function TrainingPrograms() {
               <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                 <Calendar className="w-3 h-3" />
                 <span>
-                  تم الإنشاء:{" "}
+                  {t("hr.training.createdAt")}:{" "}
                   {new Date(program.created_at).toLocaleDateString("ar")}
                 </span>
               </div>
@@ -299,10 +301,10 @@ export default function TrainingPrograms() {
                   className="flex-1"
                   onClick={() => setSelectedProgram(program.id)}
                 >
-                  عرض التفاصيل
+                  {t("hr.training.viewDetails")}
                 </Button>
                 <Button size="sm" variant="outline" className="flex-1">
-                  تسجيل موظف
+                  {t("hr.training.enrollEmployee")}
                 </Button>
               </div>
             </CardContent>
@@ -316,14 +318,14 @@ export default function TrainingPrograms() {
           <CardContent className="p-12 text-center">
             <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              لا توجد برامج تدريبية
+              {t("hr.training.noPrograms")}
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              ابدأ بإنشاء برنامج تدريبي جديد لتطوير مهارات فريقك
+              {t("hr.training.noProgamsDesc")}
             </p>
             <Button className="bg-blue-600 hover:bg-blue-700 text-white">
               <Plus className="w-4 h-4 ml-2" />
-              إنشاء برنامج تدريبي
+              {t("hr.training.createProgram")}
             </Button>
           </CardContent>
         </Card>

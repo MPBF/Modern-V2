@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
@@ -51,6 +52,7 @@ interface PerformanceCriteria {
 }
 
 export default function PerformanceReviews() {
+  const { t } = useTranslation();
   const [selectedReview, setSelectedReview] = useState<number | null>(null);
 
   const { data: reviews = [], isLoading: reviewsLoading } = useQuery<
@@ -85,13 +87,13 @@ export default function PerformanceReviews() {
   const getStatusText = (status: string) => {
     switch (status) {
       case "completed":
-        return "مكتمل";
+        return t("hr.performance.completed");
       case "in_progress":
-        return "قيد المراجعة";
+        return t("hr.performance.inProgress");
       case "draft":
-        return "مسودة";
+        return t("hr.performance.draft");
       case "approved":
-        return "معتمد";
+        return t("hr.performance.approved");
       default:
         return status;
     }
@@ -117,15 +119,15 @@ export default function PerformanceReviews() {
   const getRatingText = (rating: string) => {
     switch (rating) {
       case "excellent":
-        return "ممتاز";
+        return t("hr.performance.excellent");
       case "very_good":
-        return "جيد جداً";
+        return t("hr.performance.veryGood");
       case "good":
-        return "جيد";
+        return t("hr.performance.good");
       case "needs_improvement":
-        return "يحتاج تحسين";
+        return t("hr.performance.needsImprovement");
       case "unsatisfactory":
-        return "غير مرضي";
+        return t("hr.performance.unsatisfactory");
       default:
         return rating;
     }
@@ -134,13 +136,13 @@ export default function PerformanceReviews() {
   const getReviewTypeText = (type: string) => {
     switch (type) {
       case "annual":
-        return "تقييم سنوي";
+        return t("hr.performance.annualReview");
       case "quarterly":
-        return "تقييم ربع سنوي";
+        return t("hr.performance.quarterlyReview");
       case "project_based":
-        return "تقييم مشروع";
+        return t("hr.performance.projectReview");
       case "probation":
-        return "تقييم فترة تجريبية";
+        return t("hr.performance.probationReview");
       default:
         return type;
     }
@@ -172,7 +174,7 @@ export default function PerformanceReviews() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            جاري تحميل تقييمات الأداء...
+            {t("hr.performance.loadingReviews")}
           </p>
         </div>
       </div>
@@ -185,15 +187,15 @@ export default function PerformanceReviews() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            نظام تقييم الأداء
+            {t("hr.performance.title")}
           </h2>
           <p className="text-gray-600 dark:text-gray-300">
-            متابعة وتقييم أداء الموظفين بشكل دوري ومنهجي
+            {t("hr.performance.description")}
           </p>
         </div>
         <Button className="bg-green-600 hover:bg-green-700 text-white">
           <Plus className="w-4 h-4 ml-2" />
-          تقييم جديد
+          {t("hr.performance.newReview")}
         </Button>
       </div>
 
@@ -204,7 +206,7 @@ export default function PerformanceReviews() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  إجمالي التقييمات
+                  {t("hr.performance.totalReviews")}
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {formatNumber(reviews.length)}
@@ -220,7 +222,7 @@ export default function PerformanceReviews() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  المتوسط العام
+                  {t("hr.performance.averageScore")}
                 </p>
                 <p
                   className={`text-2xl font-bold ${getScoreColor(averageScore)}`}
@@ -238,7 +240,7 @@ export default function PerformanceReviews() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  التقييمات المكتملة
+                  {t("hr.performance.completedReviews")}
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {formatNumber(
@@ -259,7 +261,7 @@ export default function PerformanceReviews() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  قيد المراجعة
+                  {t("hr.performance.pendingReview")}
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {formatNumber(
@@ -278,7 +280,7 @@ export default function PerformanceReviews() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Star className="w-5 h-5" />
-            معايير التقييم النشطة
+            {t("hr.performance.activeCriteria")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -299,7 +301,7 @@ export default function PerformanceReviews() {
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   {criterion.description_ar ||
                     criterion.description ||
-                    "لا يوجد وصف"}
+                    t("hr.performance.noDescription")}
                 </p>
                 <div className="mt-2">
                   <Badge variant="secondary" className="text-xs">
@@ -313,10 +315,10 @@ export default function PerformanceReviews() {
             <div className="text-center py-8">
               <Star className="w-12 h-12 text-gray-400 mx-auto mb-3" />
               <p className="text-gray-600 dark:text-gray-400">
-                لا توجد معايير تقييم محددة
+                {t("hr.performance.noCriteria")}
               </p>
               <Button variant="outline" className="mt-2">
-                إضافة معايير التقييم
+                {t("hr.performance.addCriteria")}
               </Button>
             </div>
           )}
@@ -335,7 +337,7 @@ export default function PerformanceReviews() {
                   </CardTitle>
                   <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                     <User className="w-4 h-4" />
-                    <span>موظف رقم {review.employee_id}</span>
+                    <span>{t("hr.performance.employeeId")} {review.employee_id}</span>
                   </div>
                 </div>
                 <Badge className={getStatusColor(review.status)}>
@@ -348,7 +350,7 @@ export default function PerformanceReviews() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-gray-600 dark:text-gray-400">
-                    فترة التقييم
+                    {t("hr.performance.reviewPeriod")}
                   </p>
                   <p className="font-medium">
                     {new Date(review.review_period_start).toLocaleDateString(
@@ -361,8 +363,8 @@ export default function PerformanceReviews() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-gray-400">المقيم</p>
-                  <p className="font-medium">مدير رقم {review.reviewer_id}</p>
+                  <p className="text-gray-600 dark:text-gray-400">{t("hr.performance.reviewer")}</p>
+                  <p className="font-medium">{t("hr.performance.managerId")} {review.reviewer_id}</p>
                 </div>
               </div>
 
@@ -370,7 +372,7 @@ export default function PerformanceReviews() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600 dark:text-gray-400">
-                      النتيجة الإجمالية
+                      {t("hr.performance.overallScore")}
                     </span>
                     <span
                       className={`font-bold ${getScoreColor(review.overall_score)}`}
@@ -385,7 +387,7 @@ export default function PerformanceReviews() {
               {review.overall_rating && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600 dark:text-gray-400">
-                    التقدير العام
+                    {t("hr.performance.overallRating")}
                   </span>
                   <Badge
                     className={`${getRatingColor(review.overall_rating)} bg-transparent border`}
@@ -398,7 +400,7 @@ export default function PerformanceReviews() {
               <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                 <Calendar className="w-3 h-3" />
                 <span>
-                  تم الإنشاء:{" "}
+                  {t("hr.performance.createdAt")}:{" "}
                   {new Date(review.created_at).toLocaleDateString("ar")}
                 </span>
               </div>
@@ -409,10 +411,10 @@ export default function PerformanceReviews() {
                   className="flex-1"
                   onClick={() => setSelectedReview(review.id)}
                 >
-                  عرض التفاصيل
+                  {t("hr.performance.viewDetails")}
                 </Button>
                 <Button size="sm" variant="outline" className="flex-1">
-                  تحرير
+                  {t("common.edit")}
                 </Button>
               </div>
             </CardContent>
@@ -426,14 +428,14 @@ export default function PerformanceReviews() {
           <CardContent className="p-12 text-center">
             <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              لا توجد تقييمات أداء
+              {t("hr.performance.noReviews")}
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              ابدأ بإنشاء تقييم أداء جديد لتتبع أداء فريقك
+              {t("hr.performance.noReviewsDesc")}
             </p>
             <Button className="bg-green-600 hover:bg-green-700 text-white">
               <Plus className="w-4 h-4 ml-2" />
-              إنشاء تقييم جديد
+              {t("hr.performance.createReview")}
             </Button>
           </CardContent>
         </Card>

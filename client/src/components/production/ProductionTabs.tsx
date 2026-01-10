@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useProductionSSE } from "../../hooks/use-production-sse";
 import { useAuth } from "../../hooks/use-auth";
 import type { Section } from "@/types";
@@ -25,28 +26,23 @@ interface ProductionTabsProps {
 const stages = [
   {
     id: "film",
-    name: "Film Stage",
-    name_ar: "مرحلة الفيلم",
     key: "film",
     icon: Package,
   },
   {
     id: "printing",
-    name: "Printing Stage",
-    name_ar: "مرحلة الطباعة",
     key: "printing",
     icon: Play,
   },
   {
     id: "cutting",
-    name: "Cutting Stage",
-    name_ar: "مرحلة التقطيع",
     key: "cutting",
     icon: Scissors,
   },
 ];
 
 export default function ProductionTabs({ onCreateRoll }: ProductionTabsProps) {
+  const { t } = useTranslation();
   const [activeStage, setActiveStage] = useState<string>("film");
 
   // Get current user information from auth context
@@ -146,13 +142,17 @@ export default function ProductionTabs({ onCreateRoll }: ProductionTabsProps) {
     setActiveStage(defaultStage);
   }
 
+  const getStageName = (key: string) => {
+    return t(`production.stageNames.${key}`);
+  };
+
   return (
     <Card className="border-2 shadow-md">
       <Tabs value={activeStage} onValueChange={setActiveStage}>
         <CardHeader className="p-3 md:p-4 border-b">
           <div className="flex justify-between items-center">
             <CardTitle className="text-xl md:text-2xl">
-              إدارة الإنتاج
+              {t("production.title")}
             </CardTitle>
             <Button
               variant="outline"
@@ -162,7 +162,7 @@ export default function ProductionTabs({ onCreateRoll }: ProductionTabsProps) {
               data-testid="button-refresh-production"
             >
               <RefreshCw className="h-5 w-5" />
-              <span className="hidden sm:inline">تحديث</span>
+              <span className="hidden sm:inline">{t("common.refresh")}</span>
             </Button>
           </div>
           <TabsList
@@ -184,6 +184,8 @@ export default function ProductionTabs({ onCreateRoll }: ProductionTabsProps) {
               else if (stage.key === "cutting")
                 queueCount = cuttingQueue.length;
 
+              const stageName = getStageName(stage.key);
+
               return (
                 <TabsTrigger
                   key={stage.id}
@@ -192,8 +194,8 @@ export default function ProductionTabs({ onCreateRoll }: ProductionTabsProps) {
                   data-testid={`tab-${stage.key}`}
                 >
                   <Icon className="h-5 w-5 md:h-6 md:w-6" />
-                  <span className="hidden sm:inline">{stage.name_ar}</span>
-                  <span className="sm:hidden">{stage.name_ar.split(' ')[1]}</span>
+                  <span className="hidden sm:inline">{stageName}</span>
+                  <span className="sm:hidden">{stageName.split(' ')[1] || stageName}</span>
                   {queueCount > 0 && (
                     <Badge variant="secondary" className="text-xs md:text-sm">
                       {queueCount}

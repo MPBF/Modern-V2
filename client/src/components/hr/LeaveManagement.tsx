@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
@@ -50,6 +51,7 @@ interface UserRequest {
 }
 
 export default function LeaveManagement() {
+  const { t } = useTranslation();
   const [selectedRequest, setSelectedRequest] = useState<UserRequest | null>(
     null
   );
@@ -107,14 +109,14 @@ export default function LeaveManagement() {
       setApprovalComments("");
       setSelectedRequest(null);
       toast({
-        title: "تم تحديث الطلب بنجاح",
-        description: "تم حفظ قرار الموافقة/الرفض",
+        title: t("hr.leaves.updateSuccess"),
+        description: t("hr.leaves.decisionSaved"),
       });
     },
     onError: () => {
       toast({
-        title: "خطأ في تحديث الطلب",
-        description: "حدث خطأ أثناء تحديث حالة الطلب",
+        title: t("hr.leaves.updateError"),
+        description: t("hr.leaves.updateErrorDesc"),
         variant: "destructive",
       });
     },
@@ -263,7 +265,7 @@ export default function LeaveManagement() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            جاري تحميل طلبات المستخدمين...
+            {t("hr.leaves.loadingRequests")}
           </p>
         </div>
       </div>
@@ -276,15 +278,15 @@ export default function LeaveManagement() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            إدارة طلبات المستخدمين
+            {t("hr.leaves.title")}
           </h2>
           <p className="text-gray-600 dark:text-gray-300">
-            مراجعة والموافقة على طلبات المستخدمين
+            {t("hr.leaves.description")}
           </p>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => refetchRequests()} variant="outline" className="text-sm">
-            إعادة تحميل البيانات
+            {t("hr.leaves.reload")}
           </Button>
         </div>
       </div>
@@ -296,7 +298,7 @@ export default function LeaveManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  إجمالي الطلبات
+                  {t("hr.leaves.totalRequests")}
                 </p>
                 <p className="text-2xl font-bold text-blue-600">{Array.isArray(userRequests) ? userRequests.length : 0}</p>
               </div>
@@ -309,7 +311,7 @@ export default function LeaveManagement() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">قيد المراجعة</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t("hr.leaves.pendingReview")}</p>
                 <p className="text-2xl font-bold text-yellow-600">{pendingRequests.length}</p>
               </div>
               <Clock className="w-8 h-8 text-yellow-500" />
@@ -321,7 +323,7 @@ export default function LeaveManagement() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">موافق عليها</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t("hr.leaves.approved")}</p>
                 <p className="text-2xl font-bold text-green-600">{approvedRequests.length}</p>
               </div>
               <CheckCircle className="w-8 h-8 text-green-500" />
@@ -333,7 +335,7 @@ export default function LeaveManagement() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">مرفوضة</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t("hr.leaves.rejected")}</p>
                 <p className="text-2xl font-bold text-red-600">{rejectedRequests.length}</p>
               </div>
               <XCircle className="w-8 h-8 text-red-500" />
@@ -347,33 +349,33 @@ export default function LeaveManagement() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />
-            قائمة طلبات المستخدمين
+            {t("hr.leaves.requestsList")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {requestsLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-gray-600 dark:text-gray-400 mt-2">جاري تحميل الطلبات...</p>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">{t("hr.leaves.loadingRequests")}</p>
             </div>
           ) : !Array.isArray(userRequests) || userRequests.length === 0 ? (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>لا توجد طلبات مسجلة</p>
-              {requestsError && <p className="text-red-500 mt-2">خطأ في تحميل البيانات: {String(requestsError)}</p>}
+              <p>{t("hr.leaves.noRequests")}</p>
+              {requestsError && <p className="text-red-500 mt-2">{t("hr.leaves.loadError")}: {String(requestsError)}</p>}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b bg-gray-50 dark:bg-gray-800">
-                    <th className="text-right p-3 font-semibold">المستخدم</th>
-                    <th className="text-right p-3 font-semibold">نوع الطلب</th>
-                    <th className="text-right p-3 font-semibold">العنوان</th>
-                    <th className="text-right p-3 font-semibold">الأولوية</th>
-                    <th className="text-right p-3 font-semibold">الحالة</th>
-                    <th className="text-right p-3 font-semibold">تاريخ الطلب</th>
-                    <th className="text-center p-3 font-semibold">الإجراءات</th>
+                    <th className="text-right p-3 font-semibold">{t("hr.leaves.user")}</th>
+                    <th className="text-right p-3 font-semibold">{t("hr.leaves.requestType")}</th>
+                    <th className="text-right p-3 font-semibold">{t("hr.leaves.requestTitle")}</th>
+                    <th className="text-right p-3 font-semibold">{t("hr.leaves.priority")}</th>
+                    <th className="text-right p-3 font-semibold">{t("common.status")}</th>
+                    <th className="text-right p-3 font-semibold">{t("hr.leaves.requestDate")}</th>
+                    <th className="text-center p-3 font-semibold">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -422,7 +424,7 @@ export default function LeaveManagement() {
                               }}
                             >
                               <Eye className="w-4 h-4 mr-1" />
-                              عرض
+                              {t("common.view")}
                             </Button>
                             {(request.status?.toLowerCase() === "pending" ||
                               request.status === "معلق" ||
@@ -430,11 +432,11 @@ export default function LeaveManagement() {
                               <>
                                 <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleApproval(request, "approve")}>
                                   <Check className="w-4 h-4 mr-1" />
-                                  موافقة
+                                  {t("hr.leaves.approve")}
                                 </Button>
                                 <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white" onClick={() => handleApproval(request, "reject")}>
                                   <X className="w-4 h-4 mr-1" />
-                                  رفض
+                                  {t("hr.leaves.reject")}
                                 </Button>
                               </>
                             )}
@@ -453,36 +455,36 @@ export default function LeaveManagement() {
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>تفاصيل الطلب</DialogTitle>
-            <DialogDescription>عرض تفاصيل طلب الإجازة وحالة المراجعة</DialogDescription>
+            <DialogTitle>{t("hr.leaves.requestDetails")}</DialogTitle>
+            <DialogDescription>{t("hr.leaves.viewRequestDetails")}</DialogDescription>
           </DialogHeader>
 
           {selectedRequest && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="font-semibold">المستخدم:</Label>
+                  <Label className="font-semibold">{t("hr.leaves.user")}:</Label>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {getUserDisplayName(selectedRequest.user_id)}
                   </p>
                 </div>
                 <div>
-                  <Label className="font-semibold">نوع الطلب:</Label>
+                  <Label className="font-semibold">{t("hr.leaves.requestType")}:</Label>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{selectedRequest.type}</p>
                 </div>
                 <div>
-                  <Label className="font-semibold">العنوان:</Label>
+                  <Label className="font-semibold">{t("hr.leaves.requestTitle")}:</Label>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{selectedRequest.title}</p>
                 </div>
                 <div>
-                  <Label className="font-semibold">الأولوية:</Label>
+                  <Label className="font-semibold">{t("hr.leaves.priority")}:</Label>
                   <Badge className={getPriorityColor(selectedRequest.priority)}>
                     {getPriorityText(selectedRequest.priority)}
                   </Badge>
                 </div>
                 {selectedRequest.start_date && (
                   <div>
-                    <Label className="font-semibold">تاريخ البداية:</Label>
+                    <Label className="font-semibold">{t("hr.leaves.startDate")}:</Label>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       {new Date(selectedRequest.start_date).toLocaleDateString("ar")}
                     </p>
@@ -490,7 +492,7 @@ export default function LeaveManagement() {
                 )}
                 {selectedRequest.end_date && (
                   <div>
-                    <Label className="font-semibold">تاريخ النهاية:</Label>
+                    <Label className="font-semibold">{t("hr.leaves.endDate")}:</Label>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       {new Date(selectedRequest.end_date).toLocaleDateString("ar")}
                     </p>
@@ -498,14 +500,14 @@ export default function LeaveManagement() {
                 )}
                 {selectedRequest.requested_amount && (
                   <div>
-                    <Label className="font-semibold">المبلغ المطلوب:</Label>
+                    <Label className="font-semibold">{t("hr.leaves.requestedAmount")}:</Label>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {selectedRequest.requested_amount} ريال
+                      {selectedRequest.requested_amount} {t("hr.leaves.currency")}
                     </p>
                   </div>
                 )}
                 <div>
-                  <Label className="font-semibold">الحالة:</Label>
+                  <Label className="font-semibold">{t("common.status")}:</Label>
                   <Badge className={getStatusColor(selectedRequest.status)}>
                     {getStatusText(selectedRequest.status)}
                   </Badge>
@@ -513,7 +515,7 @@ export default function LeaveManagement() {
               </div>
 
               <div>
-                <Label className="font-semibold">الوصف:</Label>
+                <Label className="font-semibold">{t("hr.leaves.description")}:</Label>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   {selectedRequest.description}
                 </p>
@@ -521,7 +523,7 @@ export default function LeaveManagement() {
 
               {selectedRequest.manager_comments && (
                 <div>
-                  <Label className="font-semibold">تعليقات المدير:</Label>
+                  <Label className="font-semibold">{t("hr.leaves.managerComments")}:</Label>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     {selectedRequest.manager_comments}
                   </p>
@@ -537,21 +539,21 @@ export default function LeaveManagement() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {approvalAction === "approve" ? "موافقة على الطلب" : "رفض الطلب"}
+              {approvalAction === "approve" ? t("hr.leaves.approveRequest") : t("hr.leaves.rejectRequest")}
             </DialogTitle>
             <DialogDescription>
               {approvalAction === "approve"
-                ? "تأكيد الموافقة على الطلب مع إمكانية إضافة تعليقات"
-                : "رفض الطلب وإضافة تعليقات حول أسباب الرفض"}
+                ? t("hr.leaves.approveConfirmDesc")
+                : t("hr.leaves.rejectConfirmDesc")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="comments">تعليقات (اختياري):</Label>
+              <Label htmlFor="comments">{t("hr.leaves.commentsOptional")}:</Label>
               <Textarea
                 id="comments"
-                placeholder="أضف تعليقات حول قرارك..."
+                placeholder={t("hr.leaves.addCommentsPlaceholder")}
                 value={approvalComments}
                 onChange={(e) => setApprovalComments(e.target.value)}
                 className="mt-1"
@@ -559,7 +561,7 @@ export default function LeaveManagement() {
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsApprovalDialogOpen(false)}>
-                إلغاء
+                {t("common.cancel")}
               </Button>
               <Button
                 onClick={handleSubmitApproval}
@@ -571,17 +573,17 @@ export default function LeaveManagement() {
                 {updateRequestMutation.isPending ? (
                   <div className="flex items-center gap-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    جاري المعالجة...
+                    {t("common.pleaseWait")}
                   </div>
                 ) : approvalAction === "approve" ? (
                   <>
                     <Check className="w-4 h-4 mr-1" />
-                    موافقة
+                    {t("hr.leaves.approve")}
                   </>
                 ) : (
                   <>
                     <X className="w-4 h-4 mr-1" />
-                    رفض
+                    {t("hr.leaves.reject")}
                   </>
                 )}
               </Button>

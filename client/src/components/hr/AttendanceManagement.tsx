@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
@@ -67,6 +68,7 @@ interface ModifiedEntry {
 }
 
 export default function AttendanceManagement() {
+  const { t } = useTranslation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [modifiedEntries, setModifiedEntries] = useState<Map<number, ModifiedEntry>>(new Map());
   const [selectAll, setSelectAll] = useState(false);
@@ -84,7 +86,7 @@ export default function AttendanceManagement() {
     queryKey: ["/api/attendance/manual", dateString],
     queryFn: async () => {
       const response = await fetch(`/api/attendance/manual?date=${dateString}`);
-      if (!response.ok) throw new Error("فشل في جلب بيانات الحضور");
+      if (!response.ok) throw new Error(t("hr.attendance.fetchError"));
       return response.json();
     },
   });
@@ -103,7 +105,7 @@ export default function AttendanceManagement() {
       });
       if (!response.ok) {
         const err = await response.json();
-        throw new Error(err.message || "فشل في حفظ البيانات");
+        throw new Error(err.message || t("hr.attendance.saveError"));
       }
       return response.json();
     },
@@ -113,13 +115,13 @@ export default function AttendanceManagement() {
       setModifiedEntries(new Map());
       setSelectAll(false);
       toast({
-        title: "تم الحفظ بنجاح",
-        description: data.message || `تم حفظ بيانات الحضور`,
+        title: t("hr.attendance.saveSuccess"),
+        description: data.message || t("hr.attendance.dataSaved"),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "خطأ في الحفظ",
+        title: t("hr.attendance.saveErrorTitle"),
         description: error.message,
         variant: "destructive",
       });
@@ -263,8 +265,8 @@ export default function AttendanceManagement() {
     
     if (entriesToSave.length === 0) {
       toast({
-        title: "لا توجد تغييرات",
-        description: "لم يتم إجراء أي تعديلات للحفظ",
+        title: t("hr.attendance.noChanges"),
+        description: t("hr.attendance.noChangesDesc"),
         variant: "destructive",
       });
       return;
@@ -339,7 +341,7 @@ export default function AttendanceManagement() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              تسجيل الحضور اليدوي
+              {t("hr.attendance.manualEntry")}
             </CardTitle>
             
             <div className="flex items-center gap-2">
@@ -395,22 +397,22 @@ export default function AttendanceManagement() {
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
               <UserCheck className="h-5 w-5 text-green-600 mx-auto mb-1" />
               <div className="text-2xl font-bold text-green-700">{stats.present}</div>
-              <div className="text-xs text-green-600">حاضر</div>
+              <div className="text-xs text-green-600">{t("hr.present")}</div>
             </div>
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
               <UserX className="h-5 w-5 text-red-600 mx-auto mb-1" />
               <div className="text-2xl font-bold text-red-700">{stats.absent}</div>
-              <div className="text-xs text-red-600">غائب</div>
+              <div className="text-xs text-red-600">{t("hr.absent")}</div>
             </div>
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
               <LogOut className="h-5 w-5 text-gray-600 mx-auto mb-1" />
               <div className="text-2xl font-bold text-gray-700">{stats.left}</div>
-              <div className="text-xs text-gray-600">مغادر</div>
+              <div className="text-xs text-gray-600">{t("hr.attendance.left")}</div>
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
               <Users className="h-5 w-5 text-blue-600 mx-auto mb-1" />
               <div className="text-2xl font-bold text-blue-700">{stats.total}</div>
-              <div className="text-xs text-blue-600">إجمالي</div>
+              <div className="text-xs text-blue-600">{t("common.total")}</div>
             </div>
           </div>
 
@@ -418,7 +420,7 @@ export default function AttendanceManagement() {
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="بحث بالاسم أو الوظيفة..."
+                placeholder={t("hr.attendance.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pr-10"
@@ -437,7 +439,7 @@ export default function AttendanceManagement() {
                     data-testid="button-mark-present"
                   >
                     <UserCheck className="h-4 w-4 ml-1" />
-                    تحضير ({selectedCount})
+                    {t("hr.attendance.markPresent")} ({selectedCount})
                   </Button>
                   <Button
                     variant="outline"
@@ -447,7 +449,7 @@ export default function AttendanceManagement() {
                     data-testid="button-mark-absent"
                   >
                     <UserX className="h-4 w-4 ml-1" />
-                    تغييب ({selectedCount})
+                    {t("hr.attendance.markAbsent")} ({selectedCount})
                   </Button>
                 </>
               )}
@@ -459,7 +461,7 @@ export default function AttendanceManagement() {
                 data-testid="button-save"
               >
                 <Save className="h-4 w-4 ml-1" />
-                {saveMutation.isPending ? "جاري الحفظ..." : `حفظ التغييرات (${modifiedCount})`}
+                {saveMutation.isPending ? t("common.pleaseWait") : `${t("hr.attendance.saveChanges")} (${modifiedCount})`}
               </Button>
             </div>
           </div>
@@ -476,19 +478,19 @@ export default function AttendanceManagement() {
                         data-testid="checkbox-select-all"
                       />
                     </TableHead>
-                    <TableHead className="text-right min-w-[150px]">الموظف</TableHead>
-                    <TableHead className="text-right min-w-[100px]">الوظيفة</TableHead>
-                    <TableHead className="text-center min-w-[100px]">الحالة</TableHead>
+                    <TableHead className="text-right min-w-[150px]">{t("hr.employee")}</TableHead>
+                    <TableHead className="text-right min-w-[100px]">{t("hr.position")}</TableHead>
+                    <TableHead className="text-center min-w-[100px]">{t("common.status")}</TableHead>
                     <TableHead className="text-center min-w-[120px]">
                       <div className="flex items-center justify-center gap-1">
                         <Clock className="h-3 w-3" />
-                        وقت الدخول
+                        {t("hr.checkInTime")}
                       </div>
                     </TableHead>
                     <TableHead className="text-center min-w-[120px]">
                       <div className="flex items-center justify-center gap-1">
                         <LogOut className="h-3 w-3" />
-                        وقت الانصراف
+                        {t("hr.checkOutTime")}
                       </div>
                     </TableHead>
                   </TableRow>
@@ -497,13 +499,13 @@ export default function AttendanceManagement() {
                   {isLoading ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        جاري تحميل البيانات...
+                        {t("common.loading")}
                       </TableCell>
                     </TableRow>
                   ) : filteredData.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        لا توجد بيانات
+                        {t("common.noData")}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -551,9 +553,9 @@ export default function AttendanceManagement() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="حاضر">حاضر</SelectItem>
-                                <SelectItem value="غائب">غائب</SelectItem>
-                                <SelectItem value="مغادر">مغادر</SelectItem>
+                                <SelectItem value="حاضر">{t("hr.present")}</SelectItem>
+                                <SelectItem value="غائب">{t("hr.absent")}</SelectItem>
+                                <SelectItem value="مغادر">{t("hr.attendance.left")}</SelectItem>
                               </SelectContent>
                             </Select>
                           </TableCell>

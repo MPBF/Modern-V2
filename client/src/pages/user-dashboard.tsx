@@ -983,7 +983,7 @@ export default function UserDashboard() {
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        في انتظار الرد
+                        {t('userDashboard.requests.awaitingResponse')}
                       </p>
                     </CardContent>
                   </Card>
@@ -992,11 +992,11 @@ export default function UserDashboard() {
                 {/* Quick Actions */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>عمليات الحضور السريعة</CardTitle>
+                    <CardTitle>{t('userDashboard.attendance.quickActions')}</CardTitle>
                     <CardDescription>
-                      الحالة الحالية:{" "}
+                      {t('userDashboard.attendance.currentStatus')}:{" "}
                       {dailyAttendanceStatus?.currentStatus ||
-                        "لم يتم تسجيل الحضور"}
+                        t('userDashboard.attendance.notCheckedIn')}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -1012,8 +1012,8 @@ export default function UserDashboard() {
                           }
                         >
                           {dailyAttendanceStatus?.hasCheckedIn
-                            ? "✓ تم الحضور"
-                            : "الحضور"}
+                            ? `✓ ${t('userDashboard.attendance.checkedIn')}`
+                            : t('userDashboard.attendance.checkIn')}
                         </Button>
                         <div className="text-xs text-gray-500 mt-1 h-4 text-center">
                           {(() => {
@@ -1052,8 +1052,8 @@ export default function UserDashboard() {
                           }
                         >
                           {dailyAttendanceStatus?.hasStartedLunch
-                            ? "✓ تم اخذ استراحة"
-                            : "بدء استراحة"}
+                            ? `✓ ${t('userDashboard.attendance.breakTaken')}`
+                            : t('userDashboard.attendance.startBreak')}
                         </Button>
                         <div className="text-xs text-gray-500 mt-1 h-4 text-center">
                           {(() => {
@@ -1094,8 +1094,8 @@ export default function UserDashboard() {
                           }
                         >
                           {dailyAttendanceStatus?.hasEndedLunch
-                            ? "✓ تم انهاء الاستراحة"
-                            : "انهاء الاستراحة"}
+                            ? `✓ ${t('userDashboard.attendance.breakEnded')}`
+                            : t('userDashboard.attendance.endBreak')}
                         </Button>
                         <div className="text-xs text-gray-500 mt-1 h-4 text-center">
                           {(() => {
@@ -1134,8 +1134,8 @@ export default function UserDashboard() {
                           }
                         >
                           {dailyAttendanceStatus?.hasCheckedOut
-                            ? "✓ تم الانصراف"
-                            : "الانصراف"}
+                            ? `✓ ${t('userDashboard.attendance.checkedOut')}`
+                            : t('userDashboard.attendance.checkOut')}
                         </Button>
                         <div className="text-xs text-gray-500 mt-1 h-4 text-center">
                           {(() => {
@@ -1165,7 +1165,7 @@ export default function UserDashboard() {
 
                     {/* Status indicator with timestamps */}
                     <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <h4 className="font-semibold text-sm mb-2">سجل اليوم:</h4>
+                      <h4 className="font-semibold text-sm mb-2">{t('userDashboard.attendance.todayLog')}:</h4>
                       {attendanceRecords
                         ?.filter(
                           (record) =>
@@ -1178,7 +1178,7 @@ export default function UserDashboard() {
                             {record.check_in_time && (
                               <div className="flex items-center justify-between text-sm py-1">
                                 <span className="text-green-600">
-                                  ✓ تسجيل الحضور
+                                  ✓ {t('userDashboard.attendance.checkInRecord')}
                                 </span>
                                 <span className="text-gray-600">
                                   {new Date(
@@ -1194,7 +1194,7 @@ export default function UserDashboard() {
                             {record.lunch_start_time && (
                               <div className="flex items-center justify-between text-sm py-1">
                                 <span className="text-yellow-600">
-                                  ✓ بداية الاستراحة
+                                  ✓ {t('userDashboard.attendance.breakStart')}
                                 </span>
                                 <span className="text-gray-600">
                                   {new Date(
@@ -1210,7 +1210,7 @@ export default function UserDashboard() {
                             {record.lunch_end_time && (
                               <div className="flex items-center justify-between text-sm py-1">
                                 <span className="text-blue-600">
-                                  ✓ نهاية الاستراحة
+                                  ✓ {t('userDashboard.attendance.breakEnd')}
                                 </span>
                                 <span className="text-gray-600">
                                   {new Date(
@@ -1226,7 +1226,7 @@ export default function UserDashboard() {
                             {record.check_out_time && (
                               <div className="flex items-center justify-between text-sm py-1">
                                 <span className="text-gray-600">
-                                  ✓ تسجيل الانصراف
+                                  ✓ {t('userDashboard.attendance.checkOutRecord')}
                                 </span>
                                 <span className="text-gray-600">
                                   {new Date(
@@ -1246,18 +1246,18 @@ export default function UserDashboard() {
                       {dailyAttendanceStatus?.hasCheckedIn && (
                         <div className="mt-3 pt-3 border-t">
                           <h5 className="font-medium text-sm mb-2 text-blue-700 dark:text-blue-300">
-                            📊 ملخص ساعات العمل{" "}
-                            {dailyHours.isFriday ? "(يوم الجمعة)" : ""}:
+                            📊 {t('userDashboard.attendance.workingSummary')}{" "}
+                            {dailyHours.isFriday ? `(${t('userDashboard.attendance.friday')})` : ""}:
                           </h5>
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             {/* Working Hours */}
                             <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded">
                               <div className="flex items-center justify-between">
                                 <span className="text-green-700 dark:text-green-300">
-                                  ⏰ ساعات العمل
+                                  ⏰ {t('userDashboard.attendance.workingHours')}
                                 </span>
                                 <span className="font-medium text-green-800 dark:text-green-200">
-                                  {dailyHours.workingHours.toFixed(1)} ساعة
+                                  {dailyHours.workingHours.toFixed(1)} {t('userDashboard.attendance.hour')}
                                 </span>
                               </div>
                             </div>
@@ -1266,10 +1266,10 @@ export default function UserDashboard() {
                             <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded">
                               <div className="flex items-center justify-between">
                                 <span className="text-orange-700 dark:text-orange-300">
-                                  ⚡ ساعات إضافية
+                                  ⚡ {t('userDashboard.attendance.overtimeHours')}
                                 </span>
                                 <span className="font-medium text-orange-800 dark:text-orange-200">
-                                  {dailyHours.overtimeHours.toFixed(1)} ساعة
+                                  {dailyHours.overtimeHours.toFixed(1)} {t('userDashboard.attendance.hour')}
                                 </span>
                               </div>
                             </div>
@@ -1278,10 +1278,10 @@ export default function UserDashboard() {
                             <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded">
                               <div className="flex items-center justify-between">
                                 <span className="text-yellow-700 dark:text-yellow-300">
-                                  ☕ وقت الاستراحة
+                                  ☕ {t('userDashboard.attendance.breakTime')}
                                 </span>
                                 <span className="font-medium text-yellow-800 dark:text-yellow-200">
-                                  {dailyHours.breakMinutes} دقيقة
+                                  {dailyHours.breakMinutes} {t('userDashboard.attendance.minute')}
                                 </span>
                               </div>
                             </div>
@@ -1291,10 +1291,10 @@ export default function UserDashboard() {
                               <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded">
                                 <div className="flex items-center justify-between">
                                   <span className="text-red-700 dark:text-red-300">
-                                    ⚠️ ساعات ناقصة
+                                    ⚠️ {t('userDashboard.attendance.deficitHours')}
                                   </span>
                                   <span className="font-medium text-red-800 dark:text-red-200">
-                                    {dailyHours.deficitHours.toFixed(1)} ساعة
+                                    {dailyHours.deficitHours.toFixed(1)} {t('userDashboard.attendance.hour')}
                                   </span>
                                 </div>
                               </div>
@@ -1304,7 +1304,7 @@ export default function UserDashboard() {
                           {/* Additional Info */}
                           <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
                             <div className="flex justify-between">
-                              <span>إجمالي الوقت:</span>
+                              <span>{t('userDashboard.attendance.totalTime')}:</span>
                               <span>
                                 {Math.floor(dailyHours.totalMinutes / 60)}:
                                 {(dailyHours.totalMinutes % 60)
@@ -1314,7 +1314,7 @@ export default function UserDashboard() {
                             </div>
                             {dailyHours.isFriday && (
                               <div className="text-orange-600 dark:text-orange-400 mt-1 font-medium">
-                                * يوم الجمعة - جميع الساعات تحسب إضافية
+                                * {t('userDashboard.attendance.fridayNote')}
                               </div>
                             )}
                           </div>
@@ -1326,36 +1326,36 @@ export default function UserDashboard() {
                         {!dailyAttendanceStatus?.hasCheckedIn && (
                           <div className="flex items-center justify-between text-sm py-1">
                             <span className="text-gray-400">
-                              ⏳ تسجيل الحضور
+                              ⏳ {t('userDashboard.attendance.checkInRecord')}
                             </span>
-                            <span className="text-gray-400">لم يتم</span>
+                            <span className="text-gray-400">{t('userDashboard.attendance.notDone')}</span>
                           </div>
                         )}
                         {!dailyAttendanceStatus?.hasStartedLunch &&
                           dailyAttendanceStatus?.hasCheckedIn && (
                             <div className="flex items-center justify-between text-sm py-1">
                               <span className="text-gray-400">
-                                ⏳ بداية الاستراحة
+                                ⏳ {t('userDashboard.attendance.breakStart')}
                               </span>
-                              <span className="text-gray-400">لم يتم</span>
+                              <span className="text-gray-400">{t('userDashboard.attendance.notDone')}</span>
                             </div>
                           )}
                         {!dailyAttendanceStatus?.hasEndedLunch &&
                           dailyAttendanceStatus?.hasStartedLunch && (
                             <div className="flex items-center justify-between text-sm py-1">
                               <span className="text-gray-400">
-                                ⏳ نهاية الاستراحة
+                                ⏳ {t('userDashboard.attendance.breakEnd')}
                               </span>
-                              <span className="text-gray-400">لم يتم</span>
+                              <span className="text-gray-400">{t('userDashboard.attendance.notDone')}</span>
                             </div>
                           )}
                         {!dailyAttendanceStatus?.hasCheckedOut &&
                           dailyAttendanceStatus?.hasCheckedIn && (
                             <div className="flex items-center justify-between text-sm py-1">
                               <span className="text-gray-400">
-                                ⏳ تسجيل الانصراف
+                                ⏳ {t('userDashboard.attendance.checkOutRecord')}
                               </span>
-                              <span className="text-gray-400">لم يتم</span>
+                              <span className="text-gray-400">{t('userDashboard.attendance.notDone')}</span>
                             </div>
                           )}
                       </div>
@@ -1373,9 +1373,9 @@ export default function UserDashboard() {
               <TabsContent value="attendance">
                 <Card>
                   <CardHeader>
-                    <CardTitle>سجل الحضور والانصراف التفصيلي</CardTitle>
+                    <CardTitle>{t('userDashboard.attendance.detailedLog')}</CardTitle>
                     <CardDescription>
-                      عرض شامل لجميع تسجيلات الحضور مع الأوقات
+                      {t('userDashboard.attendance.detailedLogDesc')}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -1416,7 +1416,7 @@ export default function UserDashboard() {
                             {record.check_in_time && (
                               <div className="flex flex-col">
                                 <span className="text-gray-500 text-xs">
-                                  دخول
+                                  {t('userDashboard.attendance.entry')}
                                 </span>
                                 <span className="font-medium text-green-600">
                                   {new Date(
@@ -1433,7 +1433,7 @@ export default function UserDashboard() {
                             {record.lunch_start_time && (
                               <div className="flex flex-col">
                                 <span className="text-gray-500 text-xs">
-                                  بداية استراحة
+                                  {t('userDashboard.attendance.breakStart')}
                                 </span>
                                 <span className="font-medium text-yellow-600">
                                   {new Date(
