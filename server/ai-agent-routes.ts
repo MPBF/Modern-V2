@@ -1,19 +1,87 @@
 import type { Express, Request, Response } from "express";
 import OpenAI from "openai";
 import { db } from "./db";
-import { orders, production_orders, rolls, quotes, quote_items, customers } from "@shared/schema";
+import { orders, production_orders, rolls, quotes, quote_items, customers, ai_agent_settings, ai_agent_knowledge } from "@shared/schema";
 import { eq, desc, sql, and, gte, lte, count, sum } from "drizzle-orm";
+import multer, { FileFilterCallback } from "multer";
+import * as XLSX from "exceljs";
+import * as fs from "fs";
+import * as path from "path";
+import type { Request } from "express";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-const systemPrompt = `أنت مساعد ذكي لنظام إدارة مصنع أكياس بلاستيك. يمكنك:
+// أسعار صرف العملات (يمكن تحديثها من API خارجي)
+const exchangeRates: Record<string, number> = {
+  SAR: 1,
+  USD: 0.2666,
+  EUR: 0.2444,
+  GBP: 0.2111,
+  AED: 0.9787,
+  KWD: 0.0819,
+  QAR: 0.9714,
+  BHD: 0.1004,
+  OMR: 0.1026,
+  EGP: 8.2133,
+};
+
+const currencyNames: Record<string, string> = {
+  SAR: "ريال سعودي",
+  USD: "دولار أمريكي",
+  EUR: "يورو",
+  GBP: "جنيه إسترليني",
+  AED: "درهم إماراتي",
+  KWD: "دينار كويتي",
+  QAR: "ريال قطري",
+  BHD: "دينار بحريني",
+  OMR: "ريال عماني",
+  EGP: "جنيه مصري",
+};
+
+// إعداد رفع الملفات
+const upload = multer({
+  dest: "/tmp/ai-uploads/",
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  fileFilter: (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+    const allowedTypes = [
+      "image/jpeg", "image/png", "image/gif", "image/webp",
+      "text/plain", "text/csv",
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel"
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("نوع الملف غير مدعوم"));
+    }
+  }
+});
+
+async function getSystemPrompt(): Promise<string> {
+  const settings = await db.select().from(ai_agent_settings);
+  const knowledge = await db.select().from(ai_agent_knowledge).where(eq(ai_agent_knowledge.is_active, true));
+  
+  const customPrompt = settings.find(s => s.key === "system_prompt")?.value || "";
+  const vatRate = settings.find(s => s.key === "vat_rate")?.value || "0.15";
+  
+  let knowledgeText = "";
+  if (knowledge.length > 0) {
+    knowledgeText = "\n\nالمعلومات المتاحة:\n" + knowledge.map(k => `- ${k.title}: ${k.content}`).join("\n");
+  }
+
+  return `أنت مساعد ذكي لنظام إدارة مصنع أكياس بلاستيك. يمكنك:
 1. الإجابة على أسئلة حول الطلبات وحالتها
 2. الإجابة على أسئلة حول الإنتاج وأوامر الإنتاج
 3. الإجابة على أسئلة حول كميات الإنتاج
 4. إنشاء عروض أسعار للعملاء
+5. تحويل العملات (العملة الأساسية: الريال السعودي SAR)
+6. قراءة وتحليل الملفات المرفقة
+
+العملة الأساسية هي الريال السعودي (ر.س). نسبة ضريبة القيمة المضافة: ${parseFloat(vatRate) * 100}%
 
 عند سؤالك عن طلب معين، استخدم الأدوات المتاحة للحصول على البيانات من قاعدة البيانات.
 عند طلب إنشاء عرض سعر، اجمع البيانات التالية من المستخدم:
@@ -21,7 +89,11 @@ const systemPrompt = `أنت مساعد ذكي لنظام إدارة مصنع أ
 - الرقم الضريبي (14 رقم)
 - الأصناف (الاسم، الوحدة، السعر، الكمية)
 
+${customPrompt}
+${knowledgeText}
+
 قم بالرد باللغة العربية دائماً.`;
+}
 
 const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
@@ -111,6 +183,30 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
         },
         required: ["customer_name", "tax_number", "items"]
       }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "convert_currency",
+      description: "تحويل مبلغ من عملة إلى أخرى. العملة الأساسية هي الريال السعودي (SAR)",
+      parameters: {
+        type: "object",
+        properties: {
+          amount: { type: "number", description: "المبلغ المراد تحويله" },
+          from_currency: { type: "string", enum: ["SAR", "USD", "EUR", "GBP", "AED", "KWD", "QAR", "BHD", "OMR", "EGP"], description: "العملة المصدر" },
+          to_currency: { type: "string", enum: ["SAR", "USD", "EUR", "GBP", "AED", "KWD", "QAR", "BHD", "OMR", "EGP"], description: "العملة الهدف" }
+        },
+        required: ["amount", "from_currency", "to_currency"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_exchange_rates",
+      description: "الحصول على أسعار صرف العملات مقارنة بالريال السعودي",
+      parameters: { type: "object", properties: {} }
     }
   }
 ];
@@ -285,9 +381,57 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
             total_before_tax: totalBeforeTax.toFixed(2),
             tax_amount: taxAmount.toFixed(2),
             total_with_tax: totalWithTax.toFixed(2),
-            items_count: items.length
+            items_count: items.length,
+            currency: "SAR",
+            currency_name: "ريال سعودي"
           },
           message: `تم إنشاء عرض السعر رقم ${documentNumber} بنجاح`
+        });
+      }
+
+      case "convert_currency": {
+        const { amount, from_currency, to_currency } = args as {
+          amount: number;
+          from_currency: string;
+          to_currency: string;
+        };
+        
+        const fromRate = exchangeRates[from_currency];
+        const toRate = exchangeRates[to_currency];
+        
+        if (!fromRate || !toRate) {
+          return JSON.stringify({ error: "عملة غير مدعومة" });
+        }
+        
+        // تحويل إلى ريال سعودي أولاً ثم إلى العملة الهدف
+        const amountInSAR = amount / fromRate;
+        const convertedAmount = amountInSAR * toRate;
+        
+        return JSON.stringify({
+          original_amount: amount,
+          original_currency: from_currency,
+          original_currency_name: currencyNames[from_currency],
+          converted_amount: convertedAmount.toFixed(2),
+          target_currency: to_currency,
+          target_currency_name: currencyNames[to_currency],
+          exchange_rate: (toRate / fromRate).toFixed(4),
+          message: `${amount.toFixed(2)} ${currencyNames[from_currency]} = ${convertedAmount.toFixed(2)} ${currencyNames[to_currency]}`
+        });
+      }
+
+      case "get_exchange_rates": {
+        const rates = Object.entries(exchangeRates).map(([code, rate]) => ({
+          code,
+          name: currencyNames[code],
+          rate_vs_sar: rate,
+          sar_equivalent: (1 / rate).toFixed(4)
+        }));
+        
+        return JSON.stringify({
+          base_currency: "SAR",
+          base_currency_name: "ريال سعودي",
+          rates,
+          last_updated: new Date().toISOString()
         });
       }
 
@@ -309,8 +453,9 @@ export function registerAiAgentRoutes(app: Express): void {
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
 
+      const dynamicSystemPrompt = await getSystemPrompt();
       const chatMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: dynamicSystemPrompt },
         ...messages.map(m => ({ role: m.role as "user" | "assistant", content: m.content }))
       ];
 
@@ -598,6 +743,174 @@ export function registerAiAgentRoutes(app: Express): void {
     } catch (error) {
       console.error("Error generating quote PDF:", error);
       res.status(500).json({ error: "فشل في إنشاء ملف PDF" });
+    }
+  });
+
+  // ===== رفع الملفات وقراءتها =====
+  app.post("/api/ai-agent/upload", upload.single("file"), async (req: Request, res: Response) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ error: "لم يتم رفع أي ملف" });
+      }
+
+      let content = "";
+      const filePath = file.path;
+
+      if (file.mimetype.startsWith("image/")) {
+        // للصور: استخدام OpenAI Vision API
+        const imageBuffer = fs.readFileSync(filePath);
+        const base64Image = imageBuffer.toString("base64");
+        const imageUrl = `data:${file.mimetype};base64,${base64Image}`;
+        
+        const visionResponse = await openai.chat.completions.create({
+          model: "gpt-4.1",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "قم بوصف محتوى هذه الصورة باللغة العربية بشكل مفصل" },
+                { type: "image_url", image_url: { url: imageUrl } }
+              ]
+            }
+          ],
+          max_tokens: 1000
+        });
+        content = visionResponse.choices[0]?.message?.content || "لم يتم التعرف على محتوى الصورة";
+        
+      } else if (file.mimetype === "text/plain" || file.mimetype === "text/csv") {
+        // للملفات النصية
+        content = fs.readFileSync(filePath, "utf-8");
+        
+      } else if (file.mimetype.includes("spreadsheet") || file.mimetype.includes("excel")) {
+        // لملفات Excel
+        const workbook = new XLSX.Workbook();
+        await workbook.xlsx.readFile(filePath);
+        const worksheet = workbook.worksheets[0];
+        
+        const rows: string[][] = [];
+        worksheet.eachRow((row, rowNumber) => {
+          const values: string[] = [];
+          row.eachCell((cell) => {
+            values.push(String(cell.value || ""));
+          });
+          rows.push(values);
+        });
+        
+        content = `ملف Excel يحتوي على ${rows.length} صف:\n`;
+        rows.slice(0, 50).forEach((row, idx) => {
+          content += `الصف ${idx + 1}: ${row.join(" | ")}\n`;
+        });
+        if (rows.length > 50) {
+          content += `\n... و${rows.length - 50} صف إضافي`;
+        }
+        
+      } else if (file.mimetype === "application/pdf") {
+        // لملفات PDF - نقرأها كنص (يحتاج مكتبة PDF parser)
+        content = `ملف PDF تم رفعه: ${file.originalname}. لقراءة محتوى PDF، يرجى استخدام أداة متخصصة.`;
+      }
+
+      // حذف الملف المؤقت
+      fs.unlinkSync(filePath);
+
+      res.json({
+        success: true,
+        filename: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        content: content.substring(0, 10000) // حد أقصى 10000 حرف
+      });
+    } catch (error) {
+      console.error("File upload error:", error);
+      res.status(500).json({ error: "فشل في معالجة الملف" });
+    }
+  });
+
+  // ===== إعدادات الوكيل الذكي =====
+  app.get("/api/ai-agent/settings", async (_req: Request, res: Response) => {
+    try {
+      const settings = await db.select().from(ai_agent_settings);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching AI settings:", error);
+      res.status(500).json({ error: "فشل في جلب الإعدادات" });
+    }
+  });
+
+  app.put("/api/ai-agent/settings/:key", async (req: Request, res: Response) => {
+    try {
+      const { key } = req.params;
+      const { value, description } = req.body;
+      
+      const [existing] = await db.select().from(ai_agent_settings).where(eq(ai_agent_settings.key, key));
+      
+      if (existing) {
+        await db.update(ai_agent_settings)
+          .set({ value, description, updated_at: new Date() })
+          .where(eq(ai_agent_settings.key, key));
+      } else {
+        await db.insert(ai_agent_settings).values({ key, value, description });
+      }
+      
+      res.json({ success: true, message: "تم تحديث الإعداد بنجاح" });
+    } catch (error) {
+      console.error("Error updating AI setting:", error);
+      res.status(500).json({ error: "فشل في تحديث الإعداد" });
+    }
+  });
+
+  // ===== قاعدة المعرفة =====
+  app.get("/api/ai-agent/knowledge", async (_req: Request, res: Response) => {
+    try {
+      const knowledge = await db.select().from(ai_agent_knowledge).orderBy(desc(ai_agent_knowledge.created_at));
+      res.json(knowledge);
+    } catch (error) {
+      console.error("Error fetching knowledge base:", error);
+      res.status(500).json({ error: "فشل في جلب قاعدة المعرفة" });
+    }
+  });
+
+  app.post("/api/ai-agent/knowledge", async (req: Request, res: Response) => {
+    try {
+      const { title, content, category } = req.body;
+      const [newKnowledge] = await db.insert(ai_agent_knowledge).values({
+        title,
+        content,
+        category: category || "general",
+        is_active: true
+      }).returning();
+      res.json(newKnowledge);
+    } catch (error) {
+      console.error("Error adding knowledge:", error);
+      res.status(500).json({ error: "فشل في إضافة المعرفة" });
+    }
+  });
+
+  app.put("/api/ai-agent/knowledge/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { title, content, category, is_active } = req.body;
+      
+      const [updated] = await db.update(ai_agent_knowledge)
+        .set({ title, content, category, is_active, updated_at: new Date() })
+        .where(eq(ai_agent_knowledge.id, id))
+        .returning();
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating knowledge:", error);
+      res.status(500).json({ error: "فشل في تحديث المعرفة" });
+    }
+  });
+
+  app.delete("/api/ai-agent/knowledge/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      await db.delete(ai_agent_knowledge).where(eq(ai_agent_knowledge.id, id));
+      res.json({ success: true, message: "تم الحذف بنجاح" });
+    } catch (error) {
+      console.error("Error deleting knowledge:", error);
+      res.status(500).json({ error: "فشل في الحذف" });
     }
   });
 }

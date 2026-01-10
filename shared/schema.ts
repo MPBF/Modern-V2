@@ -2986,5 +2986,43 @@ export const insertQuoteItemSchema = createInsertSchema(quote_items).omit({
   quantity: z.string().refine((val) => parseFloatSafe(val) > 0, "الكمية يجب أن تكون أكبر من صفر"),
 });
 
+// ===== إعدادات الوكيل الذكي =====
+
+export const ai_agent_settings = pgTable("ai_agent_settings", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 100 }).notNull().unique(),
+  value: text("value").notNull(),
+  description: text("description"),
+  updated_at: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updated_by: integer("updated_by").references(() => users.id),
+});
+
+export const ai_agent_knowledge = pgTable("ai_agent_knowledge", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  category: varchar("category", { length: 50 }).notNull().default("general"),
+  is_active: boolean("is_active").default(true).notNull(),
+  created_at: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updated_at: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  created_by: integer("created_by").references(() => users.id),
+});
+
+export type AiAgentSetting = typeof ai_agent_settings.$inferSelect;
+export type InsertAiAgentSetting = typeof ai_agent_settings.$inferInsert;
+export type AiAgentKnowledge = typeof ai_agent_knowledge.$inferSelect;
+export type InsertAiAgentKnowledge = typeof ai_agent_knowledge.$inferInsert;
+
+export const insertAiAgentSettingSchema = createInsertSchema(ai_agent_settings).omit({
+  id: true,
+  updated_at: true,
+});
+
+export const insertAiAgentKnowledgeSchema = createInsertSchema(ai_agent_knowledge).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
 // Chat models for OpenAI integration
 export * from "./models/chat";
