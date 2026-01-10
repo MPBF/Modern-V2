@@ -2913,3 +2913,78 @@ export const insertBatchIngredientSchema = createInsertSchema(batch_ingredients)
 
 // Sanitized user type that excludes sensitive fields like password
 export type SafeUser = Omit<User, "password">;
+
+// ===== جداول عروض الأسعار للوكيل الذكي =====
+
+export const quotes = pgTable("quotes", {
+  id: serial("id").primaryKey(),
+  document_number: varchar("document_number", { length: 50 }).notNull().unique(),
+  customer_name: varchar("customer_name", { length: 255 }).notNull(),
+  tax_number: varchar("tax_number", { length: 14 }).notNull(),
+  quote_date: date("quote_date").notNull().default(sql`CURRENT_DATE`),
+  total_before_tax: decimal("total_before_tax", { precision: 12, scale: 2 }).notNull().default("0"),
+  tax_amount: decimal("tax_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+  total_with_tax: decimal("total_with_tax", { precision: 12, scale: 2 }).notNull().default("0"),
+  status: varchar("status", { length: 20 }).notNull().default("draft"),
+  created_by_name: varchar("created_by_name", { length: 255 }),
+  created_by_phone: varchar("created_by_phone", { length: 20 }),
+  notes: text("notes"),
+  created_at: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updated_at: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const quote_items = pgTable("quote_items", {
+  id: serial("id").primaryKey(),
+  quote_id: integer("quote_id").notNull().references(() => quotes.id, { onDelete: "cascade" }),
+  line_number: integer("line_number").notNull(),
+  item_name: varchar("item_name", { length: 255 }).notNull(),
+  unit: varchar("unit", { length: 20 }).notNull(), // كيلو، قطعة، كرتون، بندل
+  unit_price: decimal("unit_price", { precision: 12, scale: 2 }).notNull(),
+  quantity: decimal("quantity", { precision: 12, scale: 2 }).notNull(),
+  line_total: decimal("line_total", { precision: 12, scale: 2 }).notNull(),
+});
+
+// علاقات عروض الأسعار
+export const quotesRelations = relations(quotes, ({ many }) => ({
+  items: many(quote_items),
+}));
+
+export const quoteItemsRelations = relations(quote_items, ({ one }) => ({
+  quote: one(quotes, {
+    fields: [quote_items.quote_id],
+    references: [quotes.id],
+  }),
+}));
+
+// أنواع عروض الأسعار
+export type Quote = typeof quotes.$inferSelect;
+export type InsertQuote = typeof quotes.$inferInsert;
+export type QuoteItem = typeof quote_items.$inferSelect;
+export type InsertQuoteItem = typeof quote_items.$inferInsert;
+
+// مخططات التحقق لعروض الأسعار
+export const insertQuoteSchema = createInsertSchema(quotes).omit({
+  id: true,
+  document_number: true,
+  total_before_tax: true,
+  tax_amount: true,
+  total_with_tax: true,
+  created_at: true,
+  updated_at: true,
+}).extend({
+  customer_name: z.string().min(1, "اسم العميل مطلوب"),
+  tax_number: z.string().length(14, "الرقم الضريبي يجب أن يكون 14 رقم"),
+});
+
+export const insertQuoteItemSchema = createInsertSchema(quote_items).omit({
+  id: true,
+  line_total: true,
+}).extend({
+  item_name: z.string().min(1, "اسم الصنف مطلوب"),
+  unit: z.enum(["كيلو", "قطعة", "كرتون", "بندل"]),
+  unit_price: z.string().refine((val) => parseFloatSafe(val) > 0, "السعر يجب أن يكون أكبر من صفر"),
+  quantity: z.string().refine((val) => parseFloatSafe(val) > 0, "الكمية يجب أن تكون أكبر من صفر"),
+});
+
+// Chat models for OpenAI integration
+export * from "./models/chat";

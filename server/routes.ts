@@ -120,6 +120,7 @@ import {
 import { calculateProductionQuantities } from "@shared/quantity-utils";
 import { setupAuth, isAuthenticated as isAuthenticatedReplit } from "./replitAuth";
 import { resolveSessionUser } from "./auth/sessionUser";
+import { registerAiAgentRoutes } from "./ai-agent-routes";
 
 // Initialize notification service
 const notificationService = new NotificationService(storage);
@@ -131,6 +132,9 @@ let notificationManager: ReturnType<typeof getNotificationManager> | null =
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth (OpenID Connect)
   await setupAuth(app);
+  
+  // Register AI Agent routes
+  registerAiAgentRoutes(app);
   
   // Replit Auth user endpoint
   app.get('/api/auth/user', isAuthenticatedReplit, async (req: any, res) => {

@@ -42,6 +42,7 @@ import RollSearch from "./pages/RollSearch";
 import ProductionReports from "./pages/ProductionReports";
 import SystemMonitoring from "./pages/system-monitoring";
 import FactoryFloor from "./pages/FactoryFloor";
+import AiAgent from "./pages/ai-agent";
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -259,6 +260,12 @@ function AppRoutes() {
       <Route path="/system-monitoring">
         <ProtectedRoute path="/system-monitoring">
           <SystemMonitoring />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/ai-agent">
+        <ProtectedRoute path="/ai-agent">
+          <AiAgent />
         </ProtectedRoute>
       </Route>
 

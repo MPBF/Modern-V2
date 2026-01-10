@@ -1,4 +1,4 @@
-import { LucideIcon, Home, LayoutDashboard, FileText, Activity, Monitor, ClipboardCheck, Wrench, Users, Warehouse, Database, BarChart3, Settings, Gauge, Factory } from "lucide-react";
+import { LucideIcon, Home, LayoutDashboard, FileText, Activity, Monitor, ClipboardCheck, Wrench, Users, Warehouse, Database, BarChart3, Settings, Gauge, Factory, Bot } from "lucide-react";
 
 export interface NavigationItem {
   name: string;
@@ -127,6 +127,15 @@ export const navigationItems: NavigationItem[] = [
     path: "/tools",
     priority: 12,
     group: 'admin',
+  },
+  {
+    name: "الوكيل الذكي",
+    name_ar: "الوكيل الذكي",
+    name_en: "AI Agent",
+    icon: Bot,
+    path: "/ai-agent",
+    priority: 5,
+    group: 'primary',
   },
   {
     name: "الإعدادات",
