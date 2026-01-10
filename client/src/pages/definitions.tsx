@@ -3280,13 +3280,21 @@ export default function Definitions() {
                     </Button>
                     <Button
                       onClick={() => {
+                        const formData = {
+                          ...customerForm,
+                          sales_rep_id: customerForm.sales_rep_id ? parseInt(customerForm.sales_rep_id) : null,
+                          tax_number: customerForm.tax_number || null,
+                          code: customerForm.code || null,
+                          user_id: customerForm.user_id || null,
+                          plate_drawer_code: customerForm.plate_drawer_code || null,
+                        };
                         if (editingItem) {
                           updateCustomerMutation.mutate({
                             id: editingItem.id,
-                            data: customerForm,
+                            data: formData,
                           });
                         } else {
-                          createCustomerMutation.mutate(customerForm);
+                          createCustomerMutation.mutate(formData);
                         }
                       }}
                       disabled={
