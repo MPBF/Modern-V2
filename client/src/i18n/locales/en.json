@@ -2098,7 +2098,10 @@
     },
     "tabs": {
       "chat": "Chat",
-      "quotesHistory": "Price Quotes"
+      "quotesHistory": "Price Quotes",
+      "settings": "Settings",
+      "knowledge": "Knowledge Base",
+      "templates": "Quote Templates"
     },
     "quotes": {
       "title": "Quotes",
@@ -2219,11 +2222,6 @@
         "carton": "Carton",
         "bundle": "Bundle"
       }
-    },
-    "tabs": {
-      "settings": "Settings",
-      "knowledge": "Knowledge Base",
-      "templates": "Quote Templates"
     },
     "fileUpload": {
       "attach": "Attach File",

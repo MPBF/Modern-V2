@@ -2090,7 +2090,10 @@
     },
     "tabs": {
       "chat": "المحادثة",
-      "quotesHistory": "عروض الأسعار"
+      "quotesHistory": "عروض الأسعار",
+      "settings": "الإعدادات",
+      "knowledge": "قاعدة المعرفة",
+      "templates": "نماذج الأسعار"
     },
     "quotes": {
       "title": "عروض الأسعار",
@@ -2211,11 +2214,6 @@
         "carton": "كرتون",
         "bundle": "بندل"
       }
-    },
-    "tabs": {
-      "settings": "الإعدادات",
-      "knowledge": "قاعدة المعرفة",
-      "templates": "نماذج الأسعار"
     },
     "fileUpload": {
       "attach": "إرفاق ملف",
