@@ -191,6 +191,7 @@ function ChatPanel() {
               <li>• {t("aiAgent.chat.helpItems.orders")}</li>
               <li>• {t("aiAgent.chat.helpItems.production")}</li>
               <li>• {t("aiAgent.chat.helpItems.quotes")}</li>
+              <li>• {t("aiAgent.chat.helpItems.whatsapp")}</li>
               <li>• {t("aiAgent.chat.helpItems.files")}</li>
             </ul>
           </div>

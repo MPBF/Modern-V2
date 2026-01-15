@@ -81,24 +81,35 @@ async function getSystemPrompt(): Promise<string> {
 1. الإجابة على أسئلة حول الطلبات وحالتها
 2. الإجابة على أسئلة حول الإنتاج وأوامر الإنتاج
 3. الإجابة على أسئلة حول كميات الإنتاج
-4. إنشاء عروض أسعار للعملاء
-5. تحويل العملات (العملة الأساسية: الريال السعودي SAR)
-6. قراءة وتحليل الملفات المرفقة
+4. إنشاء عروض أسعار للعملاء مع إمكانية تحميلها كملف PDF
+5. إرسال عروض الأسعار عبر الواتساب للعملاء
+6. تحويل العملات (العملة الأساسية: الريال السعودي SAR)
+7. قراءة وتحليل الملفات المرفقة
 
 ${defaultGreeting ? `رسالة الترحيب: ${defaultGreeting}\n` : ""}
 أسلوب الرد: ${responseStyle}
 العملة الأساسية هي الريال السعودي (ر.س). نسبة ضريبة القيمة المضافة: ${parseFloat(vatRate) * 100}%
 
-عند سؤالك عن طلب معين، استخدم الأدوات المتاحة للحصول على البيانات من قاعدة البيانات.
-عند طلب إنشاء عرض سعر، اجمع البيانات التالية من المستخدم:
-- اسم العميل
-- الرقم الضريبي (14 رقم)
-- الأصناف (الاسم، الوحدة، السعر، الكمية)
+### إرشادات مهمة:
+
+**عند إنشاء عرض سعر:**
+1. اجمع البيانات التالية من المستخدم: اسم العميل، الرقم الضريبي (14 رقم)، الأصناف (الاسم، الوحدة، السعر، الكمية)
+2. استخدم أداة get_quote_templates للتعرف على المنتجات والأسعار المتاحة
+3. بعد إنشاء العرض، استخدم أداة generate_quote_pdf لإنشاء رابط تحميل PDF
+4. قدم للمستخدم رابط التحميل بشكل واضح
+
+**عند طلب إرسال عرض سعر عبر الواتساب:**
+1. تأكد من وجود عرض السعر (استخدم get_quote_by_number إذا لزم الأمر)
+2. اطلب رقم جوال المستلم مع رمز الدولة (مثال: +966501234567)
+3. استخدم أداة send_quote_whatsapp لإرسال العرض
+
+**عند الاستعلام عن الطلبات أو الإنتاج:**
+استخدم الأدوات المتاحة للحصول على البيانات الدقيقة من قاعدة البيانات.
 
 ${customInstructions ? `### تعليمات إضافية:\n${customInstructions}\n` : ""}
 ${knowledgeText}
 
-قم بالرد باللغة العربية دائماً.`;
+قم بالرد باللغة العربية دائماً. كن مفيداً ووفر روابط تحميل PDF عند إنشاء عروض الأسعار.`;
 }
 
 const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
@@ -221,6 +232,49 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       name: "get_quote_templates",
       description: "الحصول على نماذج عروض الأسعار الجاهزة. استخدم هذه الأداة لمعرفة المنتجات والأسعار المتاحة قبل إنشاء عرض سعر",
       parameters: { type: "object", properties: {} }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "generate_quote_pdf",
+      description: "إنشاء ملف PDF لعرض سعر معين وإرجاع رابط التحميل. استخدم هذه الأداة بعد إنشاء عرض السعر لتوفير رابط تحميل PDF للمستخدم",
+      parameters: {
+        type: "object",
+        properties: {
+          quote_id: { type: "number", description: "رقم معرف عرض السعر (ID)" }
+        },
+        required: ["quote_id"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_quote_whatsapp",
+      description: "إرسال عرض سعر عبر الواتساب. يتطلب رقم الجوال ومعرف عرض السعر",
+      parameters: {
+        type: "object",
+        properties: {
+          quote_id: { type: "number", description: "رقم معرف عرض السعر (ID)" },
+          phone_number: { type: "string", description: "رقم جوال المستلم (مع رمز الدولة، مثال: +966501234567)" }
+        },
+        required: ["quote_id", "phone_number"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_quote_by_number",
+      description: "الحصول على تفاصيل عرض سعر باستخدام رقم المستند (مثل QT-000001)",
+      parameters: {
+        type: "object",
+        properties: {
+          document_number: { type: "string", description: "رقم مستند عرض السعر (مثال: QT-000001)" }
+        },
+        required: ["document_number"]
+      }
     }
   }
 ];
@@ -474,6 +528,145 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
           })),
           count: activeTemplates.length,
           message: `يوجد ${activeTemplates.length} نموذج متاح لعروض الأسعار`
+        });
+      }
+
+      case "generate_quote_pdf": {
+        const quoteId = args.quote_id as number;
+        const [quote] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
+        
+        if (!quote) {
+          return JSON.stringify({ error: "عرض السعر غير موجود" });
+        }
+        
+        // الحصول على URL الأساسي للتطبيق
+        const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+          : process.env.REPLIT_DOMAINS 
+            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+            : '';
+        
+        // إرجاع رابط تحميل PDF
+        const relativePdfUrl = `/api/quotes/${quoteId}/pdf`;
+        const fullPdfUrl = baseUrl ? `${baseUrl}${relativePdfUrl}` : relativePdfUrl;
+        
+        return JSON.stringify({
+          success: true,
+          quote_id: quoteId,
+          document_number: quote.document_number,
+          customer_name: quote.customer_name,
+          total_with_tax: quote.total_with_tax,
+          pdf_url: relativePdfUrl,
+          full_pdf_url: fullPdfUrl,
+          message: `تم إنشاء ملف PDF لعرض السعر ${quote.document_number}.\n\n📥 **رابط تحميل PDF:** ${fullPdfUrl}\n\nيمكنك النقر على الرابط لتحميل الملف.`
+        });
+      }
+
+      case "send_quote_whatsapp": {
+        const quoteId = args.quote_id as number;
+        const phoneNumber = args.phone_number as string;
+        
+        const [quote] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
+        
+        if (!quote) {
+          return JSON.stringify({ error: "عرض السعر غير موجود" });
+        }
+        
+        // تنسيق رقم الجوال
+        let formattedPhone = phoneNumber.replace(/\s/g, "");
+        if (!formattedPhone.startsWith("+")) {
+          formattedPhone = "+" + formattedPhone;
+        }
+        
+        // الحصول على URL الأساسي للتطبيق
+        const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+          : process.env.REPLIT_DOMAINS 
+            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+            : 'http://localhost:5000';
+        
+        const pdfUrl = `${baseUrl}/api/quotes/${quoteId}/pdf`;
+        
+        // إنشاء رسالة عرض السعر مع رابط PDF
+        const quoteMessage = `📋 *عرض سعر جديد*\n\n` +
+          `📄 رقم المستند: ${quote.document_number}\n` +
+          `👤 العميل: ${quote.customer_name}\n` +
+          `📅 التاريخ: ${new Date(quote.created_at!).toLocaleDateString('ar-SA')}\n\n` +
+          `💰 المجموع قبل الضريبة: ${Number(quote.total_before_tax).toFixed(2)} ر.س\n` +
+          `🧾 ضريبة القيمة المضافة (15%): ${Number(quote.tax_amount).toFixed(2)} ر.س\n` +
+          `💵 *الإجمالي: ${Number(quote.total_with_tax).toFixed(2)} ر.س*\n\n` +
+          `📥 تحميل ملف PDF:\n${pdfUrl}\n\n` +
+          `✅ هذا العرض صالح لمدة 15 يوم من تاريخ الإصدار.`;
+        
+        // محاولة إرسال الرسالة عبر Twilio
+        try {
+          const { NotificationService } = await import("./services/notification-service");
+          const { storage } = await import("./storage");
+          const notificationService = new NotificationService(storage);
+          
+          const result = await notificationService.sendWhatsAppMessage(formattedPhone, quoteMessage, {
+            title: `عرض سعر ${quote.document_number}`,
+            context_type: "quote",
+            context_id: String(quoteId)
+          });
+          
+          if (result.success) {
+            return JSON.stringify({
+              success: true,
+              message: `تم إرسال عرض السعر ${quote.document_number} بنجاح إلى ${formattedPhone} عبر الواتساب`,
+              quote_id: quoteId,
+              document_number: quote.document_number,
+              phone_number: formattedPhone,
+              message_id: result.messageId
+            });
+          } else {
+            return JSON.stringify({
+              success: false,
+              error: result.error || "فشل في إرسال الرسالة",
+              message: "لم يتم إرسال الرسالة. تأكد من إعداد خدمة الواتساب بشكل صحيح."
+            });
+          }
+        } catch (error) {
+          console.error("WhatsApp send error:", error);
+          return JSON.stringify({
+            success: false,
+            error: "خدمة الواتساب غير متاحة حالياً",
+            message: "يمكنك تحميل ملف PDF وإرساله يدوياً"
+          });
+        }
+      }
+
+      case "get_quote_by_number": {
+        const documentNumber = args.document_number as string;
+        const [quote] = await db.select().from(quotes).where(eq(quotes.document_number, documentNumber));
+        
+        if (!quote) {
+          return JSON.stringify({ error: "عرض السعر غير موجود" });
+        }
+        
+        const items = await db.select().from(quote_items).where(eq(quote_items.quote_id, quote.id)).orderBy(quote_items.line_number);
+        
+        return JSON.stringify({
+          quote: {
+            id: quote.id,
+            document_number: quote.document_number,
+            customer_name: quote.customer_name,
+            tax_number: quote.tax_number,
+            total_before_tax: quote.total_before_tax,
+            tax_amount: quote.tax_amount,
+            total_with_tax: quote.total_with_tax,
+            status: quote.status,
+            created_at: quote.created_at,
+            notes: quote.notes
+          },
+          items: items.map(i => ({
+            item_name: i.item_name,
+            unit: i.unit,
+            quantity: i.quantity,
+            unit_price: i.unit_price,
+            line_total: i.line_total
+          })),
+          pdf_url: `/api/quotes/${quote.id}/pdf`
         });
       }
 

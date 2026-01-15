@@ -2080,8 +2080,9 @@
       "helpItems": {
         "orders": "Query orders and their status",
         "production": "Check production status and orders",
-        "quotes": "Create price quotes for customers",
-        "files": "Analyze files and images"
+        "quotes": "Create price quotes with PDF download",
+        "files": "Analyze files and images",
+        "whatsapp": "Send quotes via WhatsApp"
       },
       "loading": "Thinking...",
       "error": "Error",
