@@ -604,14 +604,21 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
           const { storage } = await import("./storage");
           const notificationService = new NotificationService(storage);
           
-          // استخدام القوالب المعتمدة إذا كانت Meta API مفعّلة
-          const result = await notificationService.sendWhatsAppMessage(formattedPhone, quoteMessage, {
-            title: `عرض سعر ${quote.document_number}`,
-            context_type: "quote",
-            context_id: String(quoteId),
-            useTemplate: true,
-            templateName: "quote_notification"
-          });
+          // استخدام قالب qoutepdf المعتمد مع Meta API
+          // القالب يتوقع متغيرين: user_name و Link_id
+          const templateVariables = [quote.customer_name, pdfUrl];
+          
+          const result = await notificationService.metaWhatsApp.sendTemplateMessage(
+            formattedPhone,
+            "qoutepdf",
+            "ar",
+            templateVariables,
+            {
+              title: `عرض سعر ${quote.document_number}`,
+              context_type: "quote",
+              context_id: String(quoteId)
+            }
+          );
           
           if (result.success) {
             return JSON.stringify({
