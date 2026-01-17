@@ -110,7 +110,7 @@ const getDeliveryDate = (createdDate: Date, days: number = 0) => {
 function Label2Lines({ ar, en }: { ar: string; en: string }) {
   return (
     <div style={{ lineHeight: 1.1 }}>
-      <div style={{ fontSize: "14px", fontWeight: 900 }}>{ar}</div>
+      <div style={{ fontSize: "12px", fontWeight: 900 }}>{ar}</div>
       <div style={{ fontSize: "12px", fontWeight: 800, opacity: 0.9 }}>{en}</div>
     </div>
   );
@@ -216,7 +216,7 @@ export default function OrderPrintTemplate({
     });
 
     const pageWidth = 297;
-    const margin = 5;
+    const margin = 2;
     const imgWidth = pageWidth - margin * 2;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
@@ -239,7 +239,7 @@ export default function OrderPrintTemplate({
           <meta charset="UTF-8">
           <title>أمر تشغيل #${order?.order_number}</title>
           <style>
-            @page { size: A4 landscape; margin: 5mm; }
+            @page { size: A4 landscape; margin: 2mm; }
             * { box-sizing: border-box; }
             body { margin: 0; padding: 20px; font-family: 'Times New Roman', Times, serif; direction: rtl; font-weight: 900; font-size: 15px; background: white; }
             table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 12px; font-weight: 900; font-family: 'Times New Roman', Times, serif; }
@@ -289,11 +289,11 @@ export default function OrderPrintTemplate({
       fontSize: "15px",
       padding: "10px",
     },
-    header: { display: "flex", borderBottom: "3px solid #1a365d", paddingBottom: "12px", marginBottom: "18px" },
+    header: { display: "flex", borderBottom: "3px solid #1a365d", paddingBottom: "10px", marginBottom: "16px" },
 
     /** ✅ تكبير العنوان */
     h1: {
-      fontSize: "30px",
+      fontSize: "25px",
       color: "#1a365d",
       margin: 0,
       fontWeight: 900 as const,
