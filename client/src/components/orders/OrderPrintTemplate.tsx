@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import "../../print.css";
+import factoryLogo from "../../../../attached_assets/FactoryLogoHPNGW.png";
 
 type PrintMode = "html" | "pdf" | "standalone";
 
@@ -350,9 +351,12 @@ export default function OrderPrintTemplate({
       <div className="order-print-container" style={{ position: "fixed", left: "-9999px", top: 0, width: "297mm", background: "white" }}>
         <div className="order-print-area" ref={printContainerRef} style={styles.page}>
           <div style={styles.header}>
-            <div style={{ flex: 1 }}>
-              <h1 style={styles.h1}>مصنع أكياس البلاستيك الحديث</h1>
-              <p style={{ margin: "2px 0", fontSize: "16px", color: "#666", fontWeight: 800 }}>Modern Plastic Bags Factory</p>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "12px" }}>
+              <img src={factoryLogo} alt="Factory Logo" style={{ width: "70px", height: "70px", objectFit: "contain" }} />
+              <div>
+                <h1 style={styles.h1}>مصنع أكياس البلاستيك الحديث</h1>
+                <p style={{ margin: "2px 0", fontSize: "16px", color: "#666", fontWeight: 800 }}>Modern Plastic Bags Factory</p>
+              </div>
             </div>
 
             <div style={{ flex: 1, textAlign: "center" }}>
