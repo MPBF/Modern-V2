@@ -105,6 +105,16 @@ const getDeliveryDate = (createdDate: Date, days: number = 0) => {
   return result;
 };
 
+/** ✅ عنوان عربي فوق وإنجليزي تحت + خط أكبر/أعرض */
+function Label2Lines({ ar, en }: { ar: string; en: string }) {
+  return (
+    <div style={{ lineHeight: 1.1 }}>
+      <div style={{ fontSize: "14px", fontWeight: 900 }}>{ar}</div>
+      <div style={{ fontSize: "12px", fontWeight: 800, opacity: 0.9 }}>{en}</div>
+    </div>
+  );
+}
+
 export default function OrderPrintTemplate({
   order,
   customer,
@@ -132,9 +142,11 @@ export default function OrderPrintTemplate({
     () => productionOrders?.filter((po) => po.order_id === order?.id) || [],
     [productionOrders, order?.id]
   );
+
   const sortedOrders = useMemo(() => {
     return [...filteredOrders].sort((a, b) => (a.id > b.id ? 1 : a.id < b.id ? -1 : 0));
   }, [filteredOrders]);
+
   const salesRep = useMemo(() => {
     return users?.find((u) => u.id === customer?.sales_rep_id);
   }, [users, customer?.sales_rep_id]);
@@ -145,11 +157,14 @@ export default function OrderPrintTemplate({
     () => (order?.created_at ? new Date(order.created_at) : new Date()),
     [order?.created_at]
   );
+
   const orderDateStr = useMemo(() => formatDate(orderDateObj), [orderDateObj]);
+
   const deliveryDateStr = useMemo(() => {
     if (!order?.delivery_days) return "-";
     return formatDate(getDeliveryDate(orderDateObj, order.delivery_days));
   }, [order?.delivery_days, orderDateObj]);
+
   const totalWeight = useMemo(() => {
     return sortedOrders.reduce((sum, po) => {
       const raw = po.final_quantity_kg ?? po.quantity_kg ?? 0;
@@ -159,14 +174,16 @@ export default function OrderPrintTemplate({
 
   const qrUrl = useMemo(() => {
     const qrData = [
-      `رقم الطلب: ${order?.order_number || '-'}`,
-      `العميل: ${customer?.name_ar || customer?.name || '-'}`,
+      `رقم الطلب: ${order?.order_number || "-"}`,
+      `العميل: ${customer?.name_ar || customer?.name || "-"}`,
       `التاريخ: ${orderDateStr}`,
       `التسليم: ${deliveryDateStr}`,
       `الإجمالي: ${totalWeight.toFixed(2)} كجم`,
-      `المندوب: ${salesRep?.full_name || '-'}`,
-    ].join('\n');
-    return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}&color=000000`;
+      `المندوب: ${salesRep?.full_name || "-"}`,
+    ].join("\n");
+    return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
+      qrData
+    )}&color=000000`;
   }, [order?.order_number, customer, orderDateStr, deliveryDateStr, totalWeight, salesRep]);
 
   const handleDirectPrint = useCallback(async () => {
@@ -180,9 +197,9 @@ export default function OrderPrintTemplate({
     if (!canPrint) return;
     const element = printContainerRef.current;
     if (!element) return;
-    
+
     await new Promise((r) => setTimeout(r, 300));
-    
+
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
@@ -199,7 +216,7 @@ export default function OrderPrintTemplate({
 
     const pageWidth = 297;
     const margin = 5;
-    const imgWidth = pageWidth - (margin * 2);
+    const imgWidth = pageWidth - margin * 2;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
     pdf.addImage(canvas.toDataURL("image/png"), "PNG", margin, margin, imgWidth, imgHeight);
@@ -210,7 +227,7 @@ export default function OrderPrintTemplate({
   const handleStandalone = useCallback(() => {
     const element = printContainerRef.current;
     if (!element) return;
-    
+
     const newWindow = window.open("", "_blank");
     if (!newWindow) return;
 
@@ -223,14 +240,14 @@ export default function OrderPrintTemplate({
           <style>
             @page { size: A4 landscape; margin: 5mm; }
             * { box-sizing: border-box; }
-            body { margin: 0; padding: 20px; font-family: 'Times New Roman', Times, serif; direction: rtl; font-weight: 700; background: white; }
-            table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 12px; font-weight: 700; font-family: 'Times New Roman', Times, serif; }
-            th { background: #e8f4fd; border: 2px solid #444; padding: 10px; font-weight: 700; text-align: center; font-size: 13px; font-family: 'Times New Roman', Times, serif; }
-            td { border: 2px solid #444; padding: 8px; text-align: center; font-weight: 700; font-size: 13px; font-family: 'Times New Roman', Times, serif; }
+            body { margin: 0; padding: 20px; font-family: 'Times New Roman', Times, serif; direction: rtl; font-weight: 900; font-size: 15px; background: white; }
+            table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 12px; font-weight: 900; font-family: 'Times New Roman', Times, serif; }
+            th { background: #e8f4fd; border: 2px solid #444; padding: 10px; font-weight: 900; text-align: center; font-size: 14px; font-family: 'Times New Roman', Times, serif; }
+            td { border: 2px solid #444; padding: 8px; text-align: center; font-weight: 900; font-size: 14px; font-family: 'Times New Roman', Times, serif; }
             img { max-width: 100%; }
             .header { display: flex; border-bottom: 3px solid #1a365d; padding-bottom: 12px; margin-bottom: 18px; }
             .header > div { flex: 1; }
-            h1 { font-size: 26px; color: #1a365d; margin: 0; font-weight: 700; font-family: 'Times New Roman', Times, serif; }
+            h1 { font-size: 30px; color: #1a365d; margin: 0; font-weight: 900; font-family: 'Times New Roman', Times, serif; }
             .print-btn { position: fixed; top: 10px; left: 10px; padding: 12px 24px; background: #16a34a; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; font-family: 'Times New Roman', Times, serif; }
             .print-btn:hover { background: #15803d; }
             @media print { .print-btn { display: none; } }
@@ -261,14 +278,60 @@ export default function OrderPrintTemplate({
   }, [mode, canPrint, handleDirectPrint, handleDirectPdf, handleStandalone]);
 
   const styles = {
-    page: { width: "100%", fontFamily: "'Times New Roman', Times, serif", direction: "rtl" as const, color: "#000", fontWeight: 700 as const, padding: "10px" },
+    /** ✅ الجديد: تكبير الخط + جعله عريض */
+    page: {
+      width: "100%",
+      fontFamily: "'Times New Roman', Times, serif",
+      direction: "rtl" as const,
+      color: "#000",
+      fontWeight: 900 as const,
+      fontSize: "15px",
+      padding: "10px",
+    },
     header: { display: "flex", borderBottom: "3px solid #1a365d", paddingBottom: "12px", marginBottom: "18px" },
-    h1: { fontSize: "26px", color: "#1a365d", margin: 0, fontWeight: 700 as const, fontFamily: "'Times New Roman', Times, serif" },
-    table: { width: "100%", borderCollapse: "collapse" as const, fontSize: "13px", marginBottom: "12px", fontWeight: 700 as const, fontFamily: "'Times New Roman', Times, serif" },
-    th: { background: "#e8f4fd", border: "2px solid #444", padding: "10px", color: "black", fontWeight: 700 as const, textAlign: "center" as const, fontSize: "13px", fontFamily: "'Times New Roman', Times, serif" },
-    td: { border: "2px solid #444", padding: "8px", textAlign: "center" as const, fontWeight: 700 as const, fontSize: "13px", fontFamily: "'Times New Roman', Times, serif" },
-    metaBox: { fontSize: "13px", textAlign: "left" as const, fontWeight: 700 as const, fontFamily: "'Times New Roman', Times, serif" },
-    footer: { display: "flex", justifyContent: "space-between", marginTop: "20px", borderTop: "2px solid #ccc", paddingTop: "12px" }
+
+    /** ✅ تكبير العنوان */
+    h1: {
+      fontSize: "30px",
+      color: "#1a365d",
+      margin: 0,
+      fontWeight: 900 as const,
+      fontFamily: "'Times New Roman', Times, serif",
+    },
+
+    /** ✅ تكبير الجداول */
+    table: {
+      width: "100%",
+      borderCollapse: "collapse" as const,
+      fontSize: "14px",
+      marginBottom: "12px",
+      fontWeight: 900 as const,
+      fontFamily: "'Times New Roman', Times, serif",
+    },
+
+    th: {
+      background: "#e8f4fd",
+      border: "2px solid #444",
+      padding: "10px",
+      color: "black",
+      fontWeight: 900 as const,
+      textAlign: "center" as const,
+      fontSize: "14px",
+      fontFamily: "'Times New Roman', Times, serif",
+    },
+
+    td: {
+      border: "2px solid #444",
+      padding: "8px",
+      textAlign: "center" as const,
+      fontWeight: 900 as const,
+      fontSize: "14px",
+      fontFamily: "'Times New Roman', Times, serif",
+    },
+
+    metaBox: { fontSize: "14px", textAlign: "left" as const, fontWeight: 900 as const, fontFamily: "'Times New Roman', Times, serif" },
+
+    footer: { display: "flex", justifyContent: "space-between", marginTop: "20px", borderTop: "2px solid #ccc", paddingTop: "12px" },
   };
 
   return (
@@ -283,26 +346,33 @@ export default function OrderPrintTemplate({
           }
         `}
       </style>
-      
-      <div className="order-print-container" style={{ position: 'fixed', left: '-9999px', top: 0, width: '297mm', background: 'white' }}>
+
+      <div className="order-print-container" style={{ position: "fixed", left: "-9999px", top: 0, width: "297mm", background: "white" }}>
         <div className="order-print-area" ref={printContainerRef} style={styles.page}>
-          
           <div style={styles.header}>
             <div style={{ flex: 1 }}>
               <h1 style={styles.h1}>مصنع أكياس البلاستيك الحديث</h1>
-              <p style={{ margin: "2px 0", fontSize: "12px", color: "#666" }}>Modern Plastic Bags Factory</p>
+              <p style={{ margin: "2px 0", fontSize: "16px", color: "#666", fontWeight: 800 }}>Modern Plastic Bags Factory</p>
             </div>
+
             <div style={{ flex: 1, textAlign: "center" }}>
-              <h2 style={{ fontSize: "18px", margin: 0, color: "#1a365d", fontWeight: 800 }}>أمر تشغيل إنتاج</h2>
-              <span style={{ fontSize: "12px", fontWeight: "bold" }}>PRODUCTION ORDER</span>
+              <h2 style={{ fontSize: "20px", margin: 0, color: "#1a365d", fontWeight: 900 }}>أمر تشغيل إنتاج</h2>
+              <span style={{ fontSize: "13px", fontWeight: 800 }}>PRODUCTION ORDER</span>
             </div>
+
             <div style={{ flex: 1, display: "flex", justifyContent: "flex-end", gap: "10px" }}>
               <div style={styles.metaBox}>
-                <div><strong>رقم الطلب:</strong> #{order?.order_number}</div>
-                <div><strong>التاريخ:</strong> {orderDateStr}</div>
-                <div><strong>التسليم:</strong> {deliveryDateStr}</div>
+                <div>
+                  <strong>رقم الطلب:</strong> #{order?.order_number}
+                </div>
+                <div>
+                  <strong>التاريخ:</strong> {orderDateStr}
+                </div>
+                <div>
+                  <strong>التسليم:</strong> {deliveryDateStr}
+                </div>
               </div>
-              <img src={qrUrl} alt="QR" width="70" height="70" />
+              <img src={qrUrl} alt="QR" width="75" height="75" />
             </div>
           </div>
 
@@ -310,29 +380,40 @@ export default function OrderPrintTemplate({
             <tbody>
               <tr>
                 <td style={{ ...styles.td, background: "#f8f9fa", width: "8%" }}>
-                  <div>العميل / Customer</div>
+                  <Label2Lines ar="العميل" en="Customer" />
                 </td>
-                <td style={{ ...styles.td, width: "22%", textAlign: "right", fontWeight: 700 }}>
+
+                <td style={{ ...styles.td, width: "22%", textAlign: "right", fontWeight: 950 }}>
                   {customer?.name_ar || "-"}
-                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#333", marginTop: "2px" }}>{customer?.name || customer?.commercial_name || ""}</div>
-                  <div style={{ fontSize: "11px", fontWeight: 500, color: "#666" }}>{customer?.phone || ""}</div>
+                  <div style={{ fontSize: "16px", fontWeight: 900, color: "#333", marginTop: "2px" }}>
+                    {customer?.name || customer?.commercial_name || ""}
+                  </div>
+                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#666" }}>{customer?.phone || ""}</div>
                 </td>
+
                 <td style={{ ...styles.td, background: "#f8f9fa", width: "6%" }}>
-                  <div>الدرج / Drawer</div>
+                  <Label2Lines ar="الدرج" en="Drawer" />
                 </td>
-                <td style={{ ...styles.td, width: "6%", fontWeight: 700, fontSize: "14px" }}>{customer?.plate_drawer_code || "-"}</td>
+
+                <td style={{ ...styles.td, width: "6%", fontWeight: 900, fontSize: "16px" }}>{customer?.plate_drawer_code || "-"}</td>
+
                 <td style={{ ...styles.td, background: "#f8f9fa", width: "6%" }}>
-                  <div>المندوب / Sales Rep</div>
+                  <Label2Lines ar="المندوب" en="Sales Rep" />
                 </td>
-                <td style={{ ...styles.td, width: "13%" }}>{salesRep?.full_name || "-"}</td>
+
+                <td style={{ ...styles.td, width: "13%", fontWeight: 900 }}>{salesRep?.full_name || "-"}</td>
+
                 <td style={{ ...styles.td, background: "#f8f9fa", width: "6%" }}>
-                  <div>الحالة / Status</div>
+                  <Label2Lines ar="الحالة" en="Status" />
                 </td>
-                <td style={{ ...styles.td, width: "8%" }}>{order?.status || "-"}</td>
-                <td style={{ ...styles.td, background: "#1a365d", color: "white", width: "7%", fontWeight: 700 }}>
-                  <div>الإجمالي / Total</div>
+
+                <td style={{ ...styles.td, width: "8%", fontWeight: 900 }}>{order?.status || "-"}</td>
+
+                <td style={{ ...styles.td, background: "#1a365d", color: "white", width: "7%", fontWeight: 900 }}>
+                  <Label2Lines ar="الإجمالي" en="Total" />
                 </td>
-                <td style={{ ...styles.td, background: "#e8f4fd", fontWeight: 900, fontSize: "18px" }}>
+
+                <td style={{ ...styles.td, background: "#e8f4fd", fontWeight: 900, fontSize: "20px" }}>
                   {formatNumber(totalWeight)} كجم
                 </td>
               </tr>
@@ -342,20 +423,45 @@ export default function OrderPrintTemplate({
           <table style={styles.table}>
             <thead>
               <tr>
-                <th style={{ ...styles.th, width: "3%" }}>#</th>
-                <th style={{ ...styles.th, width: "14%", textAlign: "right" }}>الصنف / Product</th>
-                <th style={{ ...styles.th, width: "8%" }}>المقاس / Width</th>
-                <th style={{ ...styles.th, width: "6%" }}>الطول / Length</th>
-                <th style={{ ...styles.th, width: "6%" }}>السماكة / Thickness</th>
-                <th style={{ ...styles.th, width: "8%" }}>الخامة / Material</th>
-                <th style={{ ...styles.th, width: "8%" }}>اللون / Color</th>
-                <th style={{ ...styles.th, width: "5%" }}>الطباعة / Print</th>
-                <th style={{ ...styles.th, width: "8%" }}>السلندر / Cylinder</th>
-                <th style={{ ...styles.th, width: "8%" }}>اليد / Handle</th>
-                <th style={{ ...styles.th, width: "8%" }}>الكمية / Qty (kg)</th>
-                <th style={{ ...styles.th, width: "12%" }}>ملاحظات / Notes</th>
+                <th style={{ ...styles.th, width: "3%" }}>
+                  <Label2Lines ar="#" en="#" />
+                </th>
+                <th style={{ ...styles.th, width: "14%", textAlign: "right" }}>
+                  <Label2Lines ar="الصنف" en="Product" />
+                </th>
+                <th style={{ ...styles.th, width: "8%" }}>
+                  <Label2Lines ar="العرض" en="Size" />
+                </th>
+                <th style={{ ...styles.th, width: "6%" }}>
+                  <Label2Lines ar="الطول" en="Length" />
+                </th>
+                <th style={{ ...styles.th, width: "6%" }}>
+                  <Label2Lines ar="السماكة" en="Thickness" />
+                </th>
+                <th style={{ ...styles.th, width: "8%" }}>
+                  <Label2Lines ar="المادة الخام" en="Material" />
+                </th>
+                <th style={{ ...styles.th, width: "8%" }}>
+                  <Label2Lines ar="اللون" en="Color" />
+                </th>
+                <th style={{ ...styles.th, width: "5%" }}>
+                  <Label2Lines ar="الطباعة" en="Print" />
+                </th>
+                <th style={{ ...styles.th, width: "8%" }}>
+                  <Label2Lines ar="السلندر" en="Cylinder" />
+                </th>
+                <th style={{ ...styles.th, width: "8%" }}>
+                  <Label2Lines ar="التخريم" en="Handle" />
+                </th>
+                <th style={{ ...styles.th, width: "8%" }}>
+                  <Label2Lines ar="الكمية" en="Qty (kg)" />
+                </th>
+                <th style={{ ...styles.th, width: "12%" }}>
+                  <Label2Lines ar="ملاحظات" en="Notes" />
+                </th>
               </tr>
             </thead>
+
             <tbody>
               {sortedOrders.map((po: ProductionOrder, idx: number) => {
                 const cp = customerProductsMap.get(po.customer_product_id);
@@ -366,55 +472,64 @@ export default function OrderPrintTemplate({
                 return (
                   <tr key={po.id}>
                     <td style={styles.td}>{idx + 1}</td>
-                    <td style={{ ...styles.td, textAlign: "right", fontWeight: 700 }}>
+
+                    <td style={{ ...styles.td, textAlign: "right", fontWeight: 900 }}>
                       {item?.name_ar || item?.name || "-"}
-                      <div style={{ fontSize: "9px", color: "#555", fontWeight: 500 }}>{cp?.size_caption}</div>
+                      <div style={{ fontSize: "15px", color: "#555", fontWeight: 800 }}>{cp?.size_caption}</div>
                     </td>
-                    <td style={{ ...styles.td, direction: "ltr", fontWeight: 800 }}>{cp?.width ? `${cp.width} cm` : "-"}</td>
-                    <td style={{ ...styles.td, direction: "ltr", fontWeight: 800 }}>{cp?.cutting_length_cm ? `${cp.cutting_length_cm} cm` : "-"}</td>
-                    <td style={{ ...styles.td, direction: "ltr", fontWeight: 800 }}>{cp?.thickness ? `${cp.thickness} mic` : "-"}</td>
-                    <td style={{ ...styles.td, fontWeight: 800 }}>{cp?.raw_material || "بيور"}</td>
+
+                    <td style={{ ...styles.td, direction: "ltr", fontWeight: 900 }}>{cp?.width ? `${cp.width} cm` : "-"}</td>
+                    <td style={{ ...styles.td, direction: "ltr", fontWeight: 900 }}>{cp?.cutting_length_cm ? `${cp.cutting_length_cm} cm` : "-"}</td>
+                    <td style={{ ...styles.td, direction: "ltr", fontWeight: 900 }}>{cp?.thickness ? `${cp.thickness} mic` : "-"}</td>
+                    <td style={{ ...styles.td, fontWeight: 900 }}>{cp?.raw_material || "بيور"}</td>
+
                     <td style={styles.td}>
-                      <div>{color.name_ar}</div>
-                      <div style={{ fontSize: "9px", color: "#666" }}>{color.name_en}</div>
+                      <div style={{ fontWeight: 900 }}>{color.name_ar}</div>
+                      <div style={{ fontSize: "15px", color: "#666", fontWeight: 800 }}>{color.name_en}</div>
                     </td>
+
                     <td style={styles.td}>
-                      {cp?.is_printed 
-                        ? <span style={{color:"#16a34a", fontWeight: 900, fontSize: "20px"}}>✓</span> 
-                        : <span style={{color:"#dc2626", fontWeight: 900, fontSize: "20px"}}>✗</span>}
+                      {cp?.is_printed ? (
+                        <span style={{ color: "#16a34a", fontWeight: 900, fontSize: "22px" }}>✓</span>
+                      ) : (
+                        <span style={{ color: "#dc2626", fontWeight: 900, fontSize: "22px" }}>✗</span>
+                      )}
                     </td>
-                    <td style={{ ...styles.td, fontWeight: 800 }}>{cp?.printing_cylinder || "-"}</td>
-                    <td style={{ ...styles.td, fontWeight: 700 }}>{cp?.punching || cp?.handle_type || "-"}</td>
-                    <td style={{ ...styles.td, fontWeight: 900, fontSize: "16px" }}>{formatNumber(qty)}</td>
-                    <td style={{ ...styles.td, fontSize: "12px", textAlign: "right", fontWeight: 600 }}>{po.notes || "-"}</td>
+
+                    <td style={{ ...styles.td, fontWeight: 900 }}>{cp?.printing_cylinder || "-"}</td>
+                    <td style={{ ...styles.td, fontWeight: 900 }}>{cp?.punching || cp?.handle_type || "-"}</td>
+                    <td style={{ ...styles.td, fontWeight: 900, fontSize: "18px" }}>{formatNumber(qty)}</td>
+                    <td style={{ ...styles.td, fontSize: "13px", textAlign: "right", fontWeight: 900 }}>{po.notes || "-"}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
 
-          <div style={{ border: "2px solid #ccc", padding: "12px", marginBottom: "15px", borderRadius: "4px", minHeight: "50px", fontFamily: "'Times New Roman', Times, serif" }}>
-            <strong style={{ fontSize: "13px", display: "block", marginBottom: "5px", fontWeight: 700 }}>ملاحظات عامة / General Notes:</strong>
-            <span style={{ fontSize: "13px", fontWeight: 700 }}>{order?.notes || "لا توجد ملاحظات"}</span>
+          <div style={{ border: "2px solid #ccc", padding: "12px", marginBottom: "15px", borderRadius: "4px", minHeight: "50px", fontFamily: "'Times New Roman', Times, serif", fontWeight: 900 }}>
+            <strong style={{ fontSize: "14px", display: "block", marginBottom: "5px", fontWeight: 900 }}>ملاحظات عامة / General Notes:</strong>
+            <span style={{ fontSize: "14px", fontWeight: 900 }}>{order?.notes || "لا توجد ملاحظات"}</span>
           </div>
 
           <div style={styles.footer}>
-            <div style={{ textAlign: "center", width: "30%", fontFamily: "'Times New Roman', Times, serif" }}>
-              <div style={{ fontSize: "13px", marginBottom: "30px", fontWeight: 700 }}>مدير الإنتاج / Production Manager</div>
+            <div style={{ textAlign: "center", width: "30%", fontFamily: "'Times New Roman', Times, serif", fontWeight: 900 }}>
+              <div style={{ fontSize: "14px", marginBottom: "30px", fontWeight: 900 }}>مدير الإنتاج / Production Manager</div>
               <div style={{ borderTop: "2px solid #000", width: "60%", margin: "0 auto" }}></div>
             </div>
-            <div style={{ textAlign: "center", width: "30%", fontFamily: "'Times New Roman', Times, serif" }}>
-              <div style={{ fontSize: "13px", marginBottom: "30px", fontWeight: 700 }}>مسؤول الجودة / Quality Manager</div>
+
+            <div style={{ textAlign: "center", width: "30%", fontFamily: "'Times New Roman', Times, serif", fontWeight: 900 }}>
+              <div style={{ fontSize: "14px", marginBottom: "30px", fontWeight: 900 }}>مسؤول الجودة / Quality Manager</div>
               <div style={{ borderTop: "2px solid #000", width: "60%", margin: "0 auto" }}></div>
             </div>
-            <div style={{ textAlign: "center", width: "30%", fontFamily: "'Times New Roman', Times, serif" }}>
-              <div style={{ fontSize: "13px", marginBottom: "30px", fontWeight: 700 }}>أمين المستودع / Warehouse Keeper</div>
+
+            <div style={{ textAlign: "center", width: "30%", fontFamily: "'Times New Roman', Times, serif", fontWeight: 900 }}>
+              <div style={{ fontSize: "14px", marginBottom: "30px", fontWeight: 900 }}>أمين المستودع / Warehouse Keeper</div>
               <div style={{ borderTop: "2px solid #000", width: "60%", margin: "0 auto" }}></div>
             </div>
           </div>
 
-          <div style={{ textAlign: "center", marginTop: "10px", fontSize: "9px", color: "#888" }}>
-            SYSTEM GENERATED | {new Date().toLocaleString('en-GB')}
+          <div style={{ textAlign: "center", marginTop: "10px", fontSize: "10px", color: "#888", fontWeight: 800 }}>
+            SYSTEM GENERATED | {new Date().toLocaleString("en-GB")}
           </div>
         </div>
       </div>
