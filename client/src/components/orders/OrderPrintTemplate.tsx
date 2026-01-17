@@ -23,6 +23,7 @@ interface Customer {
   sales_rep_id?: string;
   phone?: string;
   commercial_name?: string;
+  plate_drawer_code?: string;
 }
 
 interface ProductionOrder {
@@ -308,17 +309,34 @@ export default function OrderPrintTemplate({
           <table style={styles.table}>
             <tbody>
               <tr>
-                <td style={{ ...styles.td, background: "#f8f9fa", width: "8%" }}>العميل</td>
-                <td style={{ ...styles.td, width: "25%", textAlign: "right", fontWeight: 700 }}>
+                <td style={{ ...styles.td, background: "#f8f9fa", width: "8%" }}>
+                  <div>العميل</div>
+                  <div style={{ fontSize: "9px", color: "#666" }}>Customer</div>
+                </td>
+                <td style={{ ...styles.td, width: "22%", textAlign: "right", fontWeight: 700 }}>
                   {customer?.name_ar || "-"}
-                  <div style={{ fontSize: "10px", fontWeight: 600, color: "#444" }}>{customer?.name || customer?.commercial_name || ""}</div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#333", marginTop: "2px" }}>{customer?.name || customer?.commercial_name || ""}</div>
                   <div style={{ fontSize: "9px", fontWeight: 500, color: "#666" }}>{customer?.phone || ""}</div>
                 </td>
-                <td style={{ ...styles.td, background: "#f8f9fa", width: "8%" }}>المندوب</td>
-                <td style={{ ...styles.td, width: "15%" }}>{salesRep?.full_name || "-"}</td>
-                <td style={{ ...styles.td, background: "#f8f9fa", width: "8%" }}>الحالة</td>
-                <td style={{ ...styles.td, width: "10%" }}>{order?.status || "-"}</td>
-                <td style={{ ...styles.td, background: "#1a365d", color: "white", width: "8%", fontWeight: 900 }}>الإجمالي</td>
+                <td style={{ ...styles.td, background: "#f8f9fa", width: "6%" }}>
+                  <div>الدرج</div>
+                  <div style={{ fontSize: "9px", color: "#666" }}>Drawer</div>
+                </td>
+                <td style={{ ...styles.td, width: "6%", fontWeight: 800, fontSize: "16px" }}>{customer?.plate_drawer_code || "-"}</td>
+                <td style={{ ...styles.td, background: "#f8f9fa", width: "6%" }}>
+                  <div>المندوب</div>
+                  <div style={{ fontSize: "9px", color: "#666" }}>Sales Rep</div>
+                </td>
+                <td style={{ ...styles.td, width: "13%" }}>{salesRep?.full_name || "-"}</td>
+                <td style={{ ...styles.td, background: "#f8f9fa", width: "6%" }}>
+                  <div>الحالة</div>
+                  <div style={{ fontSize: "9px", color: "#666" }}>Status</div>
+                </td>
+                <td style={{ ...styles.td, width: "8%" }}>{order?.status || "-"}</td>
+                <td style={{ ...styles.td, background: "#1a365d", color: "white", width: "7%", fontWeight: 900 }}>
+                  <div>الإجمالي</div>
+                  <div style={{ fontSize: "9px", color: "#ddd" }}>Total</div>
+                </td>
                 <td style={{ ...styles.td, background: "#e8f4fd", fontWeight: 900, fontSize: "18px" }}>
                   {formatNumber(totalWeight)} كجم
                 </td>
@@ -329,18 +347,53 @@ export default function OrderPrintTemplate({
           <table style={styles.table}>
             <thead>
               <tr>
-                <th style={{ ...styles.th, width: "3%" }}>#</th>
-                <th style={{ ...styles.th, width: "14%", textAlign: "right" }}>الصنف</th>
-                <th style={{ ...styles.th, width: "8%" }}>المقاس (عرض)</th>
-                <th style={{ ...styles.th, width: "6%" }}>الطول</th>
-                <th style={{ ...styles.th, width: "6%" }}>السماكة</th>
-                <th style={{ ...styles.th, width: "8%" }}>الخامة</th>
-                <th style={{ ...styles.th, width: "8%" }}>اللون</th>
-                <th style={{ ...styles.th, width: "5%" }}>الطباعة</th>
-                <th style={{ ...styles.th, width: "8%" }}>السلندر</th>
-                <th style={{ ...styles.th, width: "8%" }}>اليد</th>
-                <th style={{ ...styles.th, width: "8%" }}>الكمية (كجم)</th>
-                <th style={{ ...styles.th, width: "12%" }}>ملاحظات</th>
+                <th style={{ ...styles.th, width: "3%" }}>
+                  <div>#</div>
+                </th>
+                <th style={{ ...styles.th, width: "14%", textAlign: "right" }}>
+                  <div>الصنف</div>
+                  <div style={{ fontSize: "9px", fontWeight: 600, color: "#555" }}>Product</div>
+                </th>
+                <th style={{ ...styles.th, width: "8%" }}>
+                  <div>المقاس (عرض)</div>
+                  <div style={{ fontSize: "9px", fontWeight: 600, color: "#555" }}>Width</div>
+                </th>
+                <th style={{ ...styles.th, width: "6%" }}>
+                  <div>الطول</div>
+                  <div style={{ fontSize: "9px", fontWeight: 600, color: "#555" }}>Length</div>
+                </th>
+                <th style={{ ...styles.th, width: "6%" }}>
+                  <div>السماكة</div>
+                  <div style={{ fontSize: "9px", fontWeight: 600, color: "#555" }}>Thickness</div>
+                </th>
+                <th style={{ ...styles.th, width: "8%" }}>
+                  <div>الخامة</div>
+                  <div style={{ fontSize: "9px", fontWeight: 600, color: "#555" }}>Material</div>
+                </th>
+                <th style={{ ...styles.th, width: "8%" }}>
+                  <div>اللون</div>
+                  <div style={{ fontSize: "9px", fontWeight: 600, color: "#555" }}>Color</div>
+                </th>
+                <th style={{ ...styles.th, width: "5%" }}>
+                  <div>الطباعة</div>
+                  <div style={{ fontSize: "9px", fontWeight: 600, color: "#555" }}>Print</div>
+                </th>
+                <th style={{ ...styles.th, width: "8%" }}>
+                  <div>السلندر</div>
+                  <div style={{ fontSize: "9px", fontWeight: 600, color: "#555" }}>Cylinder</div>
+                </th>
+                <th style={{ ...styles.th, width: "8%" }}>
+                  <div>اليد</div>
+                  <div style={{ fontSize: "9px", fontWeight: 600, color: "#555" }}>Handle</div>
+                </th>
+                <th style={{ ...styles.th, width: "8%" }}>
+                  <div>الكمية (كجم)</div>
+                  <div style={{ fontSize: "9px", fontWeight: 600, color: "#555" }}>Qty (kg)</div>
+                </th>
+                <th style={{ ...styles.th, width: "12%" }}>
+                  <div>ملاحظات</div>
+                  <div style={{ fontSize: "9px", fontWeight: 600, color: "#555" }}>Notes</div>
+                </th>
               </tr>
             </thead>
             <tbody>
