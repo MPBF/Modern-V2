@@ -5595,8 +5595,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isDevMode = process.env.NODE_ENV === 'development';
       
       // =============== إعدادات الحماية ===============
-      const MAX_ACCURACY_METERS = 100; // الحد الأقصى للدقة المسموحة بالأمتار
-      const MIN_ACCURACY_METERS = 5;   // الحد الأدنى للدقة (أقل من ذلك يعني تزوير محتمل)
+      const MAX_ACCURACY_METERS = 500; // الحد الأقصى للدقة المسموحة بالأمتار (مرن للمباني الداخلية)
+      const MIN_ACCURACY_METERS = 3;   // الحد الأدنى للدقة (أقل من ذلك يعني تزوير محتمل)
       
       // =============== جمع معلومات الجهاز للتدقيق ===============
       const deviceInfo = {
