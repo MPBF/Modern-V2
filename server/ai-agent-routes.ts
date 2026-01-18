@@ -16,7 +16,22 @@ if (!fs.existsSync(PDF_DIR)) {
   fs.mkdirSync(PDF_DIR, { recursive: true });
 }
 
-// دالة لرفع PDF إلى التخزين السحابي والحصول على رابط عام
+// دالة للحصول على الدومين الأساسي للتطبيق
+function getAppBaseUrl(): string {
+  // أولاً: التحقق من الدومين المخصص (Production)
+  if (process.env.REPLIT_DOMAINS) {
+    const domains = process.env.REPLIT_DOMAINS.split(',');
+    // استخدام أول دومين (عادة يكون الدومين المخصص أو الدومين الرئيسي)
+    return `https://${domains[0]}`;
+  }
+  // ثانياً: دومين التطوير
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  }
+  return 'http://localhost:5000';
+}
+
+// دالة لرفع PDF إلى التخزين السحابي والحصول على رابط على الدومين الخاص
 async function uploadPdfToStorage(pdfBuffer: Buffer, documentNumber: string): Promise<string> {
   try {
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
@@ -25,24 +40,24 @@ async function uploadPdfToStorage(pdfBuffer: Buffer, documentNumber: string): Pr
     }
     
     const bucket = objectStorageClient.bucket(bucketId);
-    const fileName = `quotes/quote_${documentNumber}_${Date.now()}.pdf`;
+    // استخدام اسم ملف ثابت بناءً على رقم المستند فقط (بدون timestamp) للوصول المتكرر
+    const fileName = `quotes/quote_${documentNumber}.pdf`;
     const file = bucket.file(fileName);
     
     // رفع الملف
     await file.save(pdfBuffer, {
       contentType: "application/pdf",
       metadata: {
-        cacheControl: "public, max-age=31536000",
+        cacheControl: "public, max-age=86400", // 24 hours cache
       },
     });
     
-    // الحصول على رابط موقع (صالح لمدة 7 أيام)
-    const [signedUrl] = await file.getSignedUrl({
-      action: "read",
-      expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    // إرجاع رابط على الدومين الخاص بالتطبيق
+    const baseUrl = getAppBaseUrl();
+    const pdfUrl = `${baseUrl}/api/pdf/quotes/${documentNumber}`;
     
-    return signedUrl;
+    console.log(`PDF uploaded successfully. Access URL: ${pdfUrl}`);
+    return pdfUrl;
   } catch (error) {
     console.error("Error uploading PDF to storage:", error);
     throw error;
@@ -1074,6 +1089,39 @@ export function registerAiAgentRoutes(app: Express): void {
     } catch (error) {
       console.error("Error fetching quote:", error);
       res.status(500).json({ error: "فشل في جلب عرض السعر" });
+    }
+  });
+
+  // نقطة نهاية لتقديم ملفات PDF من التخزين السحابي على الدومين الخاص
+  app.get("/api/pdf/quotes/:documentNumber", async (req: Request, res: Response) => {
+    try {
+      const { documentNumber } = req.params;
+      
+      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+      if (!bucketId) {
+        return res.status(500).json({ error: "التخزين السحابي غير مهيأ" });
+      }
+      
+      const bucket = objectStorageClient.bucket(bucketId);
+      const fileName = `quotes/quote_${documentNumber}.pdf`;
+      const file = bucket.file(fileName);
+      
+      // التحقق من وجود الملف
+      const [exists] = await file.exists();
+      if (!exists) {
+        return res.status(404).json({ error: "ملف PDF غير موجود" });
+      }
+      
+      // تحميل الملف وإرساله
+      const [fileBuffer] = await file.download();
+      
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `inline; filename="quote_${documentNumber}.pdf"`);
+      res.setHeader("Cache-Control", "public, max-age=86400"); // 24 hours cache
+      res.send(fileBuffer);
+    } catch (error) {
+      console.error("Error serving PDF:", error);
+      res.status(500).json({ error: "فشل في تحميل ملف PDF" });
     }
   });
 
