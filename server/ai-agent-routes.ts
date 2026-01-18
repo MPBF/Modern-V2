@@ -578,10 +578,17 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
           return JSON.stringify({ error: "عرض السعر غير موجود" });
         }
         
-        // تنسيق رقم الجوال
-        let formattedPhone = phoneNumber.replace(/\s/g, "");
+        // تنسيق رقم الجوال - إزالة المسافات والرموز الزائدة
+        let formattedPhone = phoneNumber.replace(/[\s\-\(\)]/g, "");
         if (!formattedPhone.startsWith("+")) {
-          formattedPhone = "+" + formattedPhone;
+          // إضافة رمز السعودية افتراضياً إذا لم يكن موجوداً
+          if (formattedPhone.startsWith("05")) {
+            formattedPhone = "+966" + formattedPhone.substring(1);
+          } else if (formattedPhone.startsWith("5")) {
+            formattedPhone = "+966" + formattedPhone;
+          } else if (!formattedPhone.startsWith("+")) {
+            formattedPhone = "+" + formattedPhone;
+          }
         }
         
         // الحصول على URL الأساسي للتطبيق
@@ -593,16 +600,16 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
         
         const pdfUrl = `${baseUrl}/api/quotes/${quoteId}/pdf`;
         
-        // إنشاء رسالة عرض السعر مع رابط PDF
-        const quoteMessage = `📋 *عرض سعر جديد*\n\n` +
-          `📄 رقم المستند: ${quote.document_number}\n` +
-          `👤 العميل: ${quote.customer_name}\n` +
-          `📅 التاريخ: ${new Date(quote.created_at!).toLocaleDateString('ar-SA')}\n\n` +
-          `💰 المجموع قبل الضريبة: ${Number(quote.total_before_tax).toFixed(2)} ر.س\n` +
-          `🧾 ضريبة القيمة المضافة (15%): ${Number(quote.tax_amount).toFixed(2)} ر.س\n` +
-          `💵 *الإجمالي: ${Number(quote.total_with_tax).toFixed(2)} ر.س*\n\n` +
-          `📥 تحميل ملف PDF:\n${pdfUrl}\n\n` +
-          `✅ هذا العرض صالح لمدة 15 يوم من تاريخ الإصدار.`;
+        // إنشاء رسالة عرض السعر مع رابط PDF (بدون رموز خاصة قد تسبب مشاكل)
+        const quoteMessage = `عرض سعر جديد\n\n` +
+          `رقم المستند: ${quote.document_number}\n` +
+          `العميل: ${quote.customer_name}\n` +
+          `التاريخ: ${new Date(quote.created_at!).toLocaleDateString('ar-SA')}\n\n` +
+          `المجموع قبل الضريبة: ${Number(quote.total_before_tax).toFixed(2)} ر.س\n` +
+          `ضريبة القيمة المضافة 15%: ${Number(quote.tax_amount).toFixed(2)} ر.س\n` +
+          `الإجمالي: ${Number(quote.total_with_tax).toFixed(2)} ر.س\n\n` +
+          `رابط تحميل PDF:\n${pdfUrl}\n\n` +
+          `هذا العرض صالح لمدة 15 يوم من تاريخ الإصدار.`;
         
         // محاولة إرسال الرسالة عبر WhatsApp API (Meta أو Twilio)
         try {
@@ -610,8 +617,8 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
           const { storage } = await import("./storage");
           const notificationService = new NotificationService(storage);
           
-          // إرسال رسالة نصية مباشرة مع تفاصيل عرض السعر ورابط PDF
-          const result = await notificationService.metaWhatsApp.sendTextMessage(
+          // استخدام sendWhatsAppMessage الذي يختار API المناسب تلقائياً (Meta أو Twilio)
+          const result = await notificationService.sendWhatsAppMessage(
             formattedPhone,
             quoteMessage,
             {
@@ -631,18 +638,26 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
               message_id: result.messageId
             });
           } else {
+            // إذا فشل الإرسال، نوفر رابط للإرسال اليدوي
+            const whatsappWebLink = `https://wa.me/${formattedPhone.replace('+', '')}?text=${encodeURIComponent(quoteMessage)}`;
             return JSON.stringify({
               success: false,
               error: result.error || "فشل في إرسال الرسالة",
-              message: "لم يتم إرسال الرسالة. تأكد من إعداد خدمة الواتساب بشكل صحيح."
+              message: "لم يتم إرسال الرسالة تلقائياً. يمكنك استخدام الرابط التالي للإرسال يدوياً:",
+              whatsapp_link: whatsappWebLink,
+              pdf_url: pdfUrl
             });
           }
         } catch (error) {
           console.error("WhatsApp send error:", error);
+          // توفير رابط للإرسال اليدوي
+          const whatsappWebLink = `https://wa.me/${formattedPhone.replace('+', '')}?text=${encodeURIComponent(quoteMessage)}`;
           return JSON.stringify({
             success: false,
             error: "خدمة الواتساب غير متاحة حالياً",
-            message: "يمكنك تحميل ملف PDF وإرساله يدوياً"
+            message: "يمكنك استخدام الرابط التالي للإرسال يدوياً عبر WhatsApp Web:",
+            whatsapp_link: whatsappWebLink,
+            pdf_url: pdfUrl
           });
         }
       }
@@ -779,6 +794,10 @@ export function registerAiAgentRoutes(app: Express): void {
   app.get("/api/quotes/:id/pdf", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "معرف عرض السعر غير صالح" });
+      }
+      
       const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
       if (!quote) {
         return res.status(404).json({ error: "عرض السعر غير موجود" });
@@ -793,13 +812,13 @@ export function registerAiAgentRoutes(app: Express): void {
         return new Date(date).toLocaleDateString("en-GB");
       };
 
-      const doc = new PDFDocument({ size: "A4", margin: 50 });
+      // إنشاء PDF في الذاكرة أولاً
+      const chunks: Buffer[] = [];
+      const doc = new PDFDocument({ size: "A4", margin: 50, bufferPages: true });
       
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="quote_${quote.document_number}.pdf"`);
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
       
-      doc.pipe(res);
-
+      // Header
       doc.fontSize(22).fillColor("#2563eb").text("Modern Plastic Bags Factory", { align: "center" });
       doc.fontSize(12).fillColor("#666").text("Quality and Excellence in Every Product", { align: "center" });
       doc.moveDown(0.5);
@@ -807,25 +826,30 @@ export function registerAiAgentRoutes(app: Express): void {
       doc.strokeColor("#2563eb").lineWidth(2).moveTo(50, doc.y).lineTo(545, doc.y).stroke();
       doc.moveDown(1);
 
+      // Title
       doc.fontSize(18).fillColor("#2563eb").text("PRICE QUOTATION", { align: "center" });
       doc.moveDown(0.5);
       doc.fontSize(14).fillColor("#333").text(`Document: ${quote.document_number}`, { align: "center" });
       doc.fontSize(11).fillColor("#666").text(`Date: ${formatDate(quote.quote_date)}`, { align: "center" });
       doc.moveDown(1);
 
-      doc.rect(50, doc.y, 495, 60).fillColor("#f8fafc").fill();
+      // Customer Info Box
+      const customerBoxY = doc.y;
+      doc.rect(50, customerBoxY, 495, 60).fillColor("#f8fafc").fill();
       doc.fillColor("#333");
-      const customerY = doc.y + 15;
+      const customerY = customerBoxY + 15;
       doc.fontSize(12).text("Customer Information", 60, customerY, { underline: true });
       doc.fontSize(11).text(`Customer: ${quote.customer_name}`, 60, customerY + 20);
       doc.text(`Tax Number: ${quote.tax_number}`, 300, customerY + 20);
-      doc.y = customerY + 50;
-      doc.moveDown(1);
+      doc.y = customerBoxY + 70;
+      doc.moveDown(0.5);
 
+      // Items Table
       const tableTop = doc.y;
       const colWidths = [30, 150, 60, 70, 85, 100];
       const headers = ["#", "Item Name", "Unit", "Qty", "Unit Price", "Total"];
       
+      // Table Header
       doc.rect(50, tableTop, 495, 25).fillColor("#2563eb").fill();
       doc.fillColor("#fff").fontSize(10);
       let xPos = 55;
@@ -834,6 +858,7 @@ export function registerAiAgentRoutes(app: Express): void {
         xPos += colWidths[i];
       });
 
+      // Table Rows
       let rowY = tableTop + 25;
       items.forEach((item, index) => {
         const isEven = index % 2 === 0;
@@ -845,8 +870,8 @@ export function registerAiAgentRoutes(app: Express): void {
         xPos = 55;
         const rowData = [
           String(item.line_number),
-          item.item_name,
-          item.unit,
+          item.item_name || "",
+          item.unit || "",
           formatCurrency(item.quantity),
           `${formatCurrency(item.unit_price)} SAR`,
           `${formatCurrency(item.line_total)} SAR`
@@ -858,12 +883,14 @@ export function registerAiAgentRoutes(app: Express): void {
         rowY += 22;
       });
 
+      // Table Bottom Border
       doc.strokeColor("#e2e8f0").lineWidth(1).moveTo(50, rowY).lineTo(545, rowY).stroke();
-      doc.moveDown(2);
       doc.y = rowY + 20;
 
-      doc.rect(50, doc.y, 250, 80).fillColor("#f8fafc").fill();
-      const totalsY = doc.y + 10;
+      // Totals Box
+      const totalsBoxY = doc.y;
+      doc.rect(50, totalsBoxY, 250, 80).fillColor("#f8fafc").fill();
+      const totalsY = totalsBoxY + 10;
       doc.fillColor("#333").fontSize(11);
       doc.text("Subtotal:", 60, totalsY);
       doc.text(`${formatCurrency(quote.total_before_tax)} SAR`, 200, totalsY, { align: "right", width: 90 });
@@ -873,16 +900,19 @@ export function registerAiAgentRoutes(app: Express): void {
       doc.fontSize(13).fillColor("#2563eb").text("Total:", 60, totalsY + 50);
       doc.text(`${formatCurrency(quote.total_with_tax)} SAR`, 200, totalsY + 50, { align: "right", width: 90 });
 
-      doc.y = totalsY + 90;
+      doc.y = totalsBoxY + 90;
 
+      // Notes (if any)
       if (quote.notes) {
-        doc.rect(50, doc.y, 495, 50).fillColor("#fffbeb").fill();
-        doc.strokeColor("#fcd34d").rect(50, doc.y, 495, 50).stroke();
-        doc.fillColor("#b45309").fontSize(10).text("Notes:", 60, doc.y + 10);
-        doc.fillColor("#78350f").text(quote.notes, 60, doc.y + 25, { width: 475 });
-        doc.moveDown(3);
+        const notesY = doc.y;
+        doc.rect(50, notesY, 495, 50).fillColor("#fffbeb").fill();
+        doc.strokeColor("#fcd34d").rect(50, notesY, 495, 50).stroke();
+        doc.fillColor("#b45309").fontSize(10).text("Notes:", 60, notesY + 10);
+        doc.fillColor("#78350f").text(quote.notes, 60, notesY + 25, { width: 475 });
+        doc.y = notesY + 60;
       }
 
+      // Footer
       doc.moveDown(2);
       doc.strokeColor("#e2e8f0").lineWidth(1).moveTo(50, doc.y).lineTo(545, doc.y).stroke();
       doc.moveDown(0.5);
@@ -893,10 +923,26 @@ export function registerAiAgentRoutes(app: Express): void {
         doc.text(`Prepared by: ${quote.created_by_name}${quote.created_by_phone ? ` - ${quote.created_by_phone}` : ""}`, { align: "center" });
       }
 
-      doc.end();
+      // انتظار اكتمال PDF ثم إرساله
+      await new Promise<void>((resolve, reject) => {
+        doc.on('end', () => resolve());
+        doc.on('error', (err) => reject(err));
+        doc.end();
+      });
+      
+      const pdfBuffer = Buffer.concat(chunks);
+      
+      // إرسال PDF
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Length", pdfBuffer.length);
+      res.setHeader("Content-Disposition", `attachment; filename="quote_${quote.document_number}.pdf"`);
+      res.send(pdfBuffer);
+      
     } catch (error) {
       console.error("Error generating quote PDF:", error);
-      res.status(500).json({ error: "فشل في إنشاء ملف PDF" });
+      if (!res.headersSent) {
+        res.status(500).json({ error: "فشل في إنشاء ملف PDF" });
+      }
     }
   });
 
