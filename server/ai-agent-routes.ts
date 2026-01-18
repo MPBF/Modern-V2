@@ -1408,27 +1408,36 @@ export function registerAiAgentRoutes(app: Express): void {
       const { documentNumber } = req.params;
       
       const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-      if (!bucketId) {
-        return res.status(500).json({ error: "التخزين السحابي غير مهيأ" });
+      
+      // محاولة جلب الملف من Object Storage أولاً
+      if (bucketId) {
+        try {
+          const bucket = objectStorageClient.bucket(bucketId);
+          const fileName = `quotes/quote_${documentNumber}.pdf`;
+          const file = bucket.file(fileName);
+          
+          const [exists] = await file.exists();
+          if (exists) {
+            const [fileBuffer] = await file.download();
+            
+            res.setHeader("Content-Type", "application/pdf");
+            res.setHeader("Content-Disposition", `inline; filename="quote_${documentNumber}.pdf"`);
+            res.setHeader("Cache-Control", "public, max-age=86400");
+            return res.send(fileBuffer);
+          }
+        } catch (storageError) {
+          console.warn("Object storage fetch failed, falling back to dynamic generation:", storageError);
+        }
       }
       
-      const bucket = objectStorageClient.bucket(bucketId);
-      const fileName = `quotes/quote_${documentNumber}.pdf`;
-      const file = bucket.file(fileName);
-      
-      // التحقق من وجود الملف
-      const [exists] = await file.exists();
-      if (!exists) {
-        return res.status(404).json({ error: "ملف PDF غير موجود" });
+      // Fallback: إنشاء PDF ديناميكياً من قاعدة البيانات
+      const [quote] = await db.select().from(quotes).where(eq(quotes.document_number, documentNumber));
+      if (!quote) {
+        return res.status(404).json({ error: "عرض السعر غير موجود" });
       }
       
-      // تحميل الملف وإرساله
-      const [fileBuffer] = await file.download();
-      
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `inline; filename="quote_${documentNumber}.pdf"`);
-      res.setHeader("Cache-Control", "public, max-age=86400"); // 24 hours cache
-      res.send(fileBuffer);
+      // إعادة التوجيه إلى endpoint التوليد الديناميكي
+      return res.redirect(`/api/quotes/${quote.id}/pdf`);
     } catch (error) {
       console.error("Error serving PDF:", error);
       res.status(500).json({ error: "فشل في تحميل ملف PDF" });
