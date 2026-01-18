@@ -8,10 +8,249 @@ import * as XLSX from "exceljs";
 import * as fs from "fs";
 import * as path from "path";
 import PDFDocument from "pdfkit";
+import { objectStorageClient } from "./replit_integrations/object_storage";
 
 const PDF_DIR = "/tmp/quote-pdfs";
 if (!fs.existsSync(PDF_DIR)) {
   fs.mkdirSync(PDF_DIR, { recursive: true });
+}
+
+// دالة لرفع PDF إلى التخزين السحابي والحصول على رابط عام
+async function uploadPdfToStorage(pdfBuffer: Buffer, documentNumber: string): Promise<string> {
+  try {
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) {
+      throw new Error("Object storage not configured");
+    }
+    
+    const bucket = objectStorageClient.bucket(bucketId);
+    const fileName = `quotes/quote_${documentNumber}_${Date.now()}.pdf`;
+    const file = bucket.file(fileName);
+    
+    // رفع الملف
+    await file.save(pdfBuffer, {
+      contentType: "application/pdf",
+      metadata: {
+        cacheControl: "public, max-age=31536000",
+      },
+    });
+    
+    // الحصول على رابط موقع (صالح لمدة 7 أيام)
+    const [signedUrl] = await file.getSignedUrl({
+      action: "read",
+      expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    
+    return signedUrl;
+  } catch (error) {
+    console.error("Error uploading PDF to storage:", error);
+    throw error;
+  }
+}
+
+// دالة مساعدة لمعالجة النص العربي
+function processArabicText(text: string): string {
+  if (!text) return "";
+  try {
+    const ArabicReshaper = require('arabic-reshaper');
+    const bidiFactory = require('bidi-js');
+    const bidi = bidiFactory();
+    const reshaped = ArabicReshaper.convertArabic(text);
+    const reordered = bidi.getReorderedString(reshaped);
+    return reordered;
+  } catch (e) {
+    console.error("Arabic text processing error:", e);
+    const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
+    if (!arabicRegex.test(text)) return text;
+    return text.split('').reverse().join('');
+  }
+}
+
+// دالة لإنشاء PDF buffer لعرض سعر
+async function generateQuotePdfBuffer(quoteId: number): Promise<Buffer> {
+  const [quote] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
+  if (!quote) {
+    throw new Error("Quote not found");
+  }
+  
+  const items = await db.select().from(quote_items).where(eq(quote_items.quote_id, quoteId)).orderBy(quote_items.line_number);
+  
+  const formatCurrency = (amount: string | number) => {
+    return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(amount));
+  };
+  
+  const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleDateString("en-GB");
+  };
+  
+  return new Promise<Buffer>((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    const doc = new PDFDocument({ size: "A4", margin: 50, bufferPages: true });
+    
+    const fontPath = path.join(__dirname, 'fonts', 'Amiri-Regular.ttf');
+    const hasArabicFont = fs.existsSync(fontPath);
+    if (hasArabicFont) {
+      doc.registerFont('Arabic', fontPath);
+    }
+    
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', (err) => reject(err));
+    
+    // Header
+    doc.fontSize(22).fillColor("#2563eb").text("Modern Plastic Bags Factory", { align: "center" });
+    doc.fontSize(12).fillColor("#666").text("Quality and Excellence in Every Product", { align: "center" });
+    
+    if (hasArabicFont) {
+      doc.font('Arabic').fontSize(14).fillColor("#666").text(processArabicText("مصنع الأكياس البلاستيكية الحديثة"), { align: "center" });
+      doc.font('Helvetica');
+    }
+    doc.moveDown(0.5);
+    
+    doc.strokeColor("#2563eb").lineWidth(2).moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+    doc.moveDown(1);
+    
+    // Title
+    doc.fontSize(18).fillColor("#2563eb").text("PRICE QUOTATION", { align: "center" });
+    if (hasArabicFont) {
+      doc.font('Arabic').fontSize(16).text(processArabicText("عرض سعر"), { align: "center" });
+      doc.font('Helvetica');
+    }
+    doc.moveDown(0.5);
+    doc.fontSize(14).fillColor("#333").text(`Document: ${quote.document_number}`, { align: "center" });
+    doc.fontSize(11).fillColor("#666").text(`Date: ${formatDate(quote.quote_date)}`, { align: "center" });
+    doc.moveDown(1);
+    
+    // Customer Info Box
+    const customerBoxY = doc.y;
+    doc.rect(50, customerBoxY, 495, 70).fillColor("#f8fafc").fill();
+    doc.fillColor("#333");
+    const customerY = customerBoxY + 12;
+    doc.fontSize(12).text("Customer Information", 60, customerY, { underline: true });
+    
+    const customerName = quote.customer_name || "";
+    const hasArabicName = /[\u0600-\u06FF]/.test(customerName);
+    if (hasArabicFont && hasArabicName) {
+      doc.font('Helvetica').fontSize(11).text("Customer: ", 60, customerY + 22, { continued: true });
+      doc.font('Arabic').text(processArabicText(customerName));
+      doc.font('Helvetica');
+    } else {
+      doc.fontSize(11).text(`Customer: ${customerName}`, 60, customerY + 22);
+    }
+    doc.text(`Tax Number: ${quote.tax_number || "N/A"}`, 60, customerY + 40);
+    doc.y = customerBoxY + 80;
+    doc.moveDown(0.5);
+    
+    // Items Table
+    const tableTop = doc.y;
+    const colWidths = [30, 150, 60, 70, 85, 100];
+    const headers = ["#", "Item Name", "Unit", "Qty", "Unit Price", "Total"];
+    
+    doc.rect(50, tableTop, 495, 25).fillColor("#2563eb").fill();
+    doc.font('Helvetica').fillColor("#fff").fontSize(10);
+    let xPos = 55;
+    headers.forEach((header, i) => {
+      doc.text(header, xPos, tableTop + 8, { width: colWidths[i], align: "center" });
+      xPos += colWidths[i];
+    });
+    
+    let rowY = tableTop + 25;
+    items.forEach((item, index) => {
+      const isEven = index % 2 === 0;
+      if (isEven) {
+        doc.rect(50, rowY, 495, 22).fillColor("#f8fafc").fill();
+      }
+      
+      doc.fillColor("#333").fontSize(10);
+      doc.font('Helvetica').text(String(item.line_number), 55, rowY + 6, { width: 30, align: "center" });
+      
+      const itemName = item.item_name || "";
+      const hasArabicItem = /[\u0600-\u06FF]/.test(itemName);
+      if (hasArabicFont && hasArabicItem) {
+        doc.font('Arabic').text(processArabicText(itemName), 85, rowY + 4, { width: 150, align: "center" });
+        doc.font('Helvetica');
+      } else {
+        doc.text(itemName, 85, rowY + 6, { width: 150, align: "center" });
+      }
+      
+      const unitText = item.unit || "";
+      const hasArabicUnit = /[\u0600-\u06FF]/.test(unitText);
+      if (hasArabicFont && hasArabicUnit) {
+        doc.font('Arabic').text(processArabicText(unitText), 235, rowY + 4, { width: 60, align: "center" });
+        doc.font('Helvetica');
+      } else {
+        doc.text(unitText, 235, rowY + 6, { width: 60, align: "center" });
+      }
+      
+      doc.font('Helvetica');
+      doc.text(formatCurrency(item.quantity), 295, rowY + 6, { width: 70, align: "center" });
+      doc.text(`${formatCurrency(item.unit_price)} SAR`, 365, rowY + 6, { width: 85, align: "center" });
+      doc.text(`${formatCurrency(item.line_total)} SAR`, 450, rowY + 6, { width: 100, align: "center" });
+      
+      rowY += 22;
+    });
+    
+    doc.strokeColor("#e2e8f0").lineWidth(1).moveTo(50, rowY).lineTo(545, rowY).stroke();
+    doc.y = rowY + 20;
+    
+    // Totals Box
+    const totalsBoxY = doc.y;
+    doc.rect(50, totalsBoxY, 250, 80).fillColor("#f8fafc").fill();
+    const totalsY = totalsBoxY + 10;
+    doc.font('Helvetica').fillColor("#333").fontSize(11);
+    doc.text("Subtotal:", 60, totalsY);
+    doc.text(`${formatCurrency(quote.total_before_tax)} SAR`, 200, totalsY, { align: "right", width: 90 });
+    doc.text("VAT (15%):", 60, totalsY + 20);
+    doc.text(`${formatCurrency(quote.tax_amount)} SAR`, 200, totalsY + 20, { align: "right", width: 90 });
+    doc.strokeColor("#e2e8f0").moveTo(60, totalsY + 40).lineTo(290, totalsY + 40).stroke();
+    doc.fontSize(13).fillColor("#2563eb").text("Total:", 60, totalsY + 50);
+    doc.text(`${formatCurrency(quote.total_with_tax)} SAR`, 200, totalsY + 50, { align: "right", width: 90 });
+    
+    doc.y = totalsBoxY + 90;
+    
+    // Notes
+    if (quote.notes) {
+      const notesY = doc.y;
+      doc.rect(50, notesY, 495, 60).fillColor("#fffbeb").fill();
+      doc.strokeColor("#fcd34d").rect(50, notesY, 495, 60).stroke();
+      doc.font('Helvetica').fillColor("#b45309").fontSize(10).text("Notes:", 60, notesY + 10);
+      
+      const notesText = quote.notes || "";
+      const hasArabicNotes = /[\u0600-\u06FF]/.test(notesText);
+      if (hasArabicFont && hasArabicNotes) {
+        doc.font('Arabic').fillColor("#78350f").text(processArabicText(notesText), 60, notesY + 25, { width: 475, align: "right" });
+        doc.font('Helvetica');
+      } else {
+        doc.fillColor("#78350f").text(notesText, 60, notesY + 25, { width: 475 });
+      }
+      doc.y = notesY + 70;
+    }
+    
+    // Footer
+    doc.moveDown(2);
+    doc.strokeColor("#e2e8f0").lineWidth(1).moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+    doc.moveDown(0.5);
+    doc.font('Helvetica').fillColor("#666").fontSize(9).text("This quotation is valid for 15 days from the issue date.", { align: "center" });
+    if (hasArabicFont) {
+      doc.font('Arabic').text(processArabicText("هذا العرض صالح لمدة 15 يوم من تاريخ الإصدار"), { align: "center" });
+      doc.font('Helvetica');
+    }
+    
+    if (quote.created_by_name) {
+      doc.moveDown(0.5);
+      const preparedByName = quote.created_by_name || "";
+      const hasArabicPreparer = /[\u0600-\u06FF]/.test(preparedByName);
+      if (hasArabicFont && hasArabicPreparer) {
+        doc.font('Helvetica').text("Prepared by: ", { align: "center", continued: true });
+        doc.font('Arabic').text(processArabicText(preparedByName) + (quote.created_by_phone ? ` - ${quote.created_by_phone}` : ""));
+        doc.font('Helvetica');
+      } else {
+        doc.text(`Prepared by: ${preparedByName}${quote.created_by_phone ? ` - ${quote.created_by_phone}` : ""}`, { align: "center" });
+      }
+    }
+    
+    doc.end();
+  });
 }
 
 const openai = new OpenAI({
@@ -545,28 +784,43 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
           return JSON.stringify({ error: "عرض السعر غير موجود" });
         }
         
-        // الحصول على URL الأساسي للتطبيق
-        const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-          : process.env.REPLIT_DOMAINS 
-            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-            : '';
-        
-        // إرجاع رابط تحميل PDF
-        const relativePdfUrl = `/api/quotes/${quoteId}/pdf`;
-        const fullPdfUrl = baseUrl ? `${baseUrl}${relativePdfUrl}` : relativePdfUrl;
-        
-        return JSON.stringify({
-          success: true,
-          quote_id: quoteId,
-          document_number: quote.document_number,
-          customer_name: quote.customer_name,
-          total_with_tax: quote.total_with_tax,
-          pdf_url: relativePdfUrl,
-          full_pdf_url: fullPdfUrl,
-          download_link: `[تحميل ملف PDF](${fullPdfUrl})`,
-          message: `تم إنشاء ملف PDF لعرض السعر ${quote.document_number}.\n\nرابط التحميل: ${fullPdfUrl}`
-        });
+        try {
+          // إنشاء PDF ورفعه للتخزين السحابي
+          const pdfBuffer = await generateQuotePdfBuffer(quoteId);
+          const cloudPdfUrl = await uploadPdfToStorage(pdfBuffer, quote.document_number);
+          
+          return JSON.stringify({
+            success: true,
+            quote_id: quoteId,
+            document_number: quote.document_number,
+            customer_name: quote.customer_name,
+            total_with_tax: quote.total_with_tax,
+            pdf_url: cloudPdfUrl,
+            download_link: `[تحميل ملف PDF](${cloudPdfUrl})`,
+            message: `تم إنشاء ملف PDF لعرض السعر ${quote.document_number}.\n\nرابط التحميل: ${cloudPdfUrl}`
+          });
+        } catch (error) {
+          console.error("Error generating/uploading PDF:", error);
+          // Fallback to local URL if storage fails
+          const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+            ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+            : process.env.REPLIT_DOMAINS 
+              ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+              : '';
+          const relativePdfUrl = `/api/quotes/${quoteId}/pdf`;
+          const fullPdfUrl = baseUrl ? `${baseUrl}${relativePdfUrl}` : relativePdfUrl;
+          
+          return JSON.stringify({
+            success: true,
+            quote_id: quoteId,
+            document_number: quote.document_number,
+            customer_name: quote.customer_name,
+            total_with_tax: quote.total_with_tax,
+            pdf_url: fullPdfUrl,
+            download_link: `[تحميل ملف PDF](${fullPdfUrl})`,
+            message: `تم إنشاء ملف PDF لعرض السعر ${quote.document_number}.\n\nرابط التحميل: ${fullPdfUrl}`
+          });
+        }
       }
 
       case "send_quote_whatsapp": {
