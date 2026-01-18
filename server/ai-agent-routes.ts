@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import OpenAI from "openai";
 import { db } from "./db";
 import { orders, production_orders, rolls, quotes, quote_items, customers, ai_agent_settings, ai_agent_knowledge, quote_templates } from "@shared/schema";
-import { eq, desc, sql, and, gte, lte, count, sum } from "drizzle-orm";
+import { eq, desc, sql, and, gte, lte, count, sum, like, or } from "drizzle-orm";
 import multer, { FileFilterCallback } from "multer";
 import * as XLSX from "exceljs";
 import * as fs from "fs";
@@ -10,7 +10,9 @@ import * as path from "path";
 import PDFDocument from "pdfkit";
 import { objectStorageClient } from "./replit_integrations/object_storage";
 import { adobePdfService } from "./services/adobe-pdf-service";
+// @ts-ignore
 import ArabicReshaper from "arabic-reshaper";
+// @ts-ignore
 import bidiFactory from "bidi-js";
 
 const PDF_DIR = "/tmp/quote-pdfs";
@@ -304,14 +306,16 @@ const currencyNames: Record<string, string> = {
 // إعداد رفع الملفات
 const upload = multer({
   dest: "/tmp/ai-uploads/",
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max for audio files
   fileFilter: (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
     const allowedTypes = [
       "image/jpeg", "image/png", "image/gif", "image/webp",
       "text/plain", "text/csv",
       "application/pdf",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.ms-excel"
+      "application/vnd.ms-excel",
+      "audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/webm", "audio/m4a",
+      "video/webm", "video/mp4"
     ];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
@@ -320,6 +324,79 @@ const upload = multer({
     }
   }
 });
+
+// دالة لجلب محتوى موقع الويب
+async function fetchWebsiteContent(url: string): Promise<string> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; ModPlastic AI Agent/1.0)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ar,en;q=0.9'
+      },
+      signal: AbortSignal.timeout(10000)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`);
+    }
+    
+    const html = await response.text();
+    
+    // تنظيف HTML واستخراج النص
+    const textContent = html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .trim();
+    
+    return textContent.substring(0, 15000);
+  } catch (error) {
+    console.error("Error fetching website:", error);
+    throw error;
+  }
+}
+
+// دالة للبحث الذكي في قاعدة المعرفة
+async function searchKnowledgeBase(query: string): Promise<Array<{ title: string; content: string; category: string; relevance: number }>> {
+  try {
+    const keywords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    
+    const allKnowledge = await db.select()
+      .from(ai_agent_knowledge)
+      .where(eq(ai_agent_knowledge.is_active, true));
+    
+    const results = allKnowledge.map(item => {
+      const titleLower = item.title.toLowerCase();
+      const contentLower = item.content.toLowerCase();
+      
+      let relevance = 0;
+      keywords.forEach(keyword => {
+        if (titleLower.includes(keyword)) relevance += 3;
+        if (contentLower.includes(keyword)) relevance += 1;
+      });
+      
+      return {
+        ...item,
+        relevance
+      };
+    })
+    .filter(item => item.relevance > 0)
+    .sort((a, b) => b.relevance - a.relevance)
+    .slice(0, 5);
+    
+    return results;
+  } catch (error) {
+    console.error("Error searching knowledge base:", error);
+    return [];
+  }
+}
 
 async function getSystemPrompt(): Promise<string> {
   const settings = await db.select().from(ai_agent_settings);
@@ -338,39 +415,53 @@ async function getSystemPrompt(): Promise<string> {
       knowledge.map(k => `**${k.title}** (${k.category}): ${k.content}`).join("\n\n");
   }
 
-  return `أنت ${agentName}، مساعد ذكي لشركة ${companyName}. يمكنك:
-1. الإجابة على أسئلة حول الطلبات وحالتها
-2. الإجابة على أسئلة حول الإنتاج وأوامر الإنتاج
-3. الإجابة على أسئلة حول كميات الإنتاج
-4. إنشاء عروض أسعار للعملاء مع إمكانية تحميلها كملف PDF
-5. إرسال عروض الأسعار عبر الواتساب للعملاء
-6. تحويل العملات (العملة الأساسية: الريال السعودي SAR)
-7. قراءة وتحليل الملفات المرفقة
+  return `أنت ${agentName}، مساعد ذكي متقدم لشركة ${companyName} (www.modplastic.com). 
+
+### قدراتك الأساسية:
+1. **الطلبات والإنتاج**: الإجابة عن استفسارات الطلبات، أوامر الإنتاج، والكميات المنتجة
+2. **عروض الأسعار**: إنشاء عروض أسعار احترافية بصيغة PDF ورفعها على modplastic.com
+3. **التواصل**: إرسال عروض الأسعار عبر الواتساب للعملاء
+4. **تحويل العملات**: تحويل بين العملات المختلفة (العملة الأساسية: الريال السعودي)
+5. **تحليل الملفات**: قراءة وتحليل الصور، Excel، CSV، PDF
+6. **الرسائل الصوتية**: استقبال وتحويل الرسائل الصوتية إلى نص
+7. **قاعدة المعرفة**: البحث في قاعدة المعرفة والتعلم وحفظ المعلومات الجديدة
+8. **معلومات الموقع**: جلب معلومات من موقع المصنع www.modplastic.com
+9. **معلومات العملاء**: البحث عن بيانات العملاء والاستعلام عنها
+
+### معلومات المصنع:
+- الموقع الإلكتروني: www.modplastic.com
+- متخصصون في تصنيع الأكياس البلاستيكية والأفلام البلاستيكية عالية الجودة
+- نقدم حلول تغليف متكاملة للمصانع والشركات
 
 ${defaultGreeting ? `رسالة الترحيب: ${defaultGreeting}\n` : ""}
 أسلوب الرد: ${responseStyle}
 العملة الأساسية هي الريال السعودي (ر.س). نسبة ضريبة القيمة المضافة: ${parseFloat(vatRate) * 100}%
 
-### إرشادات مهمة:
+### إرشادات العمل:
 
 **عند إنشاء عرض سعر:**
-1. اجمع البيانات التالية من المستخدم: اسم العميل، الرقم الضريبي (14 رقم)، الأصناف (الاسم، الوحدة، السعر، الكمية)
-2. استخدم أداة get_quote_templates للتعرف على المنتجات والأسعار المتاحة
-3. بعد إنشاء العرض، استخدم أداة generate_quote_pdf لإنشاء رابط تحميل PDF
-4. قدم للمستخدم رابط التحميل بشكل واضح
+1. اجمع: اسم العميل، الرقم الضريبي (14 رقم)، الأصناف (الاسم، الوحدة، السعر، الكمية)
+2. استخدم get_quote_templates لمعرفة المنتجات والأسعار المتاحة
+3. بعد الإنشاء، استخدم generate_quote_pdf لإنشاء رابط PDF على modplastic.com
+4. قدم رابط التحميل بوضوح
 
-**عند طلب إرسال عرض سعر عبر الواتساب:**
-1. تأكد من وجود عرض السعر (استخدم get_quote_by_number إذا لزم الأمر)
-2. اطلب رقم جوال المستلم مع رمز الدولة (مثال: +966501234567)
-3. استخدم أداة send_quote_whatsapp لإرسال العرض
+**عند إرسال عرض عبر الواتساب:**
+1. تأكد من وجود العرض (استخدم get_quote_by_number)
+2. اطلب رقم الجوال مع رمز الدولة (+966501234567)
+3. استخدم send_quote_whatsapp للإرسال
 
-**عند الاستعلام عن الطلبات أو الإنتاج:**
-استخدم الأدوات المتاحة للحصول على البيانات الدقيقة من قاعدة البيانات.
+**عند تلقي سؤال عام:**
+1. ابحث أولاً في قاعدة المعرفة باستخدام search_knowledge_base
+2. إذا لم تجد إجابة، استخدم get_website_info لجلب معلومات من الموقع
+3. تعلم من المحادثات وأضف معلومات مهمة باستخدام add_to_knowledge_base
+
+**عند الاستعلام عن عميل:**
+استخدم get_customer_info للبحث بالاسم أو الرقم
 
 ${customInstructions ? `### تعليمات إضافية:\n${customInstructions}\n` : ""}
 ${knowledgeText}
 
-قم بالرد باللغة العربية دائماً. كن مفيداً ووفر روابط تحميل PDF عند إنشاء عروض الأسعار.`;
+قم بالرد باللغة العربية دائماً. كن ذكياً، مفيداً، وتعلم من كل محادثة.`;
 }
 
 const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
@@ -535,6 +626,68 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           document_number: { type: "string", description: "رقم مستند عرض السعر (مثال: QT-000001)" }
         },
         required: ["document_number"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_knowledge_base",
+      description: "البحث في قاعدة المعرفة عن معلومات محددة. استخدم هذه الأداة عندما تحتاج معلومات عن المصنع أو المنتجات أو السياسات",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "نص البحث أو السؤال" }
+        },
+        required: ["query"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_website_info",
+      description: "جلب معلومات من موقع المصنع www.modplastic.com. استخدم هذه الأداة للإجابة عن أسئلة حول المنتجات والخدمات المتاحة على الموقع",
+      parameters: {
+        type: "object",
+        properties: {
+          page: { 
+            type: "string", 
+            enum: ["home", "products", "about", "contact"],
+            description: "الصفحة المراد جلب معلوماتها (home=الرئيسية, products=المنتجات, about=عن المصنع, contact=التواصل)" 
+          }
+        },
+        required: ["page"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_to_knowledge_base",
+      description: "إضافة معلومات جديدة إلى قاعدة المعرفة للتعلم والتذكر لاحقاً",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "عنوان المعلومة" },
+          content: { type: "string", description: "محتوى المعلومة" },
+          category: { type: "string", enum: ["products", "policies", "customers", "pricing", "general"], description: "تصنيف المعلومة" }
+        },
+        required: ["title", "content", "category"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_customer_info",
+      description: "الحصول على معلومات عميل معين بالاسم أو الرقم",
+      parameters: {
+        type: "object",
+        properties: {
+          search_term: { type: "string", description: "اسم العميل أو رقم العميل للبحث" }
+        },
+        required: ["search_term"]
       }
     }
   }
@@ -994,6 +1147,118 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
             line_total: i.line_total
           })),
           pdf_url: `/api/quotes/${quote.id}/pdf`
+        });
+      }
+
+      case "search_knowledge_base": {
+        const query = args.query as string;
+        const results = await searchKnowledgeBase(query);
+        
+        if (results.length === 0) {
+          return JSON.stringify({
+            found: false,
+            message: "لم يتم العثور على معلومات مطابقة في قاعدة المعرفة"
+          });
+        }
+        
+        return JSON.stringify({
+          found: true,
+          count: results.length,
+          results: results.map(r => ({
+            title: r.title,
+            content: r.content,
+            category: r.category
+          }))
+        });
+      }
+
+      case "get_website_info": {
+        const page = args.page as string;
+        const urlMap: Record<string, string> = {
+          home: "https://www.modplastic.com",
+          products: "https://www.modplastic.com/products",
+          about: "https://www.modplastic.com/about",
+          contact: "https://www.modplastic.com/contact"
+        };
+        
+        const url = urlMap[page] || urlMap.home;
+        
+        try {
+          const content = await fetchWebsiteContent(url);
+          return JSON.stringify({
+            success: true,
+            page,
+            url,
+            content,
+            message: `تم جلب محتوى صفحة ${page} من موقع المصنع`
+          });
+        } catch (error) {
+          return JSON.stringify({
+            success: false,
+            error: "تعذر جلب محتوى الموقع",
+            message: "الموقع قد يكون غير متاح حالياً. يرجى المحاولة لاحقاً"
+          });
+        }
+      }
+
+      case "add_to_knowledge_base": {
+        const { title, content, category } = args as { title: string; content: string; category: string };
+        
+        try {
+          const [newKnowledge] = await db.insert(ai_agent_knowledge).values({
+            title,
+            content,
+            category,
+            is_active: true
+          }).returning();
+          
+          return JSON.stringify({
+            success: true,
+            id: newKnowledge.id,
+            message: `تم إضافة "${title}" إلى قاعدة المعرفة بنجاح`
+          });
+        } catch (error) {
+          return JSON.stringify({
+            success: false,
+            error: "فشل في إضافة المعلومات إلى قاعدة المعرفة"
+          });
+        }
+      }
+
+      case "get_customer_info": {
+        const searchTerm = args.search_term as string;
+        
+        const customerResults = await db.select()
+          .from(customers)
+          .where(
+            or(
+              like(customers.name, `%${searchTerm}%`),
+              like(customers.name_ar, `%${searchTerm}%`),
+              eq(customers.id, searchTerm),
+              like(customers.phone, `%${searchTerm}%`)
+            )
+          )
+          .limit(5);
+        
+        if (customerResults.length === 0) {
+          return JSON.stringify({
+            found: false,
+            message: "لم يتم العثور على عميل مطابق"
+          });
+        }
+        
+        return JSON.stringify({
+          found: true,
+          count: customerResults.length,
+          customers: customerResults.map(c => ({
+            id: c.id,
+            name: c.name,
+            name_ar: c.name_ar,
+            phone: c.phone,
+            city: c.city,
+            tax_number: c.tax_number,
+            is_active: c.is_active
+          }))
         });
       }
 
@@ -1474,6 +1739,66 @@ export function registerAiAgentRoutes(app: Express): void {
       cleanupFile();
       console.error("File upload error:", error);
       res.status(500).json({ error: "فشل في معالجة الملف" });
+    }
+  });
+
+  // ===== تحويل الصوت إلى نص باستخدام Whisper =====
+  app.post("/api/ai-agent/transcribe", upload.single("audio"), async (req: Request, res: Response) => {
+    const file = req.file;
+    const filePath = file?.path;
+    
+    const cleanupFile = () => {
+      if (filePath && fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (e) {
+          console.error("Failed to cleanup temp audio file:", e);
+        }
+      }
+    };
+    
+    try {
+      if (!file) {
+        return res.status(400).json({ error: "لم يتم رفع ملف صوتي" });
+      }
+
+      // التحقق من أن الملف صوتي
+      const audioTypes = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/webm", "audio/m4a", "video/webm", "video/mp4"];
+      if (!audioTypes.includes(file.mimetype)) {
+        cleanupFile();
+        return res.status(400).json({ error: "نوع الملف غير مدعوم. يرجى رفع ملف صوتي" });
+      }
+
+      console.log(`Transcribing audio file: ${file.originalname}, type: ${file.mimetype}, size: ${file.size}`);
+
+      // استخدام OpenAI Whisper لتحويل الصوت إلى نص
+      const audioBuffer = fs.readFileSync(filePath!);
+      const audioFile = new File([audioBuffer], file.originalname, { type: file.mimetype });
+      
+      const transcription = await openai.audio.transcriptions.create({
+        file: audioFile,
+        model: "whisper-1",
+        language: "ar", // اللغة العربية افتراضياً
+        response_format: "text"
+      });
+
+      cleanupFile();
+
+      console.log(`Transcription successful: ${transcription.substring(0, 100)}...`);
+
+      res.json({
+        success: true,
+        text: transcription,
+        filename: file.originalname,
+        duration_hint: "تم تحويل الصوت بنجاح"
+      });
+    } catch (error: any) {
+      cleanupFile();
+      console.error("Audio transcription error:", error);
+      res.status(500).json({ 
+        error: "فشل في تحويل الصوت إلى نص",
+        details: error.message || "خطأ غير معروف"
+      });
     }
   });
 
