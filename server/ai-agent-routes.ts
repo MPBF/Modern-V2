@@ -7,6 +7,10 @@ import multer, { FileFilterCallback } from "multer";
 import * as XLSX from "exceljs";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import PDFDocument from "pdfkit";
 import { objectStorageClient } from "./replit_integrations/object_storage";
 import { adobePdfService } from "./services/adobe-pdf-service";
