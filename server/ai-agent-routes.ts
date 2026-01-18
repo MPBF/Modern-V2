@@ -1008,8 +1008,18 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
 
 export function registerAiAgentRoutes(app: Express): void {
   app.post("/api/ai-agent/chat", async (req: Request, res: Response) => {
+    // حماية ضد: انقطاع العميل + loop لا نهائي للأدوات + JSON.parse error
+    let clientClosed = false;
+    req.on("close", () => {
+      clientClosed = true;
+    });
+
     try {
       const { messages } = req.body as { messages: Array<{ role: string; content: string }> };
+
+      if (!Array.isArray(messages)) {
+        return res.status(400).json({ error: "صيغة الرسائل غير صحيحة" });
+      }
       
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
@@ -1018,8 +1028,13 @@ export function registerAiAgentRoutes(app: Express): void {
       const dynamicSystemPrompt = await getSystemPrompt();
       const chatMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
         { role: "system", content: dynamicSystemPrompt },
-        ...messages.map(m => ({ role: m.role as "user" | "assistant", content: m.content }))
+        ...messages
+          .slice(-20) // حد أقصى للرسائل لحماية الأداء
+          .map(m => ({ role: m.role as "user" | "assistant", content: String(m.content || "") }))
       ];
+
+      const MAX_TOOL_ROUNDS = 6;
+      let toolRounds = 0;
 
       let response = await openai.chat.completions.create({
         model: "gpt-4.1",
@@ -1030,17 +1045,47 @@ export function registerAiAgentRoutes(app: Express): void {
       });
 
       while (response.choices[0]?.message?.tool_calls) {
+        if (clientClosed) return;
+
+        toolRounds++;
+        if (toolRounds > MAX_TOOL_ROUNDS) {
+          res.write(
+            `data: ${JSON.stringify({
+              content: "تعذر إكمال العملية تلقائياً بسبب تكرار الاستدعاءات. فضلاً حدّد رقم الطلب/عرض السعر بشكل أدق.",
+              done: true,
+            })}\n\n`
+          );
+          return res.end();
+        }
+
         const toolCalls = response.choices[0].message.tool_calls;
         chatMessages.push(response.choices[0].message);
 
         for (const toolCall of toolCalls) {
+          if (clientClosed) return;
+
           const fn = (toolCall as any).function;
-          const args = JSON.parse(fn.arguments);
+
+          let args: any;
+          try {
+            args = JSON.parse(fn.arguments || "{}");
+          } catch (e) {
+            chatMessages.push({
+              role: "tool",
+              tool_call_id: toolCall.id,
+              content: JSON.stringify({
+                ok: false,
+                error: { code: "BAD_TOOL_ARGS", message: "تعذر قراءة مدخلات الأداة" },
+              }),
+            });
+            continue;
+          }
+
           const result = await executeFunction(fn.name, args);
           chatMessages.push({
             role: "tool",
             tool_call_id: toolCall.id,
-            content: result
+            content: result,
           });
         }
 

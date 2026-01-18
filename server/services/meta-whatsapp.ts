@@ -423,24 +423,19 @@ export class MetaWhatsAppService {
   ): Promise<void> {
     try {
       // تحديث حالة الرسالة في قاعدة البيانات
-      const notifications = await this.storage.getNotifications();
-      const notification = notifications.find(
-        (n) =>
-          n.twilio_sid === messageId || (n as any).external_id === messageId,
-      );
+      // ملاحظة: هذه الدالة كانت سابقاً تُنشئ كائن updatedNotification بدون حفظه.
+      // الآن نقوم بالحفظ عبر storage.updateNotificationStatus لضمان انعكاس الحالة في النظام.
 
-      if (notification) {
-        // تحديث الحالة
-        const updatedNotification = {
-          ...notification,
-          external_status: status,
-          delivered_at:
-            status === "delivered" ? new Date() : notification.delivered_at,
-          read_at: status === "read" ? new Date() : notification.read_at,
-        };
+      const updatePayload: Record<string, any> = {
+        external_status: status,
+        delivered_at: status === "delivered" ? new Date() : undefined,
+        read_at: status === "read" ? new Date() : undefined,
+      };
 
-        logger.info(`📊 تم تحديث حالة الرسالة ${messageId} ${status}`);
-      }
+      // نعتمد على طبقة التخزين لتحديث السجل بحسب المعرّف الخارجي (Twilio SID أو Meta message id)
+      await this.storage.updateNotificationStatus(messageId, updatePayload);
+
+      logger.info(`📊 تم تحديث حالة الرسالة ${messageId} إلى ${status}`);
     } catch (error) {
       logger.error("خطأ في تحديث حالة الرسالة", error);
     }
