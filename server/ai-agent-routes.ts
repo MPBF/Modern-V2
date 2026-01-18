@@ -10,6 +10,8 @@ import * as path from "path";
 import PDFDocument from "pdfkit";
 import { objectStorageClient } from "./replit_integrations/object_storage";
 import { adobePdfService } from "./services/adobe-pdf-service";
+import ArabicReshaper from "arabic-reshaper";
+import bidiFactory from "bidi-js";
 
 const PDF_DIR = "/tmp/quote-pdfs";
 if (!fs.existsSync(PDF_DIR)) {
@@ -68,8 +70,6 @@ async function uploadPdfToStorage(pdfBuffer: Buffer, documentNumber: string): Pr
 function processArabicText(text: string): string {
   if (!text) return "";
   try {
-    const ArabicReshaper = require('arabic-reshaper');
-    const bidiFactory = require('bidi-js');
     const bidi = bidiFactory();
     const reshaped = ArabicReshaper.convertArabic(text);
     const reordered = bidi.getReorderedString(reshaped);
@@ -1146,35 +1146,12 @@ export function registerAiAgentRoutes(app: Express): void {
         return new Date(date).toLocaleDateString("en-GB");
       };
       
-      // دالة لمعالجة النص العربي باستخدام مكتبة arabic-reshaper
-      const processArabicText = (text: string): string => {
-        if (!text) return "";
-        try {
-          const ArabicReshaper = require('arabic-reshaper');
-          const bidiFactory = require('bidi-js');
-          const bidi = bidiFactory();
-          
-          // تشكيل الحروف العربية
-          const reshaped = ArabicReshaper.convertArabic(text);
-          // تطبيق خوارزمية BiDi لترتيب النص بشكل صحيح
-          const reordered = bidi.getReorderedString(reshaped);
-          return reordered;
-        } catch (e) {
-          console.error("Arabic text processing error:", e);
-          // Fallback: simple reverse for RTL
-          const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
-          if (!arabicRegex.test(text)) return text;
-          return text.split('').reverse().join('');
-        }
-      };
-
       // إنشاء PDF في الذاكرة أولاً
       const chunks: Buffer[] = [];
       const doc = new PDFDocument({ size: "A4", margin: 50, bufferPages: true });
       
       // تسجيل الخط العربي
-      const fontPath = require('path').join(__dirname, 'fonts', 'Amiri-Regular.ttf');
-      const fs = require('fs');
+      const fontPath = path.join(__dirname, 'fonts', 'Amiri-Regular.ttf');
       const hasArabicFont = fs.existsSync(fontPath);
       if (hasArabicFont) {
         doc.registerFont('Arabic', fontPath);
