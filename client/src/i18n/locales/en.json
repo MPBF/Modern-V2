@@ -2097,6 +2097,16 @@
       "kb": "KB",
       "mb": "MB"
     },
+    "voice": {
+      "recording": "Recording...",
+      "stop": "Stop",
+      "transcribing": "Converting speech to text...",
+      "transcribed": "Speech converted to text successfully",
+      "success": "Success",
+      "error": "Error",
+      "microphoneError": "Could not access microphone. Please check your browser settings.",
+      "transcriptionError": "Failed to convert speech to text"
+    },
     "tabs": {
       "chat": "Chat",
       "quotesHistory": "Price Quotes",

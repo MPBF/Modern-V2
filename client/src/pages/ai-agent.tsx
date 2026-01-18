@@ -12,7 +12,7 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { useToast } from "../hooks/use-toast";
 import { apiRequest } from "../lib/queryClient";
-import { Bot, Send, FileText, Loader2, Download, History, User, Paperclip, X, Image, FileSpreadsheet, File } from "lucide-react";
+import { Bot, Send, FileText, Loader2, Download, History, User, Paperclip, X, Image, FileSpreadsheet, File, Mic, MicOff, Square } from "lucide-react";
 import type { Quote } from "../../../shared/schema";
 
 // Function to render text with clickable links
@@ -75,8 +75,14 @@ function ChatPanel() {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -221,6 +227,99 @@ function ChatPanel() {
     }
   };
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+      
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        if (recordingTimerRef.current) {
+          clearInterval(recordingTimerRef.current);
+          recordingTimerRef.current = null;
+        }
+        
+        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        if (audioBlob.size > 0) {
+          await transcribeAudio(audioBlob);
+        }
+        setRecordingDuration(0);
+      };
+
+      mediaRecorder.start(1000);
+      setIsRecording(true);
+      setRecordingDuration(0);
+      
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      toast({ 
+        title: t("aiAgent.voice.error"), 
+        description: t("aiAgent.voice.microphoneError"), 
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const transcribeAudio = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    try {
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
+      
+      const response = await fetch("/api/ai-agent/transcribe", {
+        method: "POST",
+        body: formData,
+      });
+      
+      const result = await response.json();
+      if (result.error) {
+        toast({ 
+          title: t("aiAgent.voice.error"), 
+          description: result.error, 
+          variant: "destructive" 
+        });
+      } else if (result.text) {
+        setInput(prev => prev + (prev ? " " : "") + result.text);
+        toast({ 
+          title: t("aiAgent.voice.success"), 
+          description: t("aiAgent.voice.transcribed") 
+        });
+      }
+    } catch (error) {
+      toast({ 
+        title: t("aiAgent.voice.error"), 
+        description: t("aiAgent.voice.transcriptionError"), 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="flex flex-col h-[600px]">
       <ScrollArea ref={scrollRef} className="flex-1 p-4 space-y-4">
@@ -282,12 +381,31 @@ function ChatPanel() {
           </div>
         </div>
       )}
+      {isRecording && (
+        <div className="px-4 pt-2">
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700">
+            <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-sm text-red-700 dark:text-red-300 font-medium">{t("aiAgent.voice.recording")}</span>
+            <span className="text-sm text-red-600 dark:text-red-400 font-mono">{formatDuration(recordingDuration)}</span>
+            <div className="flex-1" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800"
+              onClick={stopRecording}
+            >
+              <Square className="h-4 w-4 mr-1" />
+              {t("aiAgent.voice.stop")}
+            </Button>
+          </div>
+        </div>
+      )}
       <div className="p-4 flex gap-2">
         <input
           type="file"
           ref={fileInputRef}
           onChange={handleFileSelect}
-          accept="image/*,.txt,.csv,.xlsx,.xls,.pdf"
+          accept="image/*,.txt,.csv,.xlsx,.xls,.pdf,audio/*"
           className="hidden"
         />
         <Button 
@@ -295,19 +413,34 @@ function ChatPanel() {
           size="icon" 
           className="h-[60px] w-[60px] shrink-0"
           onClick={() => fileInputRef.current?.click()}
-          disabled={isLoading || isUploading}
+          disabled={isLoading || isUploading || isRecording || isTranscribing}
         >
           {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-5 w-5" />}
+        </Button>
+        <Button 
+          variant={isRecording ? "destructive" : "outline"}
+          size="icon" 
+          className="h-[60px] w-[60px] shrink-0"
+          onClick={isRecording ? stopRecording : startRecording}
+          disabled={isLoading || isUploading || isTranscribing}
+        >
+          {isTranscribing ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : isRecording ? (
+            <MicOff className="h-5 w-5" />
+          ) : (
+            <Mic className="h-5 w-5" />
+          )}
         </Button>
         <Textarea
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={t("aiAgent.chat.placeholder")}
+          placeholder={isTranscribing ? t("aiAgent.voice.transcribing") : t("aiAgent.chat.placeholder")}
           className="min-h-[60px] resize-none"
-          disabled={isLoading}
+          disabled={isLoading || isRecording || isTranscribing}
         />
-        <Button onClick={sendMessage} disabled={(!input.trim() && !selectedFile) || isLoading} size="icon" className="h-[60px] w-[60px]">
+        <Button onClick={sendMessage} disabled={(!input.trim() && !selectedFile) || isLoading || isRecording || isTranscribing} size="icon" className="h-[60px] w-[60px]">
           {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
         </Button>
       </div>
