@@ -51,6 +51,7 @@ interface CustomerProduct {
   handle_type?: string;
   punching?: string;
   unit_weight_gram?: number | string;
+  notes?: string;
 }
 
 interface Item {
@@ -74,19 +75,19 @@ interface OrderPrintTemplateProps {
   mode?: PrintMode;
 }
 
-const masterBatchColors: Array<{ id: string; name_ar: string; name_en?: string }> = [
-  { id: "PT-111111", name_ar: "أبيض", name_en: "White" },
-  { id: "PT-000000", name_ar: "أسود", name_en: "Black" },
-  { id: "PT-CLEAR", name_ar: "شفاف", name_en: "Clear" },
-  { id: "PT-RED", name_ar: "أحمر", name_en: "Red" },
-  { id: "PT-BLUE", name_ar: "أزرق", name_en: "Blue" },
-  { id: "PT-GREEN", name_ar: "أخضر", name_en: "Green" },
-  { id: "PT-YELLOW", name_ar: "أصفر", name_en: "Yellow" },
+const masterBatchColors: Array<{ id: string; name_ar: string; name_en?: string; hex: string }> = [
+  { id: "PT-111111", name_ar: "أبيض", name_en: "White", hex: "#FFFFFF" },
+  { id: "PT-000000", name_ar: "أسود", name_en: "Black", hex: "#000000" },
+  { id: "PT-CLEAR", name_ar: "شفاف", name_en: "Clear", hex: "#E0E0E0" },
+  { id: "PT-RED", name_ar: "أحمر", name_en: "Red", hex: "#EF4444" },
+  { id: "PT-BLUE", name_ar: "أزرق", name_en: "Blue", hex: "#3B82F6" },
+  { id: "PT-GREEN", name_ar: "أخضر", name_en: "Green", hex: "#22C55E" },
+  { id: "PT-YELLOW", name_ar: "أصفر", name_en: "Yellow", hex: "#EAB308" },
 ];
 
 const getMasterBatchInfo = (id?: string) => {
-  if (!id) return { name_ar: "غير محدد", name_en: "-" };
-  return masterBatchColors.find((c) => c.id === id) ?? { name_ar: id, name_en: "" };
+  if (!id) return { name_ar: "غير محدد", name_en: "-", hex: "#CCCCCC" };
+  return masterBatchColors.find((c) => c.id === id) ?? { name_ar: id, name_en: "", hex: "#CCCCCC" };
 };
 
 const formatNumber = (value: number | string | undefined) => {
@@ -484,7 +485,16 @@ export default function OrderPrintTemplate({
 
                     <td style={styles.td}>
                       <div style={{ fontWeight: 900 }}>{color.name_ar}</div>
-                      <div style={{ fontSize: "15px", color: "#666", fontWeight: 800 }}>{color.name_en}</div>
+                      <div 
+                        style={{ 
+                          width: "20px", 
+                          height: "20px", 
+                          borderRadius: "50%", 
+                          backgroundColor: color.hex, 
+                          border: "2px solid #333",
+                          margin: "4px auto 0"
+                        }} 
+                      />
                     </td>
 
                     <td style={styles.td}>
@@ -510,7 +520,7 @@ export default function OrderPrintTemplate({
                       )}
                     </td>
                     <td style={{ ...styles.td, fontWeight: 900, fontSize: "18px" }}>{formatNumber(qty)}</td>
-                    <td style={{ ...styles.td, fontSize: "13px", textAlign: "right", fontWeight: 900 }}>{po.notes || "-"}</td>
+                    <td style={{ ...styles.td, fontSize: "13px", textAlign: "right", fontWeight: 900 }}>{cp?.notes || "-"}</td>
                   </tr>
                 );
               })}
