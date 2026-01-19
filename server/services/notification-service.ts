@@ -218,6 +218,37 @@ export class NotificationService {
   }
 
   /**
+   * إرسال مستند PDF عبر WhatsApp
+   */
+  async sendWhatsAppDocument(
+    phoneNumber: string,
+    documentUrl: string,
+    filename: string,
+    caption?: string,
+    options?: {
+      title?: string;
+      priority?: string;
+      context_type?: string;
+      context_id?: string;
+    },
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    if (this.useMetaAPI) {
+      return this.metaWhatsApp.sendDocumentMessage(
+        phoneNumber,
+        documentUrl,
+        filename,
+        caption,
+        options,
+      );
+    } else {
+      return {
+        success: false,
+        error: "إرسال المستندات غير مدعوم عبر Twilio في هذا الإعداد",
+      };
+    }
+  }
+
+  /**
    * إرسال رسالة واتس اب مباشرة (للاختبار فقط في Sandbox)
    */
   async sendWhatsAppDirectMessage(

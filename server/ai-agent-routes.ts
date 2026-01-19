@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import PDFDocument from "pdfkit";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { adobePdfService } from "./services/adobe-pdf-service";
+import { generateQuotePdfWithAdobe, isAdobePdfAvailable } from "./adobe-pdf-service";
 // @ts-ignore
 import ArabicReshaper from "arabic-reshaper";
 // @ts-ignore
@@ -970,9 +970,20 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
         try {
           let pdfBuffer: Buffer;
           
-          // استخدام PDFKit المحسن للنص العربي
-          console.log("Using enhanced PDFKit for quote generation with Arabic support");
-          pdfBuffer = await generateQuotePdfBuffer(quoteId);
+          // استخدام Adobe PDF Services API للدعم الكامل للنص العربي RTL
+          if (isAdobePdfAvailable()) {
+            console.log("Using Adobe PDF Services API for quote generation with full Arabic RTL support");
+            try {
+              pdfBuffer = await generateQuotePdfWithAdobe(quoteId);
+              console.log("✅ Adobe PDF generated successfully");
+            } catch (adobeError) {
+              console.error("Adobe PDF failed, falling back to PDFKit:", adobeError);
+              pdfBuffer = await generateQuotePdfBuffer(quoteId);
+            }
+          } else {
+            console.log("Using PDFKit for quote generation (Adobe credentials not configured)");
+            pdfBuffer = await generateQuotePdfBuffer(quoteId);
+          }
           
           const cloudPdfUrl = await uploadPdfToStorage(pdfBuffer, quote.document_number);
           
@@ -1059,8 +1070,25 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
           const { storage } = await import("./storage");
           const notificationService = new NotificationService(storage);
           
-          // استخدام sendWhatsAppMessage الذي يختار API المناسب تلقائياً (Meta أو Twilio)
-          const result = await notificationService.sendWhatsAppMessage(
+          // إرسال ملف PDF أولاً
+          const pdfCaption = `عرض سعر ${quote.document_number}\n` +
+            `العميل: ${quote.customer_name}\n` +
+            `الإجمالي: ${Number(quote.total_with_tax).toFixed(2)} ر.س`;
+          
+          const docResult = await notificationService.sendWhatsAppDocument(
+            formattedPhone,
+            pdfUrl,
+            `عرض_سعر_${quote.document_number}.pdf`,
+            pdfCaption,
+            {
+              title: `مستند عرض سعر ${quote.document_number}`,
+              context_type: "quote",
+              context_id: String(quoteId)
+            }
+          );
+          
+          // إرسال رسالة نصية تفصيلية بعد الملف
+          const textResult = await notificationService.sendWhatsAppMessage(
             formattedPhone,
             quoteMessage,
             {
@@ -1070,21 +1098,23 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
             }
           );
           
-          if (result.success) {
+          if (docResult.success || textResult.success) {
             return JSON.stringify({
               success: true,
-              message: `تم إرسال عرض السعر ${quote.document_number} بنجاح إلى ${formattedPhone} عبر الواتساب`,
+              message: `تم إرسال عرض السعر ${quote.document_number} ${docResult.success ? 'مع ملف PDF' : ''} بنجاح إلى ${formattedPhone} عبر الواتساب`,
               quote_id: quoteId,
               document_number: quote.document_number,
               phone_number: formattedPhone,
-              message_id: result.messageId
+              pdf_sent: docResult.success,
+              text_sent: textResult.success,
+              message_ids: [docResult.messageId, textResult.messageId].filter(Boolean)
             });
           } else {
             // إذا فشل الإرسال، نوفر رابط للإرسال اليدوي
             const whatsappWebLink = `https://wa.me/${formattedPhone.replace('+', '')}?text=${encodeURIComponent(quoteMessage)}`;
             return JSON.stringify({
               success: false,
-              error: result.error || "فشل في إرسال الرسالة",
+              error: textResult.error || docResult.error || "فشل في إرسال الرسالة",
               message: "لم يتم إرسال الرسالة تلقائياً. يمكنك استخدام الرابط التالي للإرسال يدوياً:",
               whatsapp_link: whatsappWebLink,
               pdf_url: pdfUrl

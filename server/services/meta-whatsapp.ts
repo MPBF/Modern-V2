@@ -169,6 +169,114 @@ export class MetaWhatsAppService {
   }
 
   /**
+   * إرسال مستند PDF عبر WhatsApp
+   */
+  async sendDocumentMessage(
+    to: string,
+    documentUrl: string,
+    filename: string,
+    caption?: string,
+    options?: {
+      title?: string;
+      priority?: string;
+      context_type?: string;
+      context_id?: string;
+    },
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      if (!this.config.accessToken || !this.config.phoneNumberId) {
+        throw new Error("Meta WhatsApp API غير مُعد بشكل صحيح");
+      }
+
+      const formattedPhone = to
+        .replace(/[\+\s\-\(\)]/g, "")
+        .replace("whatsapp:", "");
+
+      const messageData = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: formattedPhone,
+        type: "document",
+        document: {
+          link: documentUrl,
+          filename: filename,
+          caption: caption || "",
+        },
+      };
+
+      const response = await fetch(
+        `${this.baseUrl}/${this.config.phoneNumberId}/messages`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${this.config.accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(messageData),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error?.message ||
+            `HTTP ${response.status}: ${response.statusText}`,
+        );
+      }
+
+      const notificationData = {
+        title: options?.title || "مستند واتس اب",
+        message: `تم إرسال ملف: ${filename}`,
+        type: "whatsapp" as const,
+        priority: options?.priority || "normal",
+        recipient_type: "user" as const,
+        phone_number: to,
+        status: "sent" as const,
+        external_id: result.messages?.[0]?.id,
+        external_status: "sent",
+        sent_at: new Date(),
+        context_type: options?.context_type,
+        context_id: options?.context_id,
+      };
+
+      await this.storage.createNotification(notificationData);
+
+      logger.info(
+        `📄 تم إرسال مستند واتس اب إلى ${to} - ID ${result.messages?.[0]?.id}`
+      );
+
+      return {
+        success: true,
+        messageId: result.messages?.[0]?.id,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "خطأ غير معروف";
+      logger.error("خطأ في إرسال مستند واتس اب عبر Meta API", error);
+
+      const notificationData = {
+        title: options?.title || "مستند واتس اب",
+        message: `فشل إرسال ملف: ${filename}`,
+        type: "whatsapp" as const,
+        priority: options?.priority || "normal",
+        recipient_type: "user" as const,
+        phone_number: to,
+        status: "failed" as const,
+        error_message: errorMessage,
+        context_type: options?.context_type,
+        context_id: options?.context_id,
+      };
+
+      await this.storage.createNotification(notificationData);
+
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  }
+
+  /**
    * إرسال رسالة باستخدام قالب Meta مُوافق عليه
    */
   async sendTemplateMessage(
