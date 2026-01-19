@@ -500,8 +500,20 @@ export default function OrderPrintTemplate({
                       )}
                     </td>
 
-                    <td style={{ ...styles.td, fontWeight: 900 }}>{cp?.printing_cylinder || "-"}</td>
-                    <td style={{ ...styles.td, fontWeight: 900 }}>{cp?.punching || cp?.handle_type || "-"}</td>
+                    <td style={styles.td}>
+                      {cp?.printing_cylinder && cp.printing_cylinder !== "بدون" ? (
+                        <span style={{ fontWeight: 900 }}>{cp.printing_cylinder}</span>
+                      ) : (
+                        <span style={{ color: "#dc2626", fontWeight: 900, fontSize: "22px" }}>✗</span>
+                      )}
+                    </td>
+                    <td style={styles.td}>
+                      {(cp?.punching || cp?.handle_type) && (cp?.punching !== "بدون" && cp?.handle_type !== "بدون") ? (
+                        <span style={{ fontWeight: 900 }}>{cp?.punching || cp?.handle_type}</span>
+                      ) : (
+                        <span style={{ color: "#dc2626", fontWeight: 900, fontSize: "22px" }}>✗</span>
+                      )}
+                    </td>
                     <td style={{ ...styles.td, fontWeight: 900, fontSize: "18px" }}>{formatNumber(qty)}</td>
                     <td style={{ ...styles.td, fontSize: "13px", textAlign: "right", fontWeight: 900 }}>{po.notes || "-"}</td>
                   </tr>
