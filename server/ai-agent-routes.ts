@@ -1291,109 +1291,176 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
 
 export function registerAiAgentRoutes(app: Express): void {
   app.post("/api/ai-agent/chat", async (req: Request, res: Response) => {
-    // حماية ضد: انقطاع العميل + loop لا نهائي للأدوات + JSON.parse error
-    let clientClosed = false;
+  let clientClosed = false;
+
+  // لمراقبة إغلاق الاتصال من العميل
+  req.on("close", () => {
+    clientClosed = true;
+  });
+
+  // وظيفة صغيرة لتنظيف الاتصال بأمان
+  let ping: NodeJS.Timeout | null = null;
+
+  const safeEnd = () => {
+    try {
+      if (ping) {
+        clearInterval(ping);
+        ping = null;
+      }
+      if (!res.writableEnded) {
+        res.end();
+      }
+    } catch {
+      // تجاهل
+    }
+  };
+
+  const safeWrite = (data: any) => {
+    if (clientClosed || res.writableEnded) return;
+    try {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch {
+      // تجاهل
+    }
+  };
+
+  try {
+    const { messages } = req.body as { messages: Array<{ role: string; content: string }> };
+
+    if (!Array.isArray(messages)) {
+      return res.status(400).json({ error: "صيغة الرسائل غير صحيحة" });
+    }
+
+    // ===== SSE Headers =====
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+
+    // إرسال الهيدرز فوراً (مهم لبعض البيئات)
+    res.flushHeaders?.();
+
+    // ===== Keep-alive Ping =====
+    // بعض المنصات/البروكسي تقطع SSE لو ما فيه بيانات لفترة
+    ping = setInterval(() => {
+      if (clientClosed || res.writableEnded) return;
+      try {
+        // هذا تعليق SSE، ما يتعارض مع JSON عند العميل
+        res.write(`: ping\n\n`);
+      } catch {
+        // تجاهل
+      }
+    }, 15000);
+
     req.on("close", () => {
       clientClosed = true;
+      safeEnd();
     });
 
-    try {
-      const { messages } = req.body as { messages: Array<{ role: string; content: string }> };
+    // ===== بناء رسائل الشات =====
+    const dynamicSystemPrompt = await getSystemPrompt();
 
-      if (!Array.isArray(messages)) {
-        return res.status(400).json({ error: "صيغة الرسائل غير صحيحة" });
+    const chatMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      { role: "system", content: dynamicSystemPrompt },
+      ...messages
+        .slice(-20) // حد أقصى للرسائل لحماية الأداء
+        .map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: String(m.content || ""),
+        })),
+    ];
+
+    const MAX_TOOL_ROUNDS = 6;
+    let toolRounds = 0;
+
+    // ===== أول استدعاء OpenAI =====
+    let response = await openai.chat.completions.create({
+      model: "gpt-4.1",
+      messages: chatMessages,
+      tools,
+      tool_choice: "auto",
+      max_completion_tokens: 4096,
+    });
+
+    // ===== Loop: تنفيذ الأدوات =====
+    while (response.choices[0]?.message?.tool_calls) {
+      if (clientClosed) return safeEnd();
+
+      toolRounds++;
+      if (toolRounds > MAX_TOOL_ROUNDS) {
+        safeWrite({
+          content:
+            "تعذر إكمال العملية تلقائياً بسبب تكرار الاستدعاءات. فضلاً حدّد رقم الطلب/عرض السعر بشكل أدق.",
+          done: true,
+        });
+        return safeEnd();
       }
-      
-      res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Connection", "keep-alive");
 
-      const dynamicSystemPrompt = await getSystemPrompt();
-      const chatMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-        { role: "system", content: dynamicSystemPrompt },
-        ...messages
-          .slice(-20) // حد أقصى للرسائل لحماية الأداء
-          .map(m => ({ role: m.role as "user" | "assistant", content: String(m.content || "") }))
-      ];
+      const toolCalls = response.choices[0].message.tool_calls;
+      chatMessages.push(response.choices[0].message);
 
-      const MAX_TOOL_ROUNDS = 6;
-      let toolRounds = 0;
+      for (const toolCall of toolCalls) {
+        if (clientClosed) return safeEnd();
 
-      let response = await openai.chat.completions.create({
+        const fn = (toolCall as any).function;
+
+        let args: any;
+        try {
+          args = JSON.parse(fn.arguments || "{}");
+        } catch {
+          chatMessages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: JSON.stringify({
+              ok: false,
+              error: { code: "BAD_TOOL_ARGS", message: "تعذر قراءة مدخلات الأداة" },
+            }),
+          });
+          continue;
+        }
+
+        const result = await executeFunction(fn.name, args);
+
+        chatMessages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: result,
+        });
+      }
+
+      // ===== استدعاء OpenAI بعد تنفيذ الأدوات =====
+      response = await openai.chat.completions.create({
         model: "gpt-4.1",
         messages: chatMessages,
         tools,
         tool_choice: "auto",
         max_completion_tokens: 4096,
       });
-
-      while (response.choices[0]?.message?.tool_calls) {
-        if (clientClosed) return;
-
-        toolRounds++;
-        if (toolRounds > MAX_TOOL_ROUNDS) {
-          res.write(
-            `data: ${JSON.stringify({
-              content: "تعذر إكمال العملية تلقائياً بسبب تكرار الاستدعاءات. فضلاً حدّد رقم الطلب/عرض السعر بشكل أدق.",
-              done: true,
-            })}\n\n`
-          );
-          return res.end();
-        }
-
-        const toolCalls = response.choices[0].message.tool_calls;
-        chatMessages.push(response.choices[0].message);
-
-        for (const toolCall of toolCalls) {
-          if (clientClosed) return;
-
-          const fn = (toolCall as any).function;
-
-          let args: any;
-          try {
-            args = JSON.parse(fn.arguments || "{}");
-          } catch (e) {
-            chatMessages.push({
-              role: "tool",
-              tool_call_id: toolCall.id,
-              content: JSON.stringify({
-                ok: false,
-                error: { code: "BAD_TOOL_ARGS", message: "تعذر قراءة مدخلات الأداة" },
-              }),
-            });
-            continue;
-          }
-
-          const result = await executeFunction(fn.name, args);
-          chatMessages.push({
-            role: "tool",
-            tool_call_id: toolCall.id,
-            content: result,
-          });
-        }
-
-        response = await openai.chat.completions.create({
-          model: "gpt-4.1",
-          messages: chatMessages,
-          tools,
-          tool_choice: "auto",
-          max_completion_tokens: 4096,
-        });
-      }
-
-      const content = response.choices[0]?.message?.content || "";
-      res.write(`data: ${JSON.stringify({ content, done: true })}\n\n`);
-      res.end();
-    } catch (error) {
-      console.error("AI Agent error:", error);
-      if (res.headersSent) {
-        res.write(`data: ${JSON.stringify({ error: "حدث خطأ في المعالجة" })}\n\n`);
-        res.end();
-      } else {
-        res.status(500).json({ error: "حدث خطأ في المعالجة" });
-      }
     }
-  });
+
+    // ===== الرد النهائي =====
+    const content = response.choices[0]?.message?.content || "";
+
+    safeWrite({ content, done: true });
+    safeEnd();
+  } catch (error) {
+    console.error("AI Agent error:", error);
+
+    // لو الهيدرز انرسلت بالفعل (SSE)، رجع خطأ بصيغة event
+    if (res.headersSent && !res.writableEnded) {
+      safeWrite({ error: "حدث خطأ في المعالجة", done: true });
+      safeEnd();
+      return;
+    }
+
+    // لو ما بدأ SSE أصلاً
+    try {
+      return res.status(500).json({ error: "حدث خطأ في المعالجة" });
+    } catch {
+      safeEnd();
+    }
+  }
+});
+
 
   app.get("/api/quotes", async (_req: Request, res: Response) => {
     try {
