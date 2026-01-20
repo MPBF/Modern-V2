@@ -223,241 +223,6 @@ export default function Definitions() {
   // Search term for customer selection in customer products form
   const [customerSearchTermInProducts, setCustomerSearchTermInProducts] = useState("");
 
-  // Master Batch Colors - ألوان الماستر باتش (24 لون من الموردين AL-KHlaiwi و PolyTEC)
-  // مع توافق الـ IDs القديمة باستخدام aliases
-  const masterBatchColors = [
-    // الألوان الأساسية (مع توافق IDs القديمة)
-    {
-      id: "PT-CLEAR",
-      aliases: ["PT-CLEAR"],
-      name: "CLEAR",
-      name_ar: "شفاف",
-      color: "transparent",
-      textColor: "#000000",
-      brand: "-",
-    },
-    {
-      id: "PT-MIX",
-      aliases: ["PT-MIX"],
-      name: "MIX",
-      name_ar: "مخلوط",
-      color: "#E2DCC8",
-      textColor: "#000000",
-      brand: "-",
-    },
-    {
-      id: "PT-111111",
-      aliases: ["PT-111111", "PT-WHITE"],
-      name: "White",
-      name_ar: "أبيض",
-      color: "#FFFFFF",
-      textColor: "#000000",
-      brand: "-",
-    },
-    {
-      id: "PT-000000",
-      aliases: ["PT-000000", "PT-BLACK"],
-      name: "Black",
-      name_ar: "أسود",
-      color: "#000000",
-      textColor: "#FFFFFF",
-      brand: "-",
-    },
-    // ألوان من الموردين الجدد
-    {
-      id: "225",
-      name: "Yellow",
-      name_ar: "أصفر فاتح",
-      color: "#FFD700",
-      textColor: "#000000",
-      brand: "AL-KHlaiwi",
-    },
-    {
-      id: "226",
-      name: "Yellow",
-      name_ar: "أصفر داكن",
-      color: "#FFC107",
-      textColor: "#000000",
-      brand: "AL-KHlaiwi",
-    },
-    {
-      id: "801",
-      name: "Orange",
-      name_ar: "برتقالي",
-      color: "#FF5722",
-      textColor: "#FFFFFF",
-      brand: "AL-KHlaiwi",
-    },
-    {
-      id: "61020",
-      name: "Brown",
-      name_ar: "بني",
-      color: "#795548",
-      textColor: "#FFFFFF",
-      brand: "-",
-    },
-    {
-      id: "160004",
-      name: "Choco Brown",
-      name_ar: "بني شوكولا",
-      color: "#5D4037",
-      textColor: "#FFFFFF",
-      brand: "-",
-    },
-    {
-      id: "560",
-      name: "Green",
-      name_ar: "أخضر 560",
-      color: "#4CAF50",
-      textColor: "#FFFFFF",
-      brand: "PolyTEC",
-    },
-    {
-      id: "666",
-      name: "Ivory",
-      name_ar: "عاجي",
-      color: "#FFFFF0",
-      textColor: "#000000",
-      brand: "AL-KHlaiwi",
-    },
-    {
-      id: "17005",
-      name: "Light Grey",
-      name_ar: "رمادي فاتح",
-      color: "#9E9E9E",
-      textColor: "#000000",
-      brand: "PolyTEC",
-    },
-    {
-      id: "KT746",
-      name: "Dark Grey",
-      name_ar: "رمادي داكن",
-      color: "#616161",
-      textColor: "#FFFFFF",
-      brand: "AL-KHlaiwi",
-    },
-    {
-      id: "180180",
-      name: "Light Pink",
-      name_ar: "وردي فاتح",
-      color: "#F8BBD9",
-      textColor: "#000000",
-      brand: "PolyTEC",
-    },
-    {
-      id: "180068",
-      name: "Dark Pink",
-      name_ar: "وردي داكن",
-      color: "#E91E63",
-      textColor: "#FFFFFF",
-      brand: "PolyTEC",
-    },
-    {
-      id: "KTCL80",
-      name: "Gold",
-      name_ar: "ذهبي",
-      color: "#FFD700",
-      textColor: "#000000",
-      brand: "AL-KHlaiwi",
-    },
-    {
-      id: "102004",
-      name: "Silver",
-      name_ar: "فضي",
-      color: "#C0C0C0",
-      textColor: "#000000",
-      brand: "PolyTEC",
-    },
-    {
-      id: "425",
-      name: "Red",
-      name_ar: "أحمر",
-      color: "#F44336",
-      textColor: "#FFFFFF",
-      brand: "AL-KHlaiwi",
-    },
-    {
-      id: "140017",
-      name: "Blue",
-      name_ar: "أزرق داكن",
-      color: "#1565C0",
-      textColor: "#FFFFFF",
-      brand: "AL-KHlaiwi",
-    },
-    {
-      id: "KT331",
-      name: "Sky Blue",
-      name_ar: "أزرق سماوي",
-      color: "#03A9F4",
-      textColor: "#000000",
-      brand: "AL-KHlaiwi",
-    },
-    {
-      id: "150002",
-      name: "Green",
-      name_ar: "أخضر 150002",
-      color: "#388E3C",
-      textColor: "#FFFFFF",
-      brand: "PolyTEC",
-    },
-    {
-      id: "G-550",
-      name: "Light Green",
-      name_ar: "أخضر فاتح",
-      color: "#81C784",
-      textColor: "#000000",
-      brand: "AL-KHlaiwi",
-    },
-    {
-      id: "150080",
-      name: "Green-Apple",
-      name_ar: "أخضر تفاحي",
-      color: "#8BC34A",
-      textColor: "#000000",
-      brand: "PolyTEC",
-    },
-    {
-      id: "150095",
-      name: "Green",
-      name_ar: "أخضر 150095",
-      color: "#2E7D32",
-      textColor: "#FFFFFF",
-      brand: "PolyTEC",
-    },
-    {
-      id: "120013",
-      name: "Beige",
-      name_ar: "بيج",
-      color: "#D7CCC8",
-      textColor: "#000000",
-      brand: "PolyTEC",
-    },
-    {
-      id: "150007",
-      name: "Green",
-      name_ar: "أخضر 150007",
-      color: "#43A047",
-      textColor: "#FFFFFF",
-      brand: "PolyTEC",
-    },
-    {
-      id: "KT454",
-      name: "Dark Violet",
-      name_ar: "بنفسجي داكن",
-      color: "#7B1FA2",
-      textColor: "#FFFFFF",
-      brand: "AL-KHlaiwi",
-    },
-    {
-      id: "337",
-      name: "Blue",
-      name_ar: "أزرق فاتح",
-      color: "#42A5F5",
-      textColor: "#000000",
-      brand: "AL-KHlaiwi",
-    },
-  ];
-
   // Generate printing cylinder options
   const printingCylinderOptions = [
     { value: "بدون طباعة", label: "بدون طباعة" },
@@ -908,6 +673,25 @@ export default function Definitions() {
     queryKey: ["/api/users/sales-reps"],
     staleTime: 0,
   });
+  
+  // جلب ألوان الماستر باتش من قاعدة البيانات
+  const { data: masterBatchColorsData = [], isLoading: masterBatchColorsLoading } = useQuery<any[]>({
+    queryKey: ["/api/master-batch-colors"],
+    staleTime: 0,
+  });
+  
+  // تحويل بيانات الألوان لتتوافق مع الشكل المتوقع
+  const masterBatchColors = React.useMemo(() => {
+    return masterBatchColorsData.map((color: any) => ({
+      id: color.id,
+      name: color.name,
+      name_ar: color.name_ar,
+      color: color.color_hex,
+      textColor: color.text_color,
+      brand: color.brand || "-",
+      aliases: color.aliases ? color.aliases.split(",") : [color.id],
+    }));
+  }, [masterBatchColorsData]);
 
   // Filter customers based on search term in customer products form
   const filteredCustomersInProducts = React.useMemo(() => {
