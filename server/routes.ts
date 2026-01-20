@@ -33,6 +33,7 @@ import {
   insertWarehouseReceiptSchema,
   insertProductionSettingsSchema,
   insertCustomerProductSchema,
+  insertMasterBatchColorSchema,
   customers,
   customer_products,
   locations,
@@ -2696,7 +2697,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/master-batch-colors", async (req, res) => {
     try {
-      const color = await storage.createMasterBatchColor(req.body);
+      const parseResult = insertMasterBatchColorSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "بيانات غير صحيحة",
+          errors: parseResult.error.errors 
+        });
+      }
+      const color = await storage.createMasterBatchColor(parseResult.data);
       res.status(201).json(color);
     } catch (error) {
       console.error("Error creating master batch color:", error);
@@ -2709,7 +2717,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/master-batch-colors/:id", async (req, res) => {
     try {
-      const color = await storage.updateMasterBatchColor(req.params.id, req.body);
+      const parseResult = insertMasterBatchColorSchema.partial().safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "بيانات غير صحيحة",
+          errors: parseResult.error.errors 
+        });
+      }
+      const color = await storage.updateMasterBatchColor(req.params.id, parseResult.data);
       res.json(color);
     } catch (error) {
       console.error("Error updating master batch color:", error);
