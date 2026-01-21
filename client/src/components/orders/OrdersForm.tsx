@@ -268,7 +268,9 @@ export default function OrdersForm({
   };
 
   // Filter customers based on search term
-  const filteredCustomers = customers.filter((customer: any) => {
+  // Ensure customers is an array to prevent runtime errors
+  const safeCustomers = Array.isArray(customers) ? customers : [];
+  const filteredCustomers = safeCustomers.filter((customer: any) => {
     if (!customerSearchTerm) return true;
 
     const searchLower = customerSearchTerm.toLowerCase();
@@ -280,7 +282,9 @@ export default function OrdersForm({
   });
 
   // Filter customer products based on selected customer (normalize to string)
-  const filteredCustomerProducts = customerProducts.filter((product: any) =>
+  // Ensure customerProducts is an array to prevent runtime errors
+  const safeCustomerProducts = Array.isArray(customerProducts) ? customerProducts : [];
+  const filteredCustomerProducts = safeCustomerProducts.filter((product: any) =>
     selectedCustomerId ? String(product.customer_id) === selectedCustomerId : true
   );
 
