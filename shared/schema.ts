@@ -2175,7 +2175,12 @@ export const insertCategorySchema = createInsertSchema(categories);
 export const insertCustomerSchema = createInsertSchema(customers).omit({
   created_at: true,
 }).extend({
-  tax_number: z.string().length(14, "الرقم الضريبي يجب أن يكون 14 خانة").optional().or(z.literal("")),
+  tax_number: z.string()
+    .refine((val) => val === "" || val === null || val === undefined || val.length === 14, {
+      message: "الرقم الضريبي يجب أن يكون 14 خانة أو اتركه فارغاً",
+    })
+    .optional()
+    .nullable(),
   unified_number: z.string().regex(/^7\d{9}$/, "الرقم الموحد يجب أن يكون 10 أرقام ويبدأ بـ 7").optional().or(z.literal("")),
   unique_customer_number: z.string().optional().or(z.literal("")),
   commercial_name: z.string().optional().or(z.literal("")),

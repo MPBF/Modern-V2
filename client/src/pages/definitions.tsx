@@ -3374,19 +3374,29 @@ export default function Definitions() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="tax_number">{t("definitions.customers.taxNumber")}</Label>
+                        <Label htmlFor="tax_number">
+                          {t("definitions.customers.taxNumber")}
+                          <span className="text-xs text-muted-foreground mr-1">(14 رقم)</span>
+                        </Label>
                         <Input
                           id="tax_number"
                           value={customerForm.tax_number}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '').slice(0, 14);
                             setCustomerForm({
                               ...customerForm,
-                              tax_number: e.target.value,
-                            })
-                          }
-                          placeholder="الرقم الضريبي"
-                          className="mt-1"
+                              tax_number: value,
+                            });
+                          }}
+                          placeholder="الرقم الضريبي (14 رقم)"
+                          className={`mt-1 ${customerForm.tax_number && customerForm.tax_number.length > 0 && customerForm.tax_number.length !== 14 ? 'border-yellow-500' : ''}`}
+                          maxLength={14}
                         />
+                        {customerForm.tax_number && customerForm.tax_number.length > 0 && customerForm.tax_number.length !== 14 && (
+                          <p className="text-xs text-yellow-600 mt-1">
+                            {customerForm.tax_number.length}/14 - يجب إدخال 14 رقم
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div>
