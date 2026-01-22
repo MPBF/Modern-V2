@@ -136,7 +136,11 @@ export default function OrderPrintTemplate({
     if (!id) return { name_ar: "غير محدد", name_en: "-", hex: "#CCCCCC" };
     const found = masterBatchColors.find((c) => c.id === id || c.aliases?.split(',').map(a => a.trim()).includes(id));
     if (found) {
-      return { name_ar: found.name_ar, name_en: found.name, hex: found.color_hex };
+      let hex = found.color_hex;
+      if (hex === "transparent" || !hex) {
+        hex = "#E0E0E0";
+      }
+      return { name_ar: found.name_ar, name_en: found.name, hex };
     }
     return { name_ar: id, name_en: "", hex: "#CCCCCC" };
   }, [masterBatchColors]);
