@@ -279,6 +279,7 @@ export default function Definitions() {
     display_name: "",
     display_name_ar: "",
     password: "",
+    phone: "",
     role_id: "none",
     section_id: "none",
     status: "active",
@@ -1605,6 +1606,7 @@ export default function Definitions() {
       display_name: "",
       display_name_ar: "",
       password: "",
+      phone: "",
       role_id: "none",
       section_id: "none",
       status: "active",
@@ -2979,6 +2981,7 @@ export default function Definitions() {
                                                 display_name_ar:
                                                   user.display_name_ar || "",
                                                 password: "",
+                                                phone: user.phone || "",
                                                 role_id: user.role_id
                                                   ? `ROLE0${user.role_id < 10 ? "0" + user.role_id : user.role_id}`
                                                   : "none",
@@ -3439,7 +3442,9 @@ export default function Definitions() {
                                 key={rep.id}
                                 value={rep.id.toString()}
                               >
-                                {rep.display_name_ar || rep.display_name || rep.username}
+                                {rep.display_name_ar && rep.display_name 
+                                  ? `${rep.display_name_ar} (${rep.display_name})`
+                                  : rep.display_name_ar || rep.display_name || rep.username}
                               </SelectItem>
                             ))}
                         </SelectContent>
@@ -5045,6 +5050,23 @@ export default function Definitions() {
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="phone">رقم الجوال</Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          value={userForm.phone}
+                          onChange={(e) =>
+                            setUserForm({
+                              ...userForm,
+                              phone: e.target.value,
+                            })
+                          }
+                          placeholder="05xxxxxxxx"
+                          className="mt-1"
+                          dir="ltr"
+                        />
+                      </div>
                       <div>
                         <Label htmlFor="role_id">{t("definitions.users.role")}</Label>
                         <Select
