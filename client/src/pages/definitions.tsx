@@ -1788,7 +1788,79 @@ export default function Definitions() {
                           </p>
                         </div>
                       ) : (
-                        <div className="overflow-x-auto">
+                        <>
+                          {/* Mobile Card View */}
+                          <div className="md:hidden space-y-3">
+                            {(() => {
+                              const filteredCustomers = getFilteredCustomers();
+                              const paginatedCustomers = paginateData(filteredCustomers, currentPages.customers);
+                              return paginatedCustomers.length > 0 ? (
+                                paginatedCustomers.map((customer: any) => {
+                                  const rep = Array.isArray(salesReps) ? salesReps.find((r: any) => r.id === customer.sales_rep_id) : null;
+                                  return (
+                                    <div key={customer.id} className="bg-white border rounded-lg p-4 shadow-sm">
+                                      <div className="flex justify-between items-start mb-3">
+                                        <div>
+                                          <div className="font-bold text-lg">{customer.name_ar || customer.name}</div>
+                                          <div className="text-sm text-gray-500">#{customer.id}</div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                              setEditingItem(customer);
+                                              setCustomerForm({
+                                                name: customer.name || "",
+                                                name_ar: customer.name_ar || "",
+                                                code: customer.code || "",
+                                                user_id: customer.user_id || "",
+                                                plate_drawer_code: customer.plate_drawer_code || "",
+                                                city: customer.city || "",
+                                                address: customer.address || "",
+                                                tax_number: customer.tax_number || "",
+                                                phone: customer.phone || "",
+                                                sales_rep_id: customer.sales_rep_id || "",
+                                              });
+                                              setSelectedTab("customers");
+                                              setIsDialogOpen(true);
+                                            }}
+                                          >
+                                            <Edit className="w-4 h-4" />
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-red-600"
+                                            disabled={deleteCustomerMutation.isPending}
+                                            onClick={() => {
+                                              if (confirm(`هل أنت متأكد من حذف العميل "${customer.name_ar || customer.name}"؟`)) {
+                                                deleteCustomerMutation.mutate(customer.id);
+                                              }
+                                            }}
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div><span className="text-gray-500">الهاتف:</span> {customer.phone || "-"}</div>
+                                        <div><span className="text-gray-500">المندوب:</span> {rep ? (rep.name_ar || rep.name) : "-"}</div>
+                                        <div><span className="text-gray-500">رقم الدرج:</span> {customer.plate_drawer_code || "-"}</div>
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                <div className="text-center py-8 text-gray-500">
+                                  {quickSearch || statusFilter !== "all" ? t("definitions.noFilterResults") : t("common.noData")}
+                                </div>
+                              );
+                            })()}
+                          </div>
+
+                          {/* Desktop Table View */}
+                          <div className="hidden md:block overflow-x-auto">
                           <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                               <tr>
@@ -1932,7 +2004,8 @@ export default function Definitions() {
                             }
                             return null;
                           })()}
-                        </div>
+                          </div>
+                        </>
                       )}
                     </CardContent>
                   </Card>
