@@ -497,7 +497,7 @@ export interface IStorage {
   getAllCustomers(): Promise<Customer[]>;
 
   // Customer Products (replacing the old Product table)
-  getCustomerProducts(options?: { customer_id?: string; ids?: number[]; page?: number; limit?: number }): Promise<{ data: CustomerProduct[]; total: number }>;
+  getCustomerProducts(options?: { customer_id?: string; ids?: number[]; page?: number; limit?: number; search?: string }): Promise<{ data: CustomerProduct[]; total: number }>;
   createCustomerProduct(customerProduct: any): Promise<CustomerProduct>;
 
   // Customers
@@ -554,7 +554,7 @@ export interface IStorage {
   getItems(): Promise<Item[]>;
 
   // Customer Products
-  getCustomerProducts(options?: { customer_id?: string; ids?: number[]; page?: number; limit?: number }): Promise<{ data: CustomerProduct[]; total: number }>;
+  getCustomerProducts(options?: { customer_id?: string; ids?: number[]; page?: number; limit?: number; search?: string }): Promise<{ data: CustomerProduct[]; total: number }>;
 
   // Locations
   getLocations(): Promise<Location[]>;
@@ -5845,11 +5845,11 @@ export class DatabaseStorage implements IStorage {
   private customerProductsCache: { data: CustomerProduct[]; total: number; expiry: number } | null = null;
   private customerProductsCacheTimeout = 45000; // 45 seconds cache
 
-  async getCustomerProducts(options?: { customer_id?: string; ids?: number[]; page?: number; limit?: number }): Promise<{ data: CustomerProduct[]; total: number }> {
-    const { customer_id, ids, page, limit } = options || {};
+  async getCustomerProducts(options?: { customer_id?: string; ids?: number[]; page?: number; limit?: number; search?: string }): Promise<{ data: CustomerProduct[]; total: number }> {
+    const { customer_id, ids, page, limit, search } = options || {};
     
     // If no filters and no pagination, use cache
-    const useCache = !customer_id && !ids && !page && !limit;
+    const useCache = !customer_id && !ids && !page && !limit && !search;
     
     if (useCache && this.customerProductsCache && Date.now() < this.customerProductsCache.expiry) {
       return { data: this.customerProductsCache.data, total: this.customerProductsCache.total };
@@ -5864,6 +5864,18 @@ export class DatabaseStorage implements IStorage {
     
     if (ids && ids.length > 0) {
       conditions.push(inArray(customer_products.id, ids));
+    }
+    
+    if (search && search.trim()) {
+      const searchTerm = `%${search.trim()}%`;
+      conditions.push(
+        or(
+          sql`${customer_products.size_caption} ILIKE ${searchTerm}`,
+          sql`${customers.name} ILIKE ${searchTerm}`,
+          sql`${customers.name_ar} ILIKE ${searchTerm}`,
+          sql`${customers.code} ILIKE ${searchTerm}`
+        )
+      );
     }
 
     // Build base query

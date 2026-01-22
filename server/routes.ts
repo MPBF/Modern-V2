@@ -2439,9 +2439,9 @@ Do not include quotes or explanations.`;
   // Customer Products routes
   app.get("/api/customer-products", async (req, res) => {
     try {
-      const { customer_id, ids, page, limit } = req.query;
+      const { customer_id, ids, page, limit, search } = req.query;
       
-      const options: { customer_id?: string; ids?: number[]; page?: number; limit?: number } = {};
+      const options: { customer_id?: string; ids?: number[]; page?: number; limit?: number; search?: string } = {};
       
       if (customer_id && typeof customer_id === 'string') {
         options.customer_id = customer_id;
@@ -2457,6 +2457,10 @@ Do not include quotes or explanations.`;
       
       if (limit && typeof limit === 'string') {
         options.limit = parseInt(limit);
+      }
+      
+      if (search && typeof search === 'string') {
+        options.search = search;
       }
       
       const result = await storage.getCustomerProducts(options);
