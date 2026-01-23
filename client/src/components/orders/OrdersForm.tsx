@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -30,36 +31,30 @@ import { Button } from "../ui/button";
 import { Search, Plus, Trash2 } from "lucide-react";
 import { formatNumber, formatWeight, formatPercentage } from "../../lib/formatNumber";
 
-// Master batch colors mapping
-const masterBatchColors = [
-  { id: "PT-111111", name: "WHITE", name_ar: "أبيض", color: "#FFFFFF", textColor: "#000000" },
-  { id: "PT-000000", name: "BLACK", name_ar: "أسود", color: "#000000", textColor: "#FFFFFF" },
-  { id: "PT-8B0000", name: "DARK_RED", name_ar: "أحمر غامق", color: "#8B0000", textColor: "#FFFFFF" },
-  { id: "PT-006400", name: "DARK_GREEN", name_ar: "أخضر غامق", color: "#006400", textColor: "#FFFFFF" },
-  { id: "PT-000080", name: "NAVY_BLUE", name_ar: "أزرق بحري", color: "#000080", textColor: "#FFFFFF" },
-  { id: "PT-2F4F4F", name: "DARK_GRAY", name_ar: "رمادي غامق", color: "#2F4F4F", textColor: "#FFFFFF" },
-  { id: "PT-FF0000", name: "RED", name_ar: "أحمر", color: "#FF0000", textColor: "#FFFFFF" },
-  { id: "PT-0000FF", name: "BLUE", name_ar: "أزرق", color: "#0000FF", textColor: "#FFFFFF" },
-  { id: "PT-00FF00", name: "GREEN", name_ar: "أخضر", color: "#00FF00", textColor: "#000000" },
-  { id: "PT-FFFF00", name: "YELLOW", name_ar: "أصفر", color: "#FFFF00", textColor: "#000000" },
-  { id: "PT-FFA500", name: "ORANGE", name_ar: "برتقالي", color: "#FFA500", textColor: "#000000" },
-  { id: "PT-800080", name: "PURPLE", name_ar: "بنفسجي", color: "#800080", textColor: "#FFFFFF" },
-  { id: "PT-FFC0CB", name: "PINK", name_ar: "وردي", color: "#FFC0CB", textColor: "#000000" },
-  { id: "PT-A52A2A", name: "BROWN", name_ar: "بني", color: "#A52A2A", textColor: "#FFFFFF" },
-  { id: "PT-C0C0C0", name: "SILVER", name_ar: "فضي", color: "#C0C0C0", textColor: "#000000" },
-  { id: "PT-FFD700", name: "GOLD", name_ar: "ذهبي", color: "#FFD700", textColor: "#000000" },
-  { id: "PT-E2DCC8", name: "BEIGE", name_ar: "بيج", color: "#E2DCC8", textColor: "#000000" },
-  { id: "PT-ADD8E6", name: "LIGHT_BLUE", name_ar: "أزرق فاتح", color: "#ADD8E6", textColor: "#000000" },
-  { id: "PT-90EE90", name: "LIGHT_GREEN", name_ar: "أخضر فاتح", color: "#90EE90", textColor: "#000000" },
-  { id: "PT-D3D3D3", name: "LIGHT_GRAY", name_ar: "رمادي فاتح", color: "#D3D3D3", textColor: "#000000" },
-  { id: "PT-MIX", name: "MIX", name_ar: "مخلوط", color: "#E2DCC8", textColor: "#000000" },
-  { id: "PT-CLEAR", name: "CLEAR", name_ar: "شفاف", color: "#E2DCC8", textColor: "#000000" },
-];
+interface MasterBatchColor {
+  id: number;
+  code: string;
+  name_ar: string;
+  name_en: string;
+  hex_color: string;
+  aliases?: string;
+}
 
-const getMasterBatchArabicName = (masterBatchId: string): string => {
-  if (!masterBatchId) return "غير محدد";
-  const color = masterBatchColors.find((c) => c.id === masterBatchId);
-  return color?.name_ar || masterBatchId;
+const ColorBadge = ({ color, code, nameAr }: { color: string; code: string; nameAr: string }) => {
+  const displayColor = !color || color === "transparent" ? "#E0E0E0" : color;
+  const isLight = displayColor.toLowerCase() === "#ffffff" || displayColor.toLowerCase() === "#e0e0e0";
+  
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-purple-50">
+      <span
+        className="w-4 h-4 rounded-sm border border-gray-300 flex-shrink-0"
+        style={{ backgroundColor: displayColor }}
+      />
+      <span className={`text-purple-600 font-semibold text-xs`}>
+        {nameAr} ({code})
+      </span>
+    </span>
+  );
 };
 
 const orderFormSchema = z.object({
@@ -102,6 +97,44 @@ export default function OrdersForm({
   const [productionOrdersInForm, setProductionOrdersInForm] = useState<ProdOrderInForm[]>([]);
   const [quantityPreviews, setQuantityPreviews] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: masterBatchColors = [] } = useQuery<MasterBatchColor[]>({
+    queryKey: ["/api/master-batch-colors"],
+    queryFn: async () => {
+      const response = await fetch("/api/master-batch-colors");
+      if (!response.ok) return [];
+      const result = await response.json();
+      return result.data || result || [];
+    },
+  });
+
+  const findColorByCode = (code: string): MasterBatchColor | undefined => {
+    if (!code) return undefined;
+    const normalizedCode = code.toUpperCase().trim();
+    return masterBatchColors.find((c) => {
+      if (c.code.toUpperCase() === normalizedCode) return true;
+      if (c.aliases) {
+        const aliasArr = c.aliases.split(",").map((a) => a.trim().toUpperCase());
+        return aliasArr.includes(normalizedCode);
+      }
+      return false;
+    });
+  };
+
+  const getMasterBatchDisplay = (masterBatchId: string) => {
+    if (!masterBatchId) return null;
+    const colorData = findColorByCode(masterBatchId);
+    if (colorData) {
+      return <ColorBadge color={colorData.hex_color} code={colorData.code} nameAr={colorData.name_ar} />;
+    }
+    return <span className="text-purple-600 font-semibold bg-purple-50 px-2 py-0.5 rounded">{masterBatchId}</span>;
+  };
+
+  const getMasterBatchText = (masterBatchId: string): string => {
+    if (!masterBatchId) return "غير محدد";
+    const colorData = findColorByCode(masterBatchId);
+    return colorData ? `${colorData.name_ar} (${colorData.code})` : masterBatchId;
+  };
 
   const orderForm = useForm({
     resolver: zodResolver(orderFormSchema),
@@ -456,7 +489,7 @@ export default function OrdersForm({
                                       item?.name_ar || item?.name || "منتج غير محدد",
                                       selectedProduct.size_caption,
                                       selectedProduct.cutting_length_cm ? `${selectedProduct.cutting_length_cm} سم` : null,
-                                      selectedProduct.master_batch_id ? getMasterBatchArabicName(selectedProduct.master_batch_id) : null,
+                                      selectedProduct.master_batch_id ? getMasterBatchText(selectedProduct.master_batch_id) : null,
                                       selectedProduct.raw_material,
                                     ].filter(Boolean);
                                     return <div className="text-right text-sm">{parts.join(" - ")}</div>;
@@ -494,9 +527,7 @@ export default function OrdersForm({
                                       {product.master_batch_id && (
                                         <div className="flex items-center gap-2">
                                           <span className="font-medium text-gray-700">الماستر باتش:</span>
-                                          <span className="text-purple-600 font-semibold bg-purple-50 px-2 py-0.5 rounded">
-                                            {getMasterBatchArabicName(product.master_batch_id)}
-                                          </span>
+                                          {getMasterBatchDisplay(product.master_batch_id)}
                                         </div>
                                       )}
                                       {product.raw_material && (

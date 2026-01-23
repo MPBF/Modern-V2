@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -8,6 +8,31 @@ import { Input } from "../ui/input";
 import { ChevronDown, ChevronRight, Eye, Plus, Search, Printer } from "lucide-react";
 import { formatNumber, formatWeight } from "../../lib/formatNumber";
 import { printRollLabel } from "./RollLabelPrint";
+
+interface MasterBatchColor {
+  id: number;
+  code: string;
+  name_ar: string;
+  name_en: string;
+  hex_color: string;
+  aliases?: string;
+}
+
+const ColorBadge = ({ color, code, nameAr }: { color: string; code: string; nameAr: string }) => {
+  const displayColor = !color || color === "transparent" ? "#E0E0E0" : color;
+  
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        className="w-4 h-4 rounded-sm border border-gray-300 flex-shrink-0"
+        style={{ backgroundColor: displayColor }}
+      />
+      <span className="text-muted-foreground">
+        {nameAr} ({code})
+      </span>
+    </span>
+  );
+};
 
 interface HierarchicalOrdersViewProps {
   stage: string;
@@ -31,10 +56,43 @@ export default function HierarchicalOrdersView({
 
   const { data: ordersData = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/production/hierarchical-orders"],
-    refetchInterval: 90000, // Reduced from 30s to 90s (1.5 minutes)
-    staleTime: 60000, // Cache for 1 minute to reduce server load
-    gcTime: 2 * 60 * 1000, // 2 minutes garbage collection
+    refetchInterval: 90000,
+    staleTime: 60000,
+    gcTime: 2 * 60 * 1000,
   });
+
+  const { data: masterBatchColors = [] } = useQuery<MasterBatchColor[]>({
+    queryKey: ["/api/master-batch-colors"],
+    queryFn: async () => {
+      const response = await fetch("/api/master-batch-colors");
+      if (!response.ok) return [];
+      const result = await response.json();
+      return result.data || result || [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const findColorByCode = useMemo(() => (code: string): MasterBatchColor | undefined => {
+    if (!code) return undefined;
+    const normalizedCode = code.toUpperCase().trim();
+    return masterBatchColors.find((c) => {
+      if (c.code.toUpperCase() === normalizedCode) return true;
+      if (c.aliases) {
+        const aliasArr = c.aliases.split(",").map((a) => a.trim().toUpperCase());
+        return aliasArr.includes(normalizedCode);
+      }
+      return false;
+    });
+  }, [masterBatchColors]);
+
+  const getMasterBatchDisplay = (masterBatchId: string) => {
+    if (!masterBatchId) return null;
+    const colorData = findColorByCode(masterBatchId);
+    if (colorData) {
+      return <ColorBadge color={colorData.hex_color} code={colorData.code} nameAr={colorData.name_ar} />;
+    }
+    return <span className="text-muted-foreground">{masterBatchId}</span>;
+  };
 
   // تنظيف الاستعلامات عند إلغاء تحميل المكون
   useEffect(() => {
@@ -278,13 +336,11 @@ export default function HierarchicalOrdersView({
                                       </div>
                                     )}
                                     {productionOrder.master_batch_id && (
-                                      <div>
+                                      <div className="flex items-center gap-1">
                                         <span className="font-medium">
                                           لون ماستر باتش:{" "}
                                         </span>
-                                        <span className="text-muted-foreground">
-                                          {productionOrder.master_batch_id}
-                                        </span>
+                                        {getMasterBatchDisplay(productionOrder.master_batch_id)}
                                       </div>
                                     )}
                                     <div>

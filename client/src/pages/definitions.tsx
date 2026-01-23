@@ -2581,17 +2581,17 @@ export default function Definitions() {
                                               return masterBatchColor ? (
                                                 <div className="flex items-center justify-center gap-2">
                                                   <div
-                                                    className="w-6 h-6 rounded-full border-2 border-gray-300 shadow-sm"
+                                                    className="w-5 h-5 rounded-sm border border-gray-300 shadow-sm flex-shrink-0"
                                                     style={{
                                                       backgroundColor:
-                                                        masterBatchColor.color,
+                                                        masterBatchColor.color || "#E0E0E0",
                                                     }}
                                                     title={
                                                       masterBatchColor.name
                                                     }
                                                   ></div>
                                                   <span className="text-xs font-medium text-gray-700">
-                                                    {masterBatchColor.name_ar}
+                                                    {masterBatchColor.name_ar} ({masterBatchColor.id})
                                                   </span>
                                                 </div>
                                               ) : (

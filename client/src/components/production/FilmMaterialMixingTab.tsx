@@ -71,32 +71,14 @@ type BatchDetail = {
   }>;
 };
 
-// Helper function to convert master batch code to color name
-const getMasterBatchColor = (code: string | null | undefined): string => {
-  if (!code) return '';
-  
-  const colorMap: Record<string, string> = {
-    'PT-000000': 'أبيض',
-    'PT-111111': 'أسود',
-    'PT-CLEAR': 'شفاف',
-    'PT-MIX': 'خليط ألوان',
-  };
-  
-  if (colorMap[code]) return colorMap[code];
-  
-  if (code.startsWith('PT-00')) return 'أبيض';
-  if (code.startsWith('PT-11')) return 'أسود';
-  if (code.startsWith('PT-12')) return 'أحمر';
-  if (code.startsWith('PT-13')) return 'أزرق';
-  if (code.startsWith('PT-14')) return 'أخضر';
-  if (code.startsWith('PT-15')) return 'أصفر';
-  if (code.startsWith('PT-16')) return 'برتقالي';
-  if (code.startsWith('PT-17')) return 'بنفسجي';
-  if (code.startsWith('PT-18')) return 'بني';
-  if (code.startsWith('PT-10')) return 'رمادي';
-  
-  return code;
-};
+interface MasterBatchColor {
+  id: number;
+  code: string;
+  name_ar: string;
+  name_en: string;
+  hex_color: string;
+  aliases?: string;
+}
 
 export default function FilmMaterialMixingTab() {
   const { toast } = useToast();
@@ -108,6 +90,31 @@ export default function FilmMaterialMixingTab() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<BatchDetail | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+
+  const { data: masterBatchColors = [] } = useQuery<MasterBatchColor[]>({
+    queryKey: ["/api/master-batch-colors"],
+    queryFn: async () => {
+      const response = await fetch("/api/master-batch-colors");
+      if (!response.ok) return [];
+      const result = await response.json();
+      return result.data || result || [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const getMasterBatchText = (code: string | null | undefined): string => {
+    if (!code) return '';
+    const normalizedCode = code.toUpperCase().trim();
+    const colorData = masterBatchColors.find((c) => {
+      if (c.code.toUpperCase() === normalizedCode) return true;
+      if (c.aliases) {
+        const aliasArr = c.aliases.split(",").map((a) => a.trim().toUpperCase());
+        return aliasArr.includes(normalizedCode);
+      }
+      return false;
+    });
+    return colorData ? `${colorData.name_ar} (${colorData.code})` : code;
+  };
 
   // Fetch data - get in_production and pending production orders
   const { data: productionOrdersData, isLoading: ordersLoading } = useQuery<any>({
@@ -316,7 +323,7 @@ export default function FilmMaterialMixingTab() {
                           <div className="text-sm text-gray-600">
                             {order.item_name_ar || order.item_name} | 
                             {' '}{order.raw_material}
-                            {order.master_batch_id && ` | ${getMasterBatchColor(order.master_batch_id)}`} | 
+                            {order.master_batch_id && ` | ${getMasterBatchText(order.master_batch_id)}`} | 
                             {' '}{parseFloat(order.final_quantity_kg || order.quantity_kg || 0).toFixed(2)} كجم |
                             {' '}{order.customer_name_ar || order.customer_name}
                           </div>
