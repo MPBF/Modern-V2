@@ -510,17 +510,22 @@ export default function OrderPrintTemplate({
                     <td style={{ ...styles.td, fontWeight: 900 }}>{cp?.raw_material || "بيور"}</td>
 
                     <td style={styles.td}>
-                      <div style={{ fontWeight: 900 }}>{color.name_ar}</div>
-                      <div 
-                        style={{ 
-                          width: "20px", 
-                          height: "20px", 
-                          borderRadius: "50%", 
-                          backgroundColor: color.hex, 
-                          border: "2px solid #333",
-                          margin: "4px auto 0"
-                        }} 
-                      />
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                        <div 
+                          style={{ 
+                            width: "18px", 
+                            height: "18px", 
+                            borderRadius: "50%", 
+                            backgroundColor: color.hex, 
+                            border: "2px solid #333",
+                            flexShrink: 0
+                          }} 
+                        />
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontWeight: 900, fontSize: "13px" }}>{color.name_ar}</div>
+                          <div style={{ fontSize: "11px", color: "#666", direction: "ltr" }}>{cp?.master_batch_id || "-"}</div>
+                        </div>
+                      </div>
                     </td>
 
                     <td style={styles.td}>
