@@ -66,11 +66,10 @@ interface User {
 }
 
 interface MasterBatchColor {
-  id: number;
-  code: string;
+  id: string;
+  name: string;
   name_ar: string;
-  name_en: string;
-  hex_color: string;
+  color_hex: string;
   text_color?: string;
   brand?: string;
   aliases?: string;
@@ -134,11 +133,11 @@ export default function OrderPrintTemplate({
   });
 
   const getMasterBatchInfo = useCallback((code?: string) => {
-    if (!code) return { name_ar: "غير محدد", name_en: "-", hex: "#CCCCCC" };
+    if (!code) return { name_ar: "غير محدد", code: "-", hex: "#CCCCCC" };
     const normalizedCode = code.toUpperCase().trim();
     const found = masterBatchColors.find((c) => {
-      if (!c || !c.code) return false;
-      if (c.code.toUpperCase() === normalizedCode) return true;
+      if (!c || !c.id) return false;
+      if (c.id.toUpperCase() === normalizedCode) return true;
       if (c.aliases) {
         const aliasArr = c.aliases.split(",").map((a) => a.trim().toUpperCase());
         return aliasArr.includes(normalizedCode);
@@ -146,13 +145,13 @@ export default function OrderPrintTemplate({
       return false;
     });
     if (found) {
-      let hex = found.hex_color;
+      let hex = found.color_hex;
       if (hex === "transparent" || !hex) {
         hex = "#E0E0E0";
       }
-      return { name_ar: found.name_ar, name_en: found.name_en || found.name_ar, hex };
+      return { name_ar: found.name_ar, code: found.id, hex };
     }
-    return { name_ar: code, name_en: "", hex: "#CCCCCC" };
+    return { name_ar: code, code: code, hex: "#CCCCCC" };
   }, [masterBatchColors]);
 
   const hasAutoTriggered = useRef(false);
@@ -523,7 +522,7 @@ export default function OrderPrintTemplate({
                         />
                         <div style={{ textAlign: "right" }}>
                           <div style={{ fontWeight: 900, fontSize: "13px" }}>{color.name_ar}</div>
-                          <div style={{ fontSize: "11px", color: "#666", direction: "ltr" }}>{cp?.master_batch_id || "-"}</div>
+                          <div style={{ fontSize: "11px", color: "#666", direction: "ltr" }}>{color.code}</div>
                         </div>
                       </div>
                     </td>
