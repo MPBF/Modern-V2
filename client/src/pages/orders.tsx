@@ -168,7 +168,10 @@ export default function Orders() {
   });
 
   // Filter orders by search term and status
-  const filteredOrders = orders.filter((order: any) => {
+  const ordersArray = Array.isArray(orders) ? orders : [];
+  const customersArray = Array.isArray(customers) ? customers : [];
+  
+  const filteredOrders = ordersArray.filter((order: any) => {
     // Search filter
     const matchesSearch =
       searchTerm === "" ||
@@ -178,11 +181,11 @@ export default function Orders() {
       (order.customer_name || "")
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      customers
+      customersArray
         .find((c: any) => c.id === order.customer_id)
         ?.name?.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      customers
+      customersArray
         .find((c: any) => c.id === order.customer_id)
         ?.name_ar?.toLowerCase()
         .includes(searchTerm.toLowerCase());
@@ -194,11 +197,17 @@ export default function Orders() {
     return matchesSearch && matchesStatus;
   });
 
+  // Ensure arrays are valid before filtering
+  const safeCustomerProducts = Array.isArray(customerProducts) ? customerProducts : [];
+  const safeOrders = Array.isArray(orders) ? orders : [];
+  const safeCustomers = Array.isArray(customers) ? customers : [];
+  const safeProductionOrders = Array.isArray(productionOrders) ? productionOrders : [];
+
   // Filter production orders by search term and status
-  const filteredProductionOrders = productionOrders.filter((po: any) => {
-    const order = orders.find((o: any) => o.id === po.order_id);
-    const customer = customers.find((c: any) => c.id === order?.customer_id);
-    const customerProduct = customerProducts.find((cp: any) => cp.id === po.customer_product_id);
+  const filteredProductionOrders = safeProductionOrders.filter((po: any) => {
+    const order = safeOrders.find((o: any) => o.id === po.order_id);
+    const customer = safeCustomers.find((c: any) => c.id === order?.customer_id);
+    const customerProduct = safeCustomerProducts.find((cp: any) => cp.id === po.customer_product_id);
 
     // Search filter
     const matchesSearch =
