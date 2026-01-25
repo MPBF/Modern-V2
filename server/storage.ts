@@ -173,6 +173,27 @@ import {
   master_batch_colors,
   type MasterBatchColor,
   type InsertMasterBatchColor,
+  
+  // سندات المستودع
+  raw_material_vouchers_in,
+  raw_material_vouchers_out,
+  finished_goods_vouchers_in,
+  finished_goods_vouchers_out,
+  inventory_counts,
+  inventory_count_items,
+  type RawMaterialVoucherIn,
+  type InsertRawMaterialVoucherIn,
+  type RawMaterialVoucherOut,
+  type InsertRawMaterialVoucherOut,
+  type FinishedGoodsVoucherIn,
+  type InsertFinishedGoodsVoucherIn,
+  type FinishedGoodsVoucherOut,
+  type InsertFinishedGoodsVoucherOut,
+  type InventoryCount,
+  type InsertInventoryCount,
+  type InventoryCountItem,
+  type InsertInventoryCountItem,
+  suppliers,
 } from "@shared/schema";
 
 import { db, pool } from "./db";
@@ -1130,6 +1151,44 @@ export interface IStorage {
   createMasterBatchColor(color: InsertMasterBatchColor): Promise<MasterBatchColor>;
   updateMasterBatchColor(id: string, updates: Partial<MasterBatchColor>): Promise<MasterBatchColor>;
   deleteMasterBatchColor(id: string): Promise<void>;
+
+  // ===== Warehouse Vouchers System =====
+  
+  // Raw Material In Vouchers
+  getRawMaterialVouchersIn(): Promise<RawMaterialVoucherIn[]>;
+  getRawMaterialVoucherInById(id: number): Promise<RawMaterialVoucherIn | undefined>;
+  createRawMaterialVoucherIn(voucher: any): Promise<RawMaterialVoucherIn>;
+  
+  // Raw Material Out Vouchers
+  getRawMaterialVouchersOut(): Promise<RawMaterialVoucherOut[]>;
+  getRawMaterialVoucherOutById(id: number): Promise<RawMaterialVoucherOut | undefined>;
+  createRawMaterialVoucherOut(voucher: any): Promise<RawMaterialVoucherOut>;
+  
+  // Finished Goods In Vouchers
+  getFinishedGoodsVouchersIn(): Promise<FinishedGoodsVoucherIn[]>;
+  getFinishedGoodsVoucherInById(id: number): Promise<FinishedGoodsVoucherIn | undefined>;
+  createFinishedGoodsVoucherIn(voucher: any): Promise<FinishedGoodsVoucherIn>;
+  
+  // Finished Goods Out Vouchers
+  getFinishedGoodsVouchersOut(): Promise<FinishedGoodsVoucherOut[]>;
+  getFinishedGoodsVoucherOutById(id: number): Promise<FinishedGoodsVoucherOut | undefined>;
+  createFinishedGoodsVoucherOut(voucher: any): Promise<FinishedGoodsVoucherOut>;
+  
+  // Warehouse Voucher Stats
+  getWarehouseVouchersStats(): Promise<any>;
+  
+  // Inventory Count (الجرد)
+  getInventoryCounts(): Promise<InventoryCount[]>;
+  getInventoryCountById(id: number): Promise<any>;
+  createInventoryCount(countData: any): Promise<InventoryCount>;
+  createInventoryCountItem(itemData: any): Promise<InventoryCountItem>;
+  completeInventoryCount(id: number, userId: number): Promise<InventoryCount>;
+  
+  // Barcode Lookup
+  lookupByBarcode(barcode: string): Promise<any>;
+  
+  // Voucher Number Generation
+  getNextVoucherNumber(type: "RMI" | "RMO" | "FGI" | "FGO" | "IC"): Promise<string>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -13396,6 +13455,485 @@ export class DatabaseStorage implements IStorage {
       },
       "deleteMasterBatchColor",
       `حذف لون الماستر باتش ${id}`,
+    );
+  }
+
+  // ===== Warehouse Vouchers System Implementation =====
+
+  async getNextVoucherNumber(type: "RMI" | "RMO" | "FGI" | "FGO" | "IC"): Promise<string> {
+    return withDatabaseErrorHandling(
+      async () => {
+        let table: any;
+        let prefix: string;
+        
+        switch (type) {
+          case "RMI":
+            table = raw_material_vouchers_in;
+            prefix = "RMI";
+            break;
+          case "RMO":
+            table = raw_material_vouchers_out;
+            prefix = "RMO";
+            break;
+          case "FGI":
+            table = finished_goods_vouchers_in;
+            prefix = "FGI";
+            break;
+          case "FGO":
+            table = finished_goods_vouchers_out;
+            prefix = "FGO";
+            break;
+          case "IC":
+            table = inventory_counts;
+            prefix = "IC";
+            break;
+        }
+
+        const result = await db
+          .select({ count: count() })
+          .from(table);
+        
+        const nextNum = (result[0]?.count || 0) + 1;
+        return `${prefix}-${String(nextNum).padStart(5, "0")}`;
+      },
+      "getNextVoucherNumber",
+      `توليد رقم سند ${type}`,
+    );
+  }
+
+  // Raw Material In Vouchers
+  async getRawMaterialVouchersIn(): Promise<RawMaterialVoucherIn[]> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const vouchers = await db
+          .select()
+          .from(raw_material_vouchers_in)
+          .orderBy(desc(raw_material_vouchers_in.created_at));
+        return vouchers;
+      },
+      "getRawMaterialVouchersIn",
+      "جلب سندات إدخال المواد الخام",
+    );
+  }
+
+  async getRawMaterialVoucherInById(id: number): Promise<RawMaterialVoucherIn | undefined> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [voucher] = await db
+          .select()
+          .from(raw_material_vouchers_in)
+          .where(eq(raw_material_vouchers_in.id, id));
+        return voucher;
+      },
+      "getRawMaterialVoucherInById",
+      `جلب سند إدخال مواد خام ${id}`,
+    );
+  }
+
+  async createRawMaterialVoucherIn(voucherData: any): Promise<RawMaterialVoucherIn> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const voucherNumber = await this.getNextVoucherNumber("RMI");
+        
+        const [voucher] = await db
+          .insert(raw_material_vouchers_in)
+          .values({
+            ...voucherData,
+            voucher_number: voucherNumber,
+            created_at: new Date(),
+            updated_at: new Date(),
+          })
+          .returning();
+
+        // تحديث المخزون
+        if (voucherData.item_id && voucherData.quantity) {
+          const existingInventory = await db
+            .select()
+            .from(inventory)
+            .where(eq(inventory.item_id, voucherData.item_id))
+            .limit(1);
+
+          if (existingInventory.length > 0) {
+            await db
+              .update(inventory)
+              .set({
+                current_stock: sql`${inventory.current_stock} + ${voucherData.quantity}`,
+                last_updated: new Date(),
+              })
+              .where(eq(inventory.item_id, voucherData.item_id));
+          } else {
+            await db.insert(inventory).values({
+              item_id: voucherData.item_id,
+              location_id: voucherData.location_id,
+              current_stock: voucherData.quantity,
+              unit: voucherData.unit || "كيلو",
+              last_updated: new Date(),
+            });
+          }
+        }
+
+        return voucher;
+      },
+      "createRawMaterialVoucherIn",
+      "إنشاء سند إدخال مواد خام",
+    );
+  }
+
+  // Raw Material Out Vouchers
+  async getRawMaterialVouchersOut(): Promise<RawMaterialVoucherOut[]> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const vouchers = await db
+          .select()
+          .from(raw_material_vouchers_out)
+          .orderBy(desc(raw_material_vouchers_out.created_at));
+        return vouchers;
+      },
+      "getRawMaterialVouchersOut",
+      "جلب سندات إخراج المواد الخام",
+    );
+  }
+
+  async getRawMaterialVoucherOutById(id: number): Promise<RawMaterialVoucherOut | undefined> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [voucher] = await db
+          .select()
+          .from(raw_material_vouchers_out)
+          .where(eq(raw_material_vouchers_out.id, id));
+        return voucher;
+      },
+      "getRawMaterialVoucherOutById",
+      `جلب سند إخراج مواد خام ${id}`,
+    );
+  }
+
+  async createRawMaterialVoucherOut(voucherData: any): Promise<RawMaterialVoucherOut> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const voucherNumber = await this.getNextVoucherNumber("RMO");
+        
+        const [voucher] = await db
+          .insert(raw_material_vouchers_out)
+          .values({
+            ...voucherData,
+            voucher_number: voucherNumber,
+            created_at: new Date(),
+            updated_at: new Date(),
+          })
+          .returning();
+
+        // تخفيض المخزون
+        if (voucherData.item_id && voucherData.quantity) {
+          await db
+            .update(inventory)
+            .set({
+              current_stock: sql`${inventory.current_stock} - ${voucherData.quantity}`,
+              last_updated: new Date(),
+            })
+            .where(eq(inventory.item_id, voucherData.item_id));
+        }
+
+        return voucher;
+      },
+      "createRawMaterialVoucherOut",
+      "إنشاء سند إخراج مواد خام",
+    );
+  }
+
+  // Finished Goods In Vouchers
+  async getFinishedGoodsVouchersIn(): Promise<FinishedGoodsVoucherIn[]> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const vouchers = await db
+          .select()
+          .from(finished_goods_vouchers_in)
+          .orderBy(desc(finished_goods_vouchers_in.created_at));
+        return vouchers;
+      },
+      "getFinishedGoodsVouchersIn",
+      "جلب سندات استلام المواد التامة",
+    );
+  }
+
+  async getFinishedGoodsVoucherInById(id: number): Promise<FinishedGoodsVoucherIn | undefined> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [voucher] = await db
+          .select()
+          .from(finished_goods_vouchers_in)
+          .where(eq(finished_goods_vouchers_in.id, id));
+        return voucher;
+      },
+      "getFinishedGoodsVoucherInById",
+      `جلب سند استلام مواد تامة ${id}`,
+    );
+  }
+
+  async createFinishedGoodsVoucherIn(voucherData: any): Promise<FinishedGoodsVoucherIn> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const voucherNumber = await this.getNextVoucherNumber("FGI");
+        
+        const [voucher] = await db
+          .insert(finished_goods_vouchers_in)
+          .values({
+            ...voucherData,
+            voucher_number: voucherNumber,
+            created_at: new Date(),
+            updated_at: new Date(),
+          })
+          .returning();
+
+        return voucher;
+      },
+      "createFinishedGoodsVoucherIn",
+      "إنشاء سند استلام مواد تامة",
+    );
+  }
+
+  // Finished Goods Out Vouchers
+  async getFinishedGoodsVouchersOut(): Promise<FinishedGoodsVoucherOut[]> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const vouchers = await db
+          .select()
+          .from(finished_goods_vouchers_out)
+          .orderBy(desc(finished_goods_vouchers_out.created_at));
+        return vouchers;
+      },
+      "getFinishedGoodsVouchersOut",
+      "جلب سندات إخراج المواد التامة",
+    );
+  }
+
+  async getFinishedGoodsVoucherOutById(id: number): Promise<FinishedGoodsVoucherOut | undefined> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [voucher] = await db
+          .select()
+          .from(finished_goods_vouchers_out)
+          .where(eq(finished_goods_vouchers_out.id, id));
+        return voucher;
+      },
+      "getFinishedGoodsVoucherOutById",
+      `جلب سند إخراج مواد تامة ${id}`,
+    );
+  }
+
+  async createFinishedGoodsVoucherOut(voucherData: any): Promise<FinishedGoodsVoucherOut> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const voucherNumber = await this.getNextVoucherNumber("FGO");
+        
+        const [voucher] = await db
+          .insert(finished_goods_vouchers_out)
+          .values({
+            ...voucherData,
+            voucher_number: voucherNumber,
+            created_at: new Date(),
+            updated_at: new Date(),
+          })
+          .returning();
+
+        return voucher;
+      },
+      "createFinishedGoodsVoucherOut",
+      "إنشاء سند إخراج مواد تامة",
+    );
+  }
+
+  // Warehouse Voucher Stats
+  async getWarehouseVouchersStats(): Promise<any> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const [rawInCount] = await db.select({ count: count() }).from(raw_material_vouchers_in);
+        const [rawOutCount] = await db.select({ count: count() }).from(raw_material_vouchers_out);
+        const [finishedInCount] = await db.select({ count: count() }).from(finished_goods_vouchers_in);
+        const [finishedOutCount] = await db.select({ count: count() }).from(finished_goods_vouchers_out);
+
+        return {
+          raw_material_in: rawInCount?.count || 0,
+          raw_material_out: rawOutCount?.count || 0,
+          finished_goods_in: finishedInCount?.count || 0,
+          finished_goods_out: finishedOutCount?.count || 0,
+          total: (rawInCount?.count || 0) + (rawOutCount?.count || 0) + 
+                 (finishedInCount?.count || 0) + (finishedOutCount?.count || 0),
+        };
+      },
+      "getWarehouseVouchersStats",
+      "جلب إحصائيات السندات",
+    );
+  }
+
+  // Inventory Counts
+  async getInventoryCounts(): Promise<InventoryCount[]> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const counts = await db
+          .select()
+          .from(inventory_counts)
+          .orderBy(desc(inventory_counts.created_at));
+        return counts;
+      },
+      "getInventoryCounts",
+      "جلب عمليات الجرد",
+    );
+  }
+
+  async getInventoryCountById(id: number): Promise<any> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [countRecord] = await db
+          .select()
+          .from(inventory_counts)
+          .where(eq(inventory_counts.id, id));
+
+        if (!countRecord) return undefined;
+
+        const countItems = await db
+          .select()
+          .from(inventory_count_items)
+          .where(eq(inventory_count_items.count_id, id));
+
+        return {
+          ...countRecord,
+          items: countItems,
+        };
+      },
+      "getInventoryCountById",
+      `جلب عملية الجرد ${id}`,
+    );
+  }
+
+  async createInventoryCount(countData: any): Promise<InventoryCount> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const countNumber = await this.getNextVoucherNumber("IC");
+        
+        const [countRecord] = await db
+          .insert(inventory_counts)
+          .values({
+            ...countData,
+            count_number: countNumber,
+            created_at: new Date(),
+            updated_at: new Date(),
+          })
+          .returning();
+
+        return countRecord;
+      },
+      "createInventoryCount",
+      "إنشاء عملية جرد",
+    );
+  }
+
+  async createInventoryCountItem(itemData: any): Promise<InventoryCountItem> {
+    return withDatabaseErrorHandling(
+      async () => {
+        // حساب الفرق
+        const difference = parseFloat(itemData.counted_quantity) - parseFloat(itemData.system_quantity);
+        
+        const [item] = await db
+          .insert(inventory_count_items)
+          .values({
+            ...itemData,
+            difference: difference.toFixed(3),
+            counted_at: new Date(),
+          })
+          .returning();
+
+        // تحديث عداد الأصناف والفروقات في الجرد
+        await db
+          .update(inventory_counts)
+          .set({
+            total_items_counted: sql`${inventory_counts.total_items_counted} + 1`,
+            total_discrepancies: difference !== 0 
+              ? sql`${inventory_counts.total_discrepancies} + 1` 
+              : inventory_counts.total_discrepancies,
+            updated_at: new Date(),
+          })
+          .where(eq(inventory_counts.id, itemData.count_id));
+
+        return item;
+      },
+      "createInventoryCountItem",
+      "إضافة صنف للجرد",
+    );
+  }
+
+  async completeInventoryCount(id: number, userId: number): Promise<InventoryCount> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [updated] = await db
+          .update(inventory_counts)
+          .set({
+            status: "completed",
+            approved_by: userId,
+            approved_at: new Date(),
+            updated_at: new Date(),
+          })
+          .where(eq(inventory_counts.id, id))
+          .returning();
+
+        return updated;
+      },
+      "completeInventoryCount",
+      `إتمام عملية الجرد ${id}`,
+    );
+  }
+
+  // Barcode Lookup
+  async lookupByBarcode(barcode: string): Promise<any> {
+    return withDatabaseErrorHandling(
+      async () => {
+        // البحث في المخزون
+        const inventoryResults = await db
+          .select()
+          .from(inventory)
+          .leftJoin(items, eq(inventory.item_id, items.id))
+          .limit(10);
+
+        // البحث في الرولات
+        const rollResults = await db
+          .select()
+          .from(rolls)
+          .where(sql`${rolls.qr_code_text} ILIKE ${`%${barcode}%`}`)
+          .limit(5);
+
+        // البحث في السندات
+        const rmiResults = await db
+          .select()
+          .from(raw_material_vouchers_in)
+          .where(eq(raw_material_vouchers_in.barcode, barcode))
+          .limit(5);
+
+        if (rmiResults.length > 0) {
+          return { type: "raw_material_voucher_in", data: rmiResults[0] };
+        }
+
+        if (rollResults.length > 0) {
+          return { type: "roll", data: rollResults[0] };
+        }
+
+        // البحث في الأصناف
+        const itemResults = await db
+          .select()
+          .from(items)
+          .where(eq(items.code, barcode))
+          .limit(1);
+
+        if (itemResults.length > 0) {
+          return { type: "item", data: itemResults[0] };
+        }
+
+        return null;
+      },
+      "lookupByBarcode",
+      `البحث بالباركود ${barcode}`,
     );
   }
 }

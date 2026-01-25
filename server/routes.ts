@@ -7814,6 +7814,304 @@ Do not include quotes or explanations.`;
     }
   });
 
+  // ============ Warehouse Vouchers API Routes ============
+
+  // سندات إدخال المواد الخام
+  app.get("/api/warehouse/vouchers/raw-material-in", async (req, res) => {
+    try {
+      const vouchers = await storage.getRawMaterialVouchersIn();
+      res.json(vouchers);
+    } catch (error) {
+      console.error("Error fetching raw material in vouchers:", error);
+      res.status(500).json({ message: "خطأ في جلب سندات إدخال المواد الخام" });
+    }
+  });
+
+  app.post("/api/warehouse/vouchers/raw-material-in", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "غير مصرح" });
+      }
+
+      const voucherData = {
+        ...req.body,
+        received_by: userId,
+      };
+
+      const voucher = await storage.createRawMaterialVoucherIn(voucherData);
+      res.status(201).json(voucher);
+    } catch (error: any) {
+      console.error("Error creating raw material in voucher:", error);
+      res.status(500).json({ message: "خطأ في إنشاء سند إدخال المواد الخام", error: error.message });
+    }
+  });
+
+  app.get("/api/warehouse/vouchers/raw-material-in/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const voucher = await storage.getRawMaterialVoucherInById(id);
+      if (!voucher) {
+        return res.status(404).json({ message: "السند غير موجود" });
+      }
+      res.json(voucher);
+    } catch (error) {
+      console.error("Error fetching raw material in voucher:", error);
+      res.status(500).json({ message: "خطأ في جلب سند إدخال المواد الخام" });
+    }
+  });
+
+  // سندات إخراج المواد الخام
+  app.get("/api/warehouse/vouchers/raw-material-out", async (req, res) => {
+    try {
+      const vouchers = await storage.getRawMaterialVouchersOut();
+      res.json(vouchers);
+    } catch (error) {
+      console.error("Error fetching raw material out vouchers:", error);
+      res.status(500).json({ message: "خطأ في جلب سندات إخراج المواد الخام" });
+    }
+  });
+
+  app.post("/api/warehouse/vouchers/raw-material-out", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "غير مصرح" });
+      }
+
+      const voucherData = {
+        ...req.body,
+        issued_by: userId,
+      };
+
+      const voucher = await storage.createRawMaterialVoucherOut(voucherData);
+      res.status(201).json(voucher);
+    } catch (error: any) {
+      console.error("Error creating raw material out voucher:", error);
+      res.status(500).json({ message: "خطأ في إنشاء سند إخراج المواد الخام", error: error.message });
+    }
+  });
+
+  app.get("/api/warehouse/vouchers/raw-material-out/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const voucher = await storage.getRawMaterialVoucherOutById(id);
+      if (!voucher) {
+        return res.status(404).json({ message: "السند غير موجود" });
+      }
+      res.json(voucher);
+    } catch (error) {
+      console.error("Error fetching raw material out voucher:", error);
+      res.status(500).json({ message: "خطأ في جلب سند إخراج المواد الخام" });
+    }
+  });
+
+  // سندات استلام المواد التامة
+  app.get("/api/warehouse/vouchers/finished-goods-in", async (req, res) => {
+    try {
+      const vouchers = await storage.getFinishedGoodsVouchersIn();
+      res.json(vouchers);
+    } catch (error) {
+      console.error("Error fetching finished goods in vouchers:", error);
+      res.status(500).json({ message: "خطأ في جلب سندات استلام المواد التامة" });
+    }
+  });
+
+  app.post("/api/warehouse/vouchers/finished-goods-in", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "غير مصرح" });
+      }
+
+      const voucherData = {
+        ...req.body,
+        received_by: userId,
+      };
+
+      const voucher = await storage.createFinishedGoodsVoucherIn(voucherData);
+      res.status(201).json(voucher);
+    } catch (error: any) {
+      console.error("Error creating finished goods in voucher:", error);
+      res.status(500).json({ message: "خطأ في إنشاء سند استلام المواد التامة", error: error.message });
+    }
+  });
+
+  app.get("/api/warehouse/vouchers/finished-goods-in/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const voucher = await storage.getFinishedGoodsVoucherInById(id);
+      if (!voucher) {
+        return res.status(404).json({ message: "السند غير موجود" });
+      }
+      res.json(voucher);
+    } catch (error) {
+      console.error("Error fetching finished goods in voucher:", error);
+      res.status(500).json({ message: "خطأ في جلب سند استلام المواد التامة" });
+    }
+  });
+
+  // سندات إخراج المواد التامة
+  app.get("/api/warehouse/vouchers/finished-goods-out", async (req, res) => {
+    try {
+      const vouchers = await storage.getFinishedGoodsVouchersOut();
+      res.json(vouchers);
+    } catch (error) {
+      console.error("Error fetching finished goods out vouchers:", error);
+      res.status(500).json({ message: "خطأ في جلب سندات إخراج المواد التامة" });
+    }
+  });
+
+  app.post("/api/warehouse/vouchers/finished-goods-out", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "غير مصرح" });
+      }
+
+      const voucherData = {
+        ...req.body,
+        issued_by: userId,
+      };
+
+      const voucher = await storage.createFinishedGoodsVoucherOut(voucherData);
+      res.status(201).json(voucher);
+    } catch (error: any) {
+      console.error("Error creating finished goods out voucher:", error);
+      res.status(500).json({ message: "خطأ في إنشاء سند إخراج المواد التامة", error: error.message });
+    }
+  });
+
+  app.get("/api/warehouse/vouchers/finished-goods-out/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const voucher = await storage.getFinishedGoodsVoucherOutById(id);
+      if (!voucher) {
+        return res.status(404).json({ message: "السند غير موجود" });
+      }
+      res.json(voucher);
+    } catch (error) {
+      console.error("Error fetching finished goods out voucher:", error);
+      res.status(500).json({ message: "خطأ في جلب سند إخراج المواد التامة" });
+    }
+  });
+
+  // إحصائيات السندات
+  app.get("/api/warehouse/vouchers/stats", async (req, res) => {
+    try {
+      const stats = await storage.getWarehouseVouchersStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching warehouse voucher stats:", error);
+      res.status(500).json({ message: "خطأ في جلب إحصائيات السندات" });
+    }
+  });
+
+  // ============ Inventory Count (الجرد) API Routes ============
+
+  app.get("/api/warehouse/inventory-counts", async (req, res) => {
+    try {
+      const counts = await storage.getInventoryCounts();
+      res.json(counts);
+    } catch (error) {
+      console.error("Error fetching inventory counts:", error);
+      res.status(500).json({ message: "خطأ في جلب عمليات الجرد" });
+    }
+  });
+
+  app.post("/api/warehouse/inventory-counts", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "غير مصرح" });
+      }
+
+      const countData = {
+        ...req.body,
+        counted_by: userId,
+      };
+
+      const count = await storage.createInventoryCount(countData);
+      res.status(201).json(count);
+    } catch (error: any) {
+      console.error("Error creating inventory count:", error);
+      res.status(500).json({ message: "خطأ في إنشاء عملية الجرد", error: error.message });
+    }
+  });
+
+  app.get("/api/warehouse/inventory-counts/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const count = await storage.getInventoryCountById(id);
+      if (!count) {
+        return res.status(404).json({ message: "عملية الجرد غير موجودة" });
+      }
+      res.json(count);
+    } catch (error) {
+      console.error("Error fetching inventory count:", error);
+      res.status(500).json({ message: "خطأ في جلب عملية الجرد" });
+    }
+  });
+
+  app.post("/api/warehouse/inventory-counts/:id/items", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const countId = parseInt(req.params.id);
+      const itemData = {
+        ...req.body,
+        count_id: countId,
+      };
+
+      const item = await storage.createInventoryCountItem(itemData);
+      res.status(201).json(item);
+    } catch (error: any) {
+      console.error("Error adding inventory count item:", error);
+      res.status(500).json({ message: "خطأ في إضافة صنف للجرد", error: error.message });
+    }
+  });
+
+  app.post("/api/warehouse/inventory-counts/:id/complete", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "غير مصرح" });
+      }
+
+      const id = parseInt(req.params.id);
+      const count = await storage.completeInventoryCount(id, userId);
+      res.json(count);
+    } catch (error: any) {
+      console.error("Error completing inventory count:", error);
+      res.status(500).json({ message: "خطأ في إتمام عملية الجرد", error: error.message });
+    }
+  });
+
+  // البحث بالباركود
+  app.get("/api/warehouse/barcode-lookup/:barcode", async (req, res) => {
+    try {
+      const barcode = req.params.barcode;
+      const result = await storage.lookupByBarcode(barcode);
+      if (!result) {
+        return res.status(404).json({ message: "الباركود غير موجود" });
+      }
+      res.json(result);
+    } catch (error) {
+      console.error("Error looking up barcode:", error);
+      res.status(500).json({ message: "خطأ في البحث بالباركود" });
+    }
+  });
+
+  // توليد رقم سند جديد
+  app.get("/api/warehouse/vouchers/next-number/:type", async (req, res) => {
+    try {
+      const type = req.params.type as "RMI" | "RMO" | "FGI" | "FGO" | "IC";
+      const nextNumber = await storage.getNextVoucherNumber(type);
+      res.json({ next_number: nextNumber });
+    } catch (error) {
+      console.error("Error generating next voucher number:", error);
+      res.status(500).json({ message: "خطأ في توليد رقم السند" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

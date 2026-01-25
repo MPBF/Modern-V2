@@ -3121,3 +3121,327 @@ export const insertMasterBatchColorSchema = createInsertSchema(master_batch_colo
 
 // Chat models for OpenAI integration
 export * from "./models/chat";
+
+// ===== نظام سندات المستودع الاحترافي =====
+// أربعة أنواع من السندات: إدخال مواد خام، إخراج مواد خام، استلام مواد تامة، إخراج مواد تامة
+
+// 📋 جدول سندات إدخال المواد الخام (من الموردين أو رصيد افتتاحي)
+export const raw_material_vouchers_in = pgTable("raw_material_vouchers_in", {
+  id: serial("id").primaryKey(),
+  voucher_number: varchar("voucher_number", { length: 50 }).notNull().unique(), // رقم السند التسلسلي RMI-001
+  voucher_type: varchar("voucher_type", { length: 30 }).notNull().default("purchase"), // purchase / opening_balance / return
+  supplier_id: integer("supplier_id").references(() => suppliers.id), // المورد (اختياري للرصيد الافتتاحي)
+  item_id: varchar("item_id", { length: 20 }).notNull().references(() => items.id), // الصنف
+  quantity: decimal("quantity", { precision: 12, scale: 3 }).notNull(), // الكمية
+  unit: varchar("unit", { length: 20 }).notNull().default("كيلو"), // الوحدة
+  unit_price: decimal("unit_price", { precision: 10, scale: 4 }), // سعر الوحدة (اختياري)
+  total_price: decimal("total_price", { precision: 12, scale: 4 }), // السعر الإجمالي
+  batch_number: varchar("batch_number", { length: 50 }), // رقم الدفعة
+  barcode: varchar("barcode", { length: 100 }), // الباركود
+  location_id: varchar("location_id", { length: 20 }).references(() => locations.id), // موقع التخزين
+  expiry_date: date("expiry_date"), // تاريخ الانتهاء
+  notes: text("notes"), // ملاحظات
+  received_by: integer("received_by").notNull().references(() => users.id), // أمين المستودع المستلم
+  voucher_date: date("voucher_date").notNull().default(sql`CURRENT_DATE`), // تاريخ السند
+  status: varchar("status", { length: 20 }).notNull().default("completed"), // draft / completed / cancelled
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// 📋 جدول سندات إخراج المواد الخام (تحويل لصالة الإنتاج)
+export const raw_material_vouchers_out = pgTable("raw_material_vouchers_out", {
+  id: serial("id").primaryKey(),
+  voucher_number: varchar("voucher_number", { length: 50 }).notNull().unique(), // رقم السند التسلسلي RMO-001
+  voucher_type: varchar("voucher_type", { length: 30 }).notNull().default("production_transfer"), // production_transfer / return_to_supplier / adjustment
+  production_order_id: integer("production_order_id").references(() => production_orders.id), // أمر الإنتاج المرتبط (اختياري)
+  item_id: varchar("item_id", { length: 20 }).notNull().references(() => items.id), // الصنف
+  quantity: decimal("quantity", { precision: 12, scale: 3 }).notNull(), // الكمية
+  unit: varchar("unit", { length: 20 }).notNull().default("كيلو"), // الوحدة
+  batch_number: varchar("batch_number", { length: 50 }), // رقم الدفعة
+  barcode: varchar("barcode", { length: 100 }), // الباركود
+  from_location_id: varchar("from_location_id", { length: 20 }).references(() => locations.id), // موقع الإخراج
+  to_destination: varchar("to_destination", { length: 100 }), // الجهة المستلمة (صالة الإنتاج)
+  issued_to: varchar("issued_to", { length: 100 }), // اسم المستلم في صالة الإنتاج
+  notes: text("notes"), // ملاحظات
+  issued_by: integer("issued_by").notNull().references(() => users.id), // أمين المستودع المصدر
+  voucher_date: date("voucher_date").notNull().default(sql`CURRENT_DATE`), // تاريخ السند
+  status: varchar("status", { length: 20 }).notNull().default("completed"), // draft / completed / cancelled
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// 📋 جدول سندات استلام المواد التامة (من صالة الإنتاج)
+export const finished_goods_vouchers_in = pgTable("finished_goods_vouchers_in", {
+  id: serial("id").primaryKey(),
+  voucher_number: varchar("voucher_number", { length: 50 }).notNull().unique(), // رقم السند التسلسلي FGI-001
+  voucher_type: varchar("voucher_type", { length: 30 }).notNull().default("production_receipt"), // production_receipt / customer_return / adjustment
+  production_order_id: integer("production_order_id").references(() => production_orders.id), // أمر الإنتاج المرتبط
+  roll_id: integer("roll_id").references(() => rolls.id), // الرول المرتبط (اختياري)
+  order_id: integer("order_id").references(() => orders.id), // الطلب المرتبط
+  customer_id: varchar("customer_id", { length: 20 }).references(() => customers.id), // العميل
+  product_description: text("product_description"), // وصف المنتج
+  quantity: decimal("quantity", { precision: 12, scale: 3 }).notNull(), // الكمية
+  unit: varchar("unit", { length: 20 }).notNull().default("كيلو"), // الوحدة
+  weight_kg: decimal("weight_kg", { precision: 12, scale: 3 }), // الوزن بالكيلو
+  pieces_count: integer("pieces_count"), // عدد القطع
+  packages_count: integer("packages_count"), // عدد الطرود
+  batch_number: varchar("batch_number", { length: 50 }), // رقم الدفعة
+  barcode: varchar("barcode", { length: 100 }), // الباركود
+  qr_code: text("qr_code"), // كود QR
+  location_id: varchar("location_id", { length: 20 }).references(() => locations.id), // موقع التخزين
+  from_production_line: varchar("from_production_line", { length: 100 }), // خط الإنتاج
+  quality_check_status: varchar("quality_check_status", { length: 20 }).default("pending"), // pending / passed / failed
+  notes: text("notes"), // ملاحظات
+  received_by: integer("received_by").notNull().references(() => users.id), // أمين المستودع المستلم
+  delivered_by: varchar("delivered_by", { length: 100 }), // اسم المسلم من الإنتاج
+  voucher_date: date("voucher_date").notNull().default(sql`CURRENT_DATE`), // تاريخ السند
+  status: varchar("status", { length: 20 }).notNull().default("completed"), // draft / completed / cancelled
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// 📋 جدول سندات إخراج المواد التامة (تسليم للعملاء)
+export const finished_goods_vouchers_out = pgTable("finished_goods_vouchers_out", {
+  id: serial("id").primaryKey(),
+  voucher_number: varchar("voucher_number", { length: 50 }).notNull().unique(), // رقم السند التسلسلي FGO-001
+  voucher_type: varchar("voucher_type", { length: 30 }).notNull().default("customer_delivery"), // customer_delivery / sample / adjustment
+  order_id: integer("order_id").references(() => orders.id), // الطلب المرتبط
+  production_order_id: integer("production_order_id").references(() => production_orders.id), // أمر الإنتاج المرتبط
+  customer_id: varchar("customer_id", { length: 20 }).notNull().references(() => customers.id), // العميل
+  driver_name: varchar("driver_name", { length: 100 }), // اسم السائق
+  driver_phone: varchar("driver_phone", { length: 20 }), // رقم السائق
+  vehicle_number: varchar("vehicle_number", { length: 50 }), // رقم السيارة
+  product_description: text("product_description"), // وصف المنتج
+  quantity: decimal("quantity", { precision: 12, scale: 3 }).notNull(), // الكمية
+  unit: varchar("unit", { length: 20 }).notNull().default("كيلو"), // الوحدة
+  weight_kg: decimal("weight_kg", { precision: 12, scale: 3 }), // الوزن بالكيلو
+  pieces_count: integer("pieces_count"), // عدد القطع
+  packages_count: integer("packages_count"), // عدد الطرود
+  batch_number: varchar("batch_number", { length: 50 }), // رقم الدفعة
+  barcode: varchar("barcode", { length: 100 }), // الباركود
+  from_location_id: varchar("from_location_id", { length: 20 }).references(() => locations.id), // موقع الإخراج
+  delivery_address: text("delivery_address"), // عنوان التسليم
+  notes: text("notes"), // ملاحظات
+  issued_by: integer("issued_by").notNull().references(() => users.id), // أمين المستودع المصدر
+  received_by_name: varchar("received_by_name", { length: 100 }), // اسم المستلم
+  received_by_signature: text("received_by_signature"), // توقيع المستلم (base64)
+  voucher_date: date("voucher_date").notNull().default(sql`CURRENT_DATE`), // تاريخ السند
+  status: varchar("status", { length: 20 }).notNull().default("completed"), // draft / completed / cancelled
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// 📋 جدول الجرد
+export const inventory_counts = pgTable("inventory_counts", {
+  id: serial("id").primaryKey(),
+  count_number: varchar("count_number", { length: 50 }).notNull().unique(), // رقم الجرد IC-001
+  count_type: varchar("count_type", { length: 30 }).notNull().default("periodic"), // opening / periodic / annual / spot_check
+  count_date: date("count_date").notNull().default(sql`CURRENT_DATE`), // تاريخ الجرد
+  location_id: varchar("location_id", { length: 20 }).references(() => locations.id), // موقع الجرد
+  status: varchar("status", { length: 20 }).notNull().default("in_progress"), // draft / in_progress / completed / approved
+  notes: text("notes"), // ملاحظات
+  counted_by: integer("counted_by").notNull().references(() => users.id), // من قام بالجرد
+  approved_by: integer("approved_by").references(() => users.id), // من وافق على الجرد
+  approved_at: timestamp("approved_at"), // تاريخ الموافقة
+  total_items_counted: integer("total_items_counted").default(0), // عدد الأصناف المجرودة
+  total_discrepancies: integer("total_discrepancies").default(0), // عدد الفروقات
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// 📋 جدول تفاصيل الجرد
+export const inventory_count_items = pgTable("inventory_count_items", {
+  id: serial("id").primaryKey(),
+  count_id: integer("count_id").notNull().references(() => inventory_counts.id, { onDelete: "cascade" }), // رقم الجرد
+  item_id: varchar("item_id", { length: 20 }).notNull().references(() => items.id), // الصنف
+  barcode: varchar("barcode", { length: 100 }), // الباركود الممسوح
+  system_quantity: decimal("system_quantity", { precision: 12, scale: 3 }).notNull(), // الكمية في النظام
+  counted_quantity: decimal("counted_quantity", { precision: 12, scale: 3 }).notNull(), // الكمية المجرودة
+  difference: decimal("difference", { precision: 12, scale: 3 }).notNull(), // الفرق
+  unit: varchar("unit", { length: 20 }).notNull().default("كيلو"), // الوحدة
+  location_id: varchar("location_id", { length: 20 }).references(() => locations.id), // الموقع
+  notes: text("notes"), // ملاحظات
+  adjustment_created: boolean("adjustment_created").default(false), // هل تم إنشاء تسوية؟
+  counted_at: timestamp("counted_at").defaultNow(), // وقت الجرد
+});
+
+// ===== مخططات التحقق للسندات =====
+
+export const insertRawMaterialVoucherInSchema = createInsertSchema(raw_material_vouchers_in).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+}).extend({
+  quantity: z.string().refine((val) => parseFloatSafe(val) > 0, "الكمية يجب أن تكون أكبر من صفر"),
+});
+
+export const insertRawMaterialVoucherOutSchema = createInsertSchema(raw_material_vouchers_out).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+}).extend({
+  quantity: z.string().refine((val) => parseFloatSafe(val) > 0, "الكمية يجب أن تكون أكبر من صفر"),
+});
+
+export const insertFinishedGoodsVoucherInSchema = createInsertSchema(finished_goods_vouchers_in).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+}).extend({
+  quantity: z.string().refine((val) => parseFloatSafe(val) > 0, "الكمية يجب أن تكون أكبر من صفر"),
+});
+
+export const insertFinishedGoodsVoucherOutSchema = createInsertSchema(finished_goods_vouchers_out).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+}).extend({
+  quantity: z.string().refine((val) => parseFloatSafe(val) > 0, "الكمية يجب أن تكون أكبر من صفر"),
+});
+
+export const insertInventoryCountSchema = createInsertSchema(inventory_counts).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export const insertInventoryCountItemSchema = createInsertSchema(inventory_count_items).omit({
+  id: true,
+  counted_at: true,
+});
+
+// ===== أنواع TypeScript للسندات =====
+
+export type RawMaterialVoucherIn = typeof raw_material_vouchers_in.$inferSelect;
+export type InsertRawMaterialVoucherIn = z.infer<typeof insertRawMaterialVoucherInSchema>;
+export type RawMaterialVoucherOut = typeof raw_material_vouchers_out.$inferSelect;
+export type InsertRawMaterialVoucherOut = z.infer<typeof insertRawMaterialVoucherOutSchema>;
+export type FinishedGoodsVoucherIn = typeof finished_goods_vouchers_in.$inferSelect;
+export type InsertFinishedGoodsVoucherIn = z.infer<typeof insertFinishedGoodsVoucherInSchema>;
+export type FinishedGoodsVoucherOut = typeof finished_goods_vouchers_out.$inferSelect;
+export type InsertFinishedGoodsVoucherOut = z.infer<typeof insertFinishedGoodsVoucherOutSchema>;
+export type InventoryCount = typeof inventory_counts.$inferSelect;
+export type InsertInventoryCount = z.infer<typeof insertInventoryCountSchema>;
+export type InventoryCountItem = typeof inventory_count_items.$inferSelect;
+export type InsertInventoryCountItem = z.infer<typeof insertInventoryCountItemSchema>;
+
+// ===== علاقات السندات =====
+
+export const rawMaterialVouchersInRelations = relations(raw_material_vouchers_in, ({ one }) => ({
+  supplier: one(suppliers, {
+    fields: [raw_material_vouchers_in.supplier_id],
+    references: [suppliers.id],
+  }),
+  item: one(items, {
+    fields: [raw_material_vouchers_in.item_id],
+    references: [items.id],
+  }),
+  location: one(locations, {
+    fields: [raw_material_vouchers_in.location_id],
+    references: [locations.id],
+  }),
+  receivedByUser: one(users, {
+    fields: [raw_material_vouchers_in.received_by],
+    references: [users.id],
+  }),
+}));
+
+export const rawMaterialVouchersOutRelations = relations(raw_material_vouchers_out, ({ one }) => ({
+  productionOrder: one(production_orders, {
+    fields: [raw_material_vouchers_out.production_order_id],
+    references: [production_orders.id],
+  }),
+  item: one(items, {
+    fields: [raw_material_vouchers_out.item_id],
+    references: [items.id],
+  }),
+  fromLocation: one(locations, {
+    fields: [raw_material_vouchers_out.from_location_id],
+    references: [locations.id],
+  }),
+  issuedByUser: one(users, {
+    fields: [raw_material_vouchers_out.issued_by],
+    references: [users.id],
+  }),
+}));
+
+export const finishedGoodsVouchersInRelations = relations(finished_goods_vouchers_in, ({ one }) => ({
+  productionOrder: one(production_orders, {
+    fields: [finished_goods_vouchers_in.production_order_id],
+    references: [production_orders.id],
+  }),
+  roll: one(rolls, {
+    fields: [finished_goods_vouchers_in.roll_id],
+    references: [rolls.id],
+  }),
+  order: one(orders, {
+    fields: [finished_goods_vouchers_in.order_id],
+    references: [orders.id],
+  }),
+  customer: one(customers, {
+    fields: [finished_goods_vouchers_in.customer_id],
+    references: [customers.id],
+  }),
+  location: one(locations, {
+    fields: [finished_goods_vouchers_in.location_id],
+    references: [locations.id],
+  }),
+  receivedByUser: one(users, {
+    fields: [finished_goods_vouchers_in.received_by],
+    references: [users.id],
+  }),
+}));
+
+export const finishedGoodsVouchersOutRelations = relations(finished_goods_vouchers_out, ({ one }) => ({
+  order: one(orders, {
+    fields: [finished_goods_vouchers_out.order_id],
+    references: [orders.id],
+  }),
+  productionOrder: one(production_orders, {
+    fields: [finished_goods_vouchers_out.production_order_id],
+    references: [production_orders.id],
+  }),
+  customer: one(customers, {
+    fields: [finished_goods_vouchers_out.customer_id],
+    references: [customers.id],
+  }),
+  fromLocation: one(locations, {
+    fields: [finished_goods_vouchers_out.from_location_id],
+    references: [locations.id],
+  }),
+  issuedByUser: one(users, {
+    fields: [finished_goods_vouchers_out.issued_by],
+    references: [users.id],
+  }),
+}));
+
+export const inventoryCountsRelations = relations(inventory_counts, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [inventory_counts.location_id],
+    references: [locations.id],
+  }),
+  countedByUser: one(users, {
+    fields: [inventory_counts.counted_by],
+    references: [users.id],
+  }),
+  approvedByUser: one(users, {
+    fields: [inventory_counts.approved_by],
+    references: [users.id],
+  }),
+  items: many(inventory_count_items),
+}));
+
+export const inventoryCountItemsRelations = relations(inventory_count_items, ({ one }) => ({
+  count: one(inventory_counts, {
+    fields: [inventory_count_items.count_id],
+    references: [inventory_counts.id],
+  }),
+  item: one(items, {
+    fields: [inventory_count_items.item_id],
+    references: [items.id],
+  }),
+  location: one(locations, {
+    fields: [inventory_count_items.location_id],
+    references: [locations.id],
+  }),
+}));

@@ -59,7 +59,13 @@ import {
   Scale,
   FileText,
   User,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  ClipboardCheck,
 } from "lucide-react";
+import { VouchersList } from "../components/warehouse/VouchersList";
+import { VoucherForm } from "../components/warehouse/VoucherForm";
+import { InventoryCountForm } from "../components/warehouse/InventoryCountForm";
 import PageLayout from "../components/layout/PageLayout";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -104,9 +110,19 @@ export default function Warehouse() {
   const [editingLocation, setEditingLocation] = useState<any>(null);
   const [editingMovement, setEditingMovement] = useState<any>(null);
   const [activeLocationTab, setActiveLocationTab] = useState<string>("");
+  
+  const [voucherFormType, setVoucherFormType] = useState<"raw-material-in" | "raw-material-out" | "finished-goods-in" | "finished-goods-out">("raw-material-in");
+  const [isVoucherFormOpen, setIsVoucherFormOpen] = useState(false);
+  const [isInventoryCountOpen, setIsInventoryCountOpen] = useState(false);
+  
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  const openVoucherForm = (type: typeof voucherFormType) => {
+    setVoucherFormType(type);
+    setIsVoucherFormOpen(true);
+  };
 
   // Fetch inventory data
   const { data: inventoryItems = [], isLoading: inventoryLoading } = useQuery({
@@ -600,7 +616,11 @@ export default function Warehouse() {
         defaultValue={activeLocationTab || "production-hall"}
         className="space-y-4"
       >
-        <TabsList className="flex flex-wrap w-full justify-start">
+        <TabsList className="flex flex-wrap w-full justify-start gap-1">
+          <TabsTrigger value="vouchers" className="shrink-0 bg-blue-50">
+            <FileText className="h-4 w-4 ml-1" />
+            السندات
+          </TabsTrigger>
           <TabsTrigger value="production-hall" className="shrink-0">
             صالة الإنتاج
           </TabsTrigger>
@@ -620,6 +640,77 @@ export default function Warehouse() {
             {t('warehouse.movements')}
           </TabsTrigger>
         </TabsList>
+
+        {/* Vouchers Tab - السندات */}
+        <TabsContent value="vouchers" className="space-y-4">
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Button onClick={() => openVoucherForm("raw-material-in")} className="bg-green-600 hover:bg-green-700">
+              <ArrowDownToLine className="h-4 w-4 ml-2" />
+              إدخال مواد خام
+            </Button>
+            <Button onClick={() => openVoucherForm("raw-material-out")} className="bg-red-600 hover:bg-red-700">
+              <ArrowUpFromLine className="h-4 w-4 ml-2" />
+              إخراج مواد خام
+            </Button>
+            <Button onClick={() => openVoucherForm("finished-goods-in")} className="bg-blue-600 hover:bg-blue-700">
+              <Package className="h-4 w-4 ml-2" />
+              استلام مواد تامة
+            </Button>
+            <Button onClick={() => openVoucherForm("finished-goods-out")} className="bg-orange-600 hover:bg-orange-700">
+              <Package className="h-4 w-4 ml-2" />
+              إخراج مواد تامة
+            </Button>
+            <Button onClick={() => setIsInventoryCountOpen(true)} variant="outline">
+              <ClipboardCheck className="h-4 w-4 ml-2" />
+              جرد بالباركود
+            </Button>
+          </div>
+          
+          <Tabs defaultValue="raw-material-in" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="raw-material-in">
+                <ArrowDownToLine className="h-4 w-4 ml-1" />
+                إدخال مواد خام
+              </TabsTrigger>
+              <TabsTrigger value="raw-material-out">
+                <ArrowUpFromLine className="h-4 w-4 ml-1" />
+                إخراج مواد خام
+              </TabsTrigger>
+              <TabsTrigger value="finished-goods-in">
+                <Package className="h-4 w-4 ml-1" />
+                استلام مواد تامة
+              </TabsTrigger>
+              <TabsTrigger value="finished-goods-out">
+                <Package className="h-4 w-4 ml-1" />
+                إخراج مواد تامة
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="raw-material-in">
+              <VouchersList type="raw-material-in" title="سندات إدخال مواد خام" />
+            </TabsContent>
+            <TabsContent value="raw-material-out">
+              <VouchersList type="raw-material-out" title="سندات إخراج مواد خام" />
+            </TabsContent>
+            <TabsContent value="finished-goods-in">
+              <VouchersList type="finished-goods-in" title="سندات استلام مواد تامة" />
+            </TabsContent>
+            <TabsContent value="finished-goods-out">
+              <VouchersList type="finished-goods-out" title="سندات إخراج مواد تامة" />
+            </TabsContent>
+          </Tabs>
+          
+          <VoucherForm
+            type={voucherFormType}
+            open={isVoucherFormOpen}
+            onOpenChange={setIsVoucherFormOpen}
+          />
+          
+          <InventoryCountForm
+            open={isInventoryCountOpen}
+            onOpenChange={setIsInventoryCountOpen}
+          />
+        </TabsContent>
 
         {/* Production Hall Tab */}
         <TabsContent value="production-hall" className="space-y-4">
