@@ -446,10 +446,10 @@ function ChatPanel() {
   };
 
   return (
-    <div className="flex flex-col h-[600px]">
+    <div className="flex flex-col h-[calc(100vh-280px)] min-h-[500px] max-h-[800px]">
       <ScrollArea
         viewportRef={viewportRef}
-        className="flex-1"
+        className="flex-1 border-b"
       >
         <div
           className="p-4 space-y-4"
@@ -490,10 +490,10 @@ function ChatPanel() {
                   </div>
 
                   <div
-                    className={`max-w-[80%] rounded-lg p-3 ${
+                    className={`max-w-[85%] rounded-2xl p-4 shadow-sm ${
                       msg.role === "user"
                         ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
+                        : "bg-muted/80 border border-border/50"
                     }`}
                   >
                     {msg.fileInfo && (
@@ -574,7 +574,7 @@ function ChatPanel() {
         </div>
       )}
 
-      <div className="p-4 flex gap-2">
+      <div className="p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <input
           type="file"
           ref={fileInputRef}
@@ -583,59 +583,63 @@ function ChatPanel() {
           className="hidden"
         />
 
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-[60px] w-[60px] shrink-0"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isLoading || isUploading || isRecording || isTranscribing}
-        >
-          {isUploading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Paperclip className="h-5 w-5" />
-          )}
-        </Button>
+        <div className="flex gap-2 items-end">
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-12 w-12 shrink-0 rounded-xl"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading || isUploading || isRecording || isTranscribing}
+            >
+              {isUploading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Paperclip className="h-5 w-5" />
+              )}
+            </Button>
 
-        <Button
-          variant={isRecording ? "destructive" : "outline"}
-          size="icon"
-          className="h-[60px] w-[60px] shrink-0"
-          onClick={isRecording ? stopRecording : startRecording}
-          disabled={isLoading || isUploading || isTranscribing}
-        >
-          {isTranscribing ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : isRecording ? (
-            <MicOff className="h-5 w-5" />
-          ) : (
-            <Mic className="h-5 w-5" />
-          )}
-        </Button>
+            <Button
+              variant={isRecording ? "destructive" : "outline"}
+              size="icon"
+              className="h-12 w-12 shrink-0 rounded-xl"
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={isLoading || isUploading || isTranscribing}
+            >
+              {isTranscribing ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : isRecording ? (
+                <MicOff className="h-5 w-5" />
+              ) : (
+                <Mic className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
 
-        <Textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={
-            isTranscribing ? t("aiAgent.voice.transcribing") : t("aiAgent.chat.placeholder")
-          }
-          className="min-h-[60px] resize-none"
-          disabled={isLoading || isRecording || isTranscribing}
-        />
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              isTranscribing ? t("aiAgent.voice.transcribing") : t("aiAgent.chat.placeholder")
+            }
+            className="min-h-[48px] max-h-[120px] resize-none rounded-xl border-2 focus:border-primary/50"
+            disabled={isLoading || isRecording || isTranscribing}
+          />
 
-        <Button
-          onClick={sendMessage}
-          disabled={(!input.trim() && !selectedFile) || isLoading || isRecording || isTranscribing}
-          size="icon"
-          className="h-[60px] w-[60px]"
-        >
-          {isLoading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Send className="h-5 w-5" />
-          )}
-        </Button>
+          <Button
+            onClick={sendMessage}
+            disabled={(!input.trim() && !selectedFile) || isLoading || isRecording || isTranscribing}
+            size="icon"
+            className="h-12 w-12 shrink-0 rounded-xl"
+          >
+            {isLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );
