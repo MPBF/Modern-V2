@@ -96,6 +96,7 @@ function ChatPanel() {
   const [recordingDuration, setRecordingDuration] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Radix: لازم ref على Viewport نفسه
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -342,6 +343,11 @@ function ChatPanel() {
     setMessages((prev) => [...prev, userMessage, { role: "assistant", content: "" }]);
     setInput("");
     setIsLoading(true);
+    
+    // إعادة التركيز على حقل الإدخال بعد الإرسال
+    setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 100);
 
     try {
       const messagesForApi = [
@@ -506,7 +512,7 @@ function ChatPanel() {
                       </div>
                     )}
 
-                    <div className="whitespace-pre-wrap text-sm">
+                    <div className="whitespace-pre-wrap text-base leading-relaxed">
                       {renderTextWithLinks(msg.content)}
                     </div>
                   </div>
@@ -617,14 +623,16 @@ function ChatPanel() {
           </div>
 
           <Textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
               isTranscribing ? t("aiAgent.voice.transcribing") : t("aiAgent.chat.placeholder")
             }
-            className="min-h-[48px] max-h-[120px] resize-none rounded-xl border-2 focus:border-primary/50"
+            className="min-h-[48px] max-h-[120px] resize-none rounded-xl border-2 focus:border-primary/50 text-base"
             disabled={isLoading || isRecording || isTranscribing}
+            autoFocus
           />
 
           <Button
