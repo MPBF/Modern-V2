@@ -2608,11 +2608,17 @@
       "tip1": "Code 128 supports any letters and numbers",
       "tip2": "EAN-13 requires 12-13 digits only",
       "tip3": "Choose the appropriate size for your label printer",
+      "customText": "Custom Text (optional)",
+      "customTextPlaceholder": "Enter additional text below barcode",
+      "labelSize": "Label Size",
       "sizes": {
         "small": "Small (38×13 mm)",
         "medium": "Medium (50×25 mm)",
         "large": "Large (70×35 mm)",
-        "xlarge": "Extra Large (90×50 mm)"
+        "xlarge": "Extra Large (90×50 mm)",
+        "label50x25": "Label 50×25 mm",
+        "label55x40": "Label 55×40 mm",
+        "label100x150": "Label 100×150 mm"
       },
       "formats": {
         "CODE128": "Code 128",

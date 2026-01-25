@@ -1326,7 +1326,7 @@ function JobTimePlanner(): JSX.Element {
 // ===================== Barcode Generator =====================
 
 type BarcodeFormat = "CODE128" | "EAN13" | "EAN8" | "CODE39" | "ITF14";
-type BarcodeSize = "small" | "medium" | "large" | "xlarge";
+type BarcodeSize = "small" | "medium" | "large" | "xlarge" | "label50x25" | "label55x40" | "label100x150";
 
 interface BarcodeSizeData {
   width: number;
@@ -1334,13 +1334,18 @@ interface BarcodeSizeData {
   fontSize: number;
   displayWidth: number;
   displayHeight: number;
+  printWidthMm: number;
+  printHeightMm: number;
 }
 
 const barcodeSizeData: Record<BarcodeSize, BarcodeSizeData> = {
-  small: { width: 1, height: 30, fontSize: 10, displayWidth: 150, displayHeight: 50 },
-  medium: { width: 1.5, height: 50, fontSize: 12, displayWidth: 200, displayHeight: 70 },
-  large: { width: 2, height: 80, fontSize: 14, displayWidth: 280, displayHeight: 100 },
-  xlarge: { width: 2.5, height: 100, fontSize: 16, displayWidth: 350, displayHeight: 130 },
+  small: { width: 1, height: 30, fontSize: 10, displayWidth: 150, displayHeight: 50, printWidthMm: 38, printHeightMm: 13 },
+  medium: { width: 1.5, height: 50, fontSize: 12, displayWidth: 200, displayHeight: 70, printWidthMm: 50, printHeightMm: 25 },
+  large: { width: 2, height: 80, fontSize: 14, displayWidth: 280, displayHeight: 100, printWidthMm: 70, printHeightMm: 35 },
+  xlarge: { width: 2.5, height: 100, fontSize: 16, displayWidth: 350, displayHeight: 130, printWidthMm: 90, printHeightMm: 50 },
+  label50x25: { width: 1.5, height: 45, fontSize: 11, displayWidth: 189, displayHeight: 94, printWidthMm: 50, printHeightMm: 25 },
+  label55x40: { width: 1.8, height: 70, fontSize: 12, displayWidth: 208, displayHeight: 151, printWidthMm: 55, printHeightMm: 40 },
+  label100x150: { width: 3, height: 200, fontSize: 18, displayWidth: 378, displayHeight: 567, printWidthMm: 100, printHeightMm: 150 },
 };
 
 const barcodeFormatValues: BarcodeFormat[] = ["CODE128", "EAN13", "EAN8", "CODE39", "ITF14"];
@@ -1351,6 +1356,7 @@ function BarcodeGenerator(): JSX.Element {
   const [format, setFormat] = useState<BarcodeFormat>("CODE128");
   const [size, setSize] = useState<BarcodeSize>("medium");
   const [showText, setShowText] = useState<boolean>(true);
+  const [customText, setCustomText] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
   const [error, setError] = useState<string>("");
   const svgRef = useRef<SVGSVGElement>(null);
@@ -1384,9 +1390,13 @@ function BarcodeGenerator(): JSX.Element {
     const dataUrl = `data:image/svg+xml;base64,${base64Svg}`;
     
     const sizeConfig = barcodeSizeData[size];
+    const labelWidthMm = sizeConfig.printWidthMm;
+    const labelHeightMm = sizeConfig.printHeightMm;
+    
     const barcodeItems = Array(quantity).fill(null).map(() => 
-      `<div class="barcode-item" style="display:inline-block;margin:5px;padding:10px;border:1px dashed #ccc;">
-        <img src="${dataUrl}" width="${sizeConfig.displayWidth}" height="${sizeConfig.displayHeight}" />
+      `<div class="barcode-item">
+        <img src="${dataUrl}" style="max-width:100%;max-height:${customText ? '75%' : '90%'};object-fit:contain;" />
+        ${customText ? `<div class="custom-text">${customText}</div>` : ''}
       </div>`
     ).join("");
 
@@ -1398,19 +1408,60 @@ function BarcodeGenerator(): JSX.Element {
         <head>
           <title>${t("tools.barcode.printTitle")}</title>
           <style>
-            body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-            .barcode-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-            .barcode-item { page-break-inside: avoid; }
-            @media print { .no-print { display: none; } }
+            @page {
+              size: ${labelWidthMm}mm ${labelHeightMm}mm;
+              margin: 0;
+            }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 0; 
+              padding: 0;
+            }
+            .barcode-item { 
+              width: ${labelWidthMm}mm;
+              height: ${labelHeightMm}mm;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              page-break-after: always;
+              padding: 1mm;
+            }
+            .barcode-item:last-child { page-break-after: auto; }
+            .custom-text {
+              font-size: ${Math.max(8, Math.floor(labelHeightMm / 8))}px;
+              font-weight: bold;
+              text-align: center;
+              margin-top: 1mm;
+              max-width: 100%;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+            @media screen {
+              body { padding: 20px; text-align: center; }
+              .barcode-item { 
+                border: 1px dashed #ccc; 
+                margin: 10px auto;
+                display: inline-flex;
+              }
+              .no-print { margin-bottom: 20px; }
+            }
+            @media print { 
+              .no-print { display: none !important; } 
+              body { padding: 0; }
+            }
           </style>
         </head>
         <body>
-          <div class="no-print" style="margin-bottom:20px;">
-            <button onclick="window.print()" style="padding:10px 30px;font-size:16px;cursor:pointer;">
+          <div class="no-print">
+            <button onclick="window.print()" style="padding:10px 30px;font-size:16px;cursor:pointer;margin-bottom:10px;">
               ${t("tools.barcode.printNow")}
             </button>
+            <p style="color:#666;font-size:12px;">${t("tools.barcode.labelSize")}: ${labelWidthMm}×${labelHeightMm} ${t("common.mm") || "مم"}</p>
           </div>
-          <div class="barcode-container">${barcodeItems}</div>
+          ${barcodeItems}
         </body>
         </html>
       `);
@@ -1486,6 +1537,15 @@ function BarcodeGenerator(): JSX.Element {
           </div>
 
           <div className="space-y-2">
+            <Label>{t("tools.barcode.customText")}</Label>
+            <Input
+              value={customText}
+              onChange={(e) => setCustomText(e.target.value)}
+              placeholder={t("tools.barcode.customTextPlaceholder")}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label>{t("tools.barcode.quantity")}</Label>
             <Input
               type="number"
@@ -1511,7 +1571,12 @@ function BarcodeGenerator(): JSX.Element {
                 <p className="text-xs mt-2">{t("tools.barcode.checkFormat")}</p>
               </div>
             ) : (
-              <svg ref={svgRef}></svg>
+              <div className="flex flex-col items-center">
+                <svg ref={svgRef}></svg>
+                {customText && (
+                  <p className="mt-2 font-bold text-sm">{customText}</p>
+                )}
+              </div>
             )}
           </div>
           
