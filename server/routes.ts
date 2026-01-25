@@ -1,8 +1,13 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import bcrypt from "bcrypt";
+import multer from "multer";
+import * as XLSX from "xlsx";
 import { requireAuth, requirePermission, requireAdmin, type AuthRequest } from "./middleware/auth";
 import { logger } from "./lib/logger";
+
+// Configure multer for file uploads
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Extend Express Request type to include session
 declare module "express-serve-static-core" {
@@ -8219,6 +8224,356 @@ Do not include quotes or explanations.`;
     } catch (error) {
       console.error("Error deleting unit:", error);
       res.status(500).json({ message: "خطأ في حذف الوحدة" });
+    }
+  });
+
+  // ============ Excel Import/Export API Routes ============
+  
+  // تصدير الأصناف إلى Excel
+  app.get("/api/warehouse/export/items", async (req, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT id, name, name_ar, code, barcode, unit, category, current_stock, min_stock, max_stock
+        FROM inventory WHERE is_active = true ORDER BY name_ar
+      `);
+      
+      const ws = XLSX.utils.json_to_sheet(result.rows || []);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "الأصناف");
+      
+      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Disposition", "attachment; filename=inventory_items.xlsx");
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error exporting items:", error);
+      res.status(500).json({ message: "خطأ في تصدير الأصناف" });
+    }
+  });
+
+  // تصدير الموردين إلى Excel
+  app.get("/api/warehouse/export/suppliers", async (req, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT id, name, name_ar, phone, email, address, contact_person
+        FROM suppliers WHERE is_active = true ORDER BY name_ar
+      `);
+      
+      const ws = XLSX.utils.json_to_sheet(result.rows || []);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "الموردين");
+      
+      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Disposition", "attachment; filename=suppliers.xlsx");
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error exporting suppliers:", error);
+      res.status(500).json({ message: "خطأ في تصدير الموردين" });
+    }
+  });
+
+  // تصدير سندات الإدخال/الإخراج إلى Excel - باستخدام استعلامات آمنة
+  app.get("/api/warehouse/export/vouchers/:type", async (req, res) => {
+    try {
+      const type = req.params.type;
+      let result;
+      let sheetName = "";
+      
+      switch(type) {
+        case "raw-material-in":
+          result = await db.execute(sql`SELECT * FROM raw_material_vouchers_in ORDER BY created_at DESC`);
+          sheetName = "سندات إدخال مواد خام";
+          break;
+        case "raw-material-out":
+          result = await db.execute(sql`SELECT * FROM raw_material_vouchers_out ORDER BY created_at DESC`);
+          sheetName = "سندات إخراج مواد خام";
+          break;
+        case "finished-goods-in":
+          result = await db.execute(sql`SELECT * FROM finished_goods_vouchers_in ORDER BY created_at DESC`);
+          sheetName = "سندات استلام مواد تامة";
+          break;
+        case "finished-goods-out":
+          result = await db.execute(sql`SELECT * FROM finished_goods_vouchers_out ORDER BY created_at DESC`);
+          sheetName = "سندات إخراج مواد تامة";
+          break;
+        default:
+          return res.status(400).json({ message: "نوع السند غير صحيح" });
+      }
+      
+      const ws = XLSX.utils.json_to_sheet(result.rows || []);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      
+      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Disposition", `attachment; filename=${type}_vouchers.xlsx`);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error exporting vouchers:", error);
+      res.status(500).json({ message: "خطأ في تصدير السندات" });
+    }
+  });
+
+  // استيراد أرصدة افتتاحية من Excel
+  app.post("/api/warehouse/import/opening-balance", requireAuth, upload.single("file"), async (req: AuthRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "لم يتم رفع ملف" });
+      }
+
+      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+      let imported = 0;
+      let errors: string[] = [];
+
+      for (const row of data) {
+        try {
+          const code = row["الكود"] || row["code"] || row["Code"];
+          const quantity = parseFloat(row["الكمية"] || row["quantity"] || row["Quantity"] || 0);
+          const unitCost = parseFloat(row["سعر_الوحدة"] || row["unit_cost"] || row["UnitCost"] || 0);
+
+          if (!code) {
+            errors.push(`سطر بدون كود صنف`);
+            continue;
+          }
+
+          // تحديث الرصيد في جدول المخزون
+          await db.execute(sql`
+            UPDATE inventory 
+            SET current_stock = ${quantity}, unit_cost = ${unitCost}, updated_at = NOW()
+            WHERE code = ${code}
+          `);
+          imported++;
+        } catch (err: any) {
+          errors.push(`خطأ في الصنف ${row["الكود"] || row["code"]}: ${err.message}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `تم استيراد ${imported} صنف بنجاح`,
+        imported,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error: any) {
+      console.error("Error importing opening balance:", error);
+      res.status(500).json({ message: "خطأ في استيراد الأرصدة الافتتاحية", error: error.message });
+    }
+  });
+
+  // استيراد موردين من Excel
+  app.post("/api/warehouse/import/suppliers", requireAuth, upload.single("file"), async (req: AuthRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "لم يتم رفع ملف" });
+      }
+
+      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+      let imported = 0;
+      let errors: string[] = [];
+
+      for (const row of data) {
+        try {
+          const name = row["الاسم_انجليزي"] || row["name"] || row["Name"] || "";
+          const name_ar = row["الاسم_عربي"] || row["name_ar"] || row["NameAr"] || "";
+          const phone = row["الهاتف"] || row["phone"] || row["Phone"] || null;
+          const email = row["البريد"] || row["email"] || row["Email"] || null;
+          const address = row["العنوان"] || row["address"] || row["Address"] || null;
+          const contact_person = row["جهة_الاتصال"] || row["contact_person"] || row["ContactPerson"] || null;
+
+          if (!name_ar) {
+            errors.push(`سطر بدون اسم مورد`);
+            continue;
+          }
+
+          await db.execute(sql`
+            INSERT INTO suppliers (name, name_ar, phone, email, address, contact_person)
+            VALUES (${name}, ${name_ar}, ${phone}, ${email}, ${address}, ${contact_person})
+          `);
+          imported++;
+        } catch (err: any) {
+          errors.push(`خطأ في المورد ${row["الاسم_عربي"] || row["name_ar"]}: ${err.message}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `تم استيراد ${imported} مورد بنجاح`,
+        imported,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error: any) {
+      console.error("Error importing suppliers:", error);
+      res.status(500).json({ message: "خطأ في استيراد الموردين", error: error.message });
+    }
+  });
+
+  // تحميل قالب Excel فارغ
+  app.get("/api/warehouse/template/:type", async (req, res) => {
+    try {
+      const type = req.params.type;
+      let headers: string[] = [];
+      let sheetName = "";
+      
+      switch(type) {
+        case "opening-balance":
+          headers = ["الكود", "الكمية", "سعر_الوحدة"];
+          sheetName = "أرصدة افتتاحية";
+          break;
+        case "suppliers":
+          headers = ["الاسم_عربي", "الاسم_انجليزي", "الهاتف", "البريد", "العنوان", "جهة_الاتصال"];
+          sheetName = "الموردين";
+          break;
+        case "items":
+          headers = ["الكود", "الاسم_عربي", "الاسم_انجليزي", "الباركود", "الوحدة", "التصنيف", "الحد_الأدنى", "الحد_الأقصى"];
+          sheetName = "الأصناف";
+          break;
+        default:
+          return res.status(400).json({ message: "نوع القالب غير صحيح" });
+      }
+      
+      const ws = XLSX.utils.aoa_to_sheet([headers]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      
+      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Disposition", `attachment; filename=${type}_template.xlsx`);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error generating template:", error);
+      res.status(500).json({ message: "خطأ في إنشاء القالب" });
+    }
+  });
+
+  // ============ Warehouse Reports API Routes ============
+  
+  // تقرير حركات المخزون - باستخدام استعلامات معلمة آمنة
+  app.get("/api/warehouse/reports/movements", async (req, res) => {
+    try {
+      const startDate = typeof req.query.startDate === 'string' ? req.query.startDate : null;
+      const endDate = typeof req.query.endDate === 'string' ? req.query.endDate : null;
+      const itemId = typeof req.query.itemId === 'string' ? parseInt(req.query.itemId) : null;
+      const movementType = typeof req.query.type === 'string' && ['in', 'out'].includes(req.query.type) ? req.query.type : null;
+      
+      const result = await db.execute(sql`
+        SELECT 
+          im.id,
+          im.item_id,
+          im.movement_type,
+          im.quantity,
+          im.reference_type,
+          im.reference_id,
+          im.notes,
+          im.created_at,
+          i.name_ar as item_name,
+          i.code as item_code
+        FROM inventory_movements im
+        LEFT JOIN inventory i ON im.item_id = i.id
+        WHERE 1=1
+          AND (${startDate}::date IS NULL OR im.created_at >= ${startDate}::date)
+          AND (${endDate}::date IS NULL OR im.created_at <= ${endDate}::date)
+          AND (${itemId}::int IS NULL OR im.item_id = ${itemId})
+          AND (${movementType}::text IS NULL OR im.movement_type = ${movementType})
+        ORDER BY im.created_at DESC
+        LIMIT 500
+      `);
+      res.json(result.rows || []);
+    } catch (error) {
+      console.error("Error fetching movements report:", error);
+      res.status(500).json({ message: "خطأ في جلب تقرير الحركات" });
+    }
+  });
+
+  // تقرير الأرصدة الحالية - باستخدام استعلامات معلمة آمنة
+  app.get("/api/warehouse/reports/stock-levels", async (req, res) => {
+    try {
+      const category = typeof req.query.category === 'string' ? req.query.category : null;
+      const belowMinimum = req.query.belowMinimum === "true";
+      
+      const result = await db.execute(sql`
+        SELECT 
+          id,
+          code,
+          name_ar,
+          name,
+          category,
+          unit,
+          current_stock,
+          min_stock,
+          max_stock,
+          unit_cost,
+          (current_stock * COALESCE(unit_cost, 0)) as total_value,
+          CASE 
+            WHEN current_stock <= min_stock THEN 'low'
+            WHEN current_stock >= max_stock THEN 'high'
+            ELSE 'normal'
+          END as stock_status
+        FROM inventory
+        WHERE is_active = true
+          AND (${category}::text IS NULL OR category = ${category})
+          AND (${belowMinimum} = false OR current_stock <= min_stock)
+        ORDER BY name_ar
+      `);
+      res.json(result.rows || []);
+    } catch (error) {
+      console.error("Error fetching stock levels report:", error);
+      res.status(500).json({ message: "خطأ في جلب تقرير الأرصدة" });
+    }
+  });
+
+  // تقرير التنبيهات (أصناف تحت الحد الأدنى)
+  app.get("/api/warehouse/reports/alerts", async (req, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT 
+          id,
+          code,
+          name_ar,
+          name,
+          category,
+          unit,
+          current_stock,
+          min_stock,
+          (min_stock - current_stock) as shortage
+        FROM inventory
+        WHERE is_active = true AND current_stock < min_stock
+        ORDER BY (min_stock - current_stock) DESC
+      `);
+      res.json(result.rows || []);
+    } catch (error) {
+      console.error("Error fetching alerts:", error);
+      res.status(500).json({ message: "خطأ في جلب التنبيهات" });
+    }
+  });
+
+  // ملخص إحصائيات المستودع
+  app.get("/api/warehouse/reports/summary", async (req, res) => {
+    try {
+      const [itemsCount, suppliersCount, lowStockCount, totalValue] = await Promise.all([
+        db.execute(sql`SELECT COUNT(*) as count FROM inventory WHERE is_active = true`),
+        db.execute(sql`SELECT COUNT(*) as count FROM suppliers WHERE is_active = true`),
+        db.execute(sql`SELECT COUNT(*) as count FROM inventory WHERE is_active = true AND current_stock < min_stock`),
+        db.execute(sql`SELECT COALESCE(SUM(current_stock * COALESCE(unit_cost, 0)), 0) as total FROM inventory WHERE is_active = true`)
+      ]);
+      
+      res.json({
+        totalItems: (itemsCount.rows[0] as any)?.count || 0,
+        totalSuppliers: (suppliersCount.rows[0] as any)?.count || 0,
+        lowStockItems: (lowStockCount.rows[0] as any)?.count || 0,
+        totalInventoryValue: (totalValue.rows[0] as any)?.total || 0
+      });
+    } catch (error) {
+      console.error("Error fetching warehouse summary:", error);
+      res.status(500).json({ message: "خطأ في جلب ملخص المستودع" });
     }
   });
 
