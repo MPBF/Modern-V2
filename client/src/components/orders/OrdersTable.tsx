@@ -384,6 +384,16 @@ export default function OrdersTable({
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                    onClick={() => onPrintOrder(order, "standalone")}
+                    title="طباعة"
+                    data-testid={`button-print-${order.id}`}
+                  >
+                    <Printer className="h-4 w-4" />
+                  </Button>
                   
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
