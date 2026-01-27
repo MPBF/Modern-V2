@@ -258,11 +258,13 @@ export default function QuickNotes() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {users.map((u: any) => (
-                      <SelectItem key={u.id} value={u.id.toString()}>
-                        {u.display_name || u.username}
-                      </SelectItem>
-                    ))}
+                    {users
+                      .filter((u: any) => ![3, 4, 5].includes(u.section_id))
+                      .map((u: any) => (
+                        <SelectItem key={u.id} value={u.id.toString()}>
+                          {u.display_name || u.username}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
