@@ -5,13 +5,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { Printer, Download, ExternalLink, ChevronDown } from "lucide-react";
+import { Printer } from "lucide-react";
 import { format } from "date-fns";
 
 type PrintMode = "html" | "pdf" | "standalone";
@@ -83,34 +77,16 @@ export default function ViewOrderDialog({
               تفاصيل الطلب {order.order_number}
             </DialogTitle>
             {onPrint && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    data-testid="button-print-order-dialog"
-                  >
-                    <Printer className="h-4 w-4" />
-                    طباعة
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" style={{ direction: 'rtl' }}>
-                  <DropdownMenuItem onClick={() => onPrint(order, "html")}>
-                    <Printer className="h-4 w-4 ml-2 text-green-600" />
-                    طباعة مباشرة
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onPrint(order, "pdf")}>
-                    <Download className="h-4 w-4 ml-2 text-blue-600" />
-                    تصدير PDF
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onPrint(order, "standalone")}>
-                    <ExternalLink className="h-4 w-4 ml-2 text-purple-600" />
-                    صفحة مستقلة
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                data-testid="button-print-order-dialog"
+                onClick={() => onPrint(order, "standalone")}
+              >
+                <Printer className="h-4 w-4" />
+                طباعة
+              </Button>
             )}
           </div>
         </DialogHeader>
