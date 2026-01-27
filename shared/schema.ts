@@ -949,10 +949,12 @@ export const suppliers = pgTable("suppliers", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   name_ar: varchar("name_ar", { length: 100 }),
-  contact: varchar("contact", { length: 100 }),
+  contact_person: varchar("contact_person", { length: 100 }),
   phone: varchar("phone", { length: 20 }),
+  email: varchar("email", { length: 100 }),
   address: text("address"),
   materials_supplied: json("materials_supplied").$type<number[]>(),
+  is_active: boolean("is_active").default(true),
 });
 
 // 📦 جدول المخزون الحالي - Inventory Management with Stock Constraints
