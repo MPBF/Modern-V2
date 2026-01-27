@@ -6053,88 +6053,150 @@ export class DatabaseStorage implements IStorage {
   // Cache for dashboard stats - expires after 2 minutes
   private dashboardStatsCache: { data: any; expiry: number } | null = null;
 
-  async getDashboardStats(): Promise<{
-    activeOrders: number;
-    productionRate: number;
-    qualityScore: number;
-    wastePercentage: number;
-  }> {
+  async getDashboardStats(): Promise<any> {
     // Check cache first
     const now = Date.now();
     if (this.dashboardStatsCache && this.dashboardStatsCache.expiry > now) {
       return this.dashboardStatsCache.data;
     }
 
-    // Optimize: Get all stats in parallel instead of sequential queries
-    const [activeOrdersResult, productionResult, qualityResult, wasteResult] =
-      await Promise.all([
-        // Active orders count
-        db
-          .select({ count: count() })
-          .from(orders)
-          .where(
-            or(
-              eq(orders.status, "in_production"),
-              eq(orders.status, "waiting"),
-              eq(orders.status, "pending"),
-            ),
-          ),
+    const currentMonth = new Date();
+    const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+    const today = new Date().toISOString().split('T')[0];
 
-        // Production rate (percentage based on production orders) - using existing quantity field
-        db
-          .select({
-            totalRequired: sum(production_orders.quantity_kg),
-            totalProduced: sql<number>`COALESCE(SUM(${rolls.weight_kg}), 0)`,
-          })
-          .from(production_orders)
-          .leftJoin(rolls, eq(production_orders.id, rolls.production_order_id)),
+    // Optimize: Get all stats in parallel
+    const [
+      waitingOrdersResult,
+      inProductionOrdersResult,
+      monthlyProductionResult,
+      monthlyWasteResult,
+      presentEmployeesResult,
+      maintenanceAlertsResult,
+      topFilmWorkersResult,
+      topPrintingWorkersResult,
+      topCuttingWorkersResult,
+    ] = await Promise.all([
+      // Orders waiting (count and total kg)
+      db.execute(sql`
+        SELECT COUNT(*) as count, COALESCE(SUM(po.quantity_kg), 0) as total_kg
+        FROM orders o
+        LEFT JOIN production_orders po ON o.id = po.order_id
+        WHERE o.status IN ('waiting', 'pending')
+      `),
 
-        // Quality score (average from quality checks) - limited to recent checks for performance
-        db
-          .select({
-            avgScore: sql<number>`AVG(CAST(${quality_checks.score} AS DECIMAL))`,
-          })
-          .from(quality_checks)
-          .where(
-            sql`${quality_checks.created_at} >= NOW() - INTERVAL '30 days'`,
-          )
-          .limit(1000), // Limit for performance
+      // Orders in production (count and total kg)
+      db.execute(sql`
+        SELECT COUNT(DISTINCT o.id) as count, COALESCE(SUM(po.quantity_kg), 0) as total_kg
+        FROM orders o
+        LEFT JOIN production_orders po ON o.id = po.order_id
+        WHERE o.status = 'in_production'
+      `),
 
-        // Waste percentage - limited to recent waste for performance
-        db
-          .select({
-            totalWaste: sum(waste.quantity_wasted),
-          })
-          .from(waste)
-          .where(sql`${waste.created_at} >= NOW() - INTERVAL '7 days'`)
-          .limit(1000), // Limit for performance
-      ]);
+      // Total production for current month (from rolls)
+      db.execute(sql`
+        SELECT COALESCE(SUM(weight_kg), 0) as total_kg
+        FROM rolls
+        WHERE created_at >= ${startOfMonth}
+      `),
 
-    const activeOrders = activeOrdersResult[0]?.count || 0;
+      // Total waste for current month
+      db.execute(sql`
+        SELECT COALESCE(SUM(quantity_wasted), 0) as total_kg
+        FROM waste
+        WHERE created_at >= ${startOfMonth}
+      `),
 
-    const productionRate =
-      productionResult[0]?.totalRequired &&
-      Number(productionResult[0].totalRequired) > 0
-        ? Math.round(
-            (Number(productionResult[0].totalProduced) /
-              Number(productionResult[0].totalRequired)) *
-              100,
-          )
-        : 0;
+      // Present employees today
+      db.execute(sql`
+        SELECT COUNT(DISTINCT user_id) as count
+        FROM attendance
+        WHERE DATE(check_in_time) = ${today}
+        AND status IN ('present', 'late')
+      `),
 
-    const qualityScore = qualityResult[0]?.avgScore
-      ? Math.round(Number(qualityResult[0].avgScore) * 20) // Convert 1-5 to percentage
-      : 95; // Default high score
+      // Maintenance alerts (pending or overdue)
+      db.execute(sql`
+        SELECT COUNT(*) as count
+        FROM maintenance_records
+        WHERE status IN ('pending', 'in_progress')
+        OR (next_maintenance_date IS NOT NULL AND next_maintenance_date <= CURRENT_DATE)
+      `),
 
-    const wastePercentage = wasteResult[0]?.totalWaste
-      ? Number(wasteResult[0].totalWaste) / 100 // Convert to percentage
-      : 2.5; // Default low waste
+      // Top film workers (section SEC03)
+      db.execute(sql`
+        SELECT u.id, u.full_name, u.full_name_ar, COALESCE(SUM(r.weight_kg), 0) as total_production
+        FROM users u
+        LEFT JOIN rolls r ON u.id = r.operator_id AND r.created_at >= ${startOfMonth}
+        WHERE u.section_id::text = 'SEC03' OR u.section_id = 3
+        GROUP BY u.id, u.full_name, u.full_name_ar
+        ORDER BY total_production DESC
+        LIMIT 3
+      `),
+
+      // Top printing workers (section SEC04)
+      db.execute(sql`
+        SELECT u.id, u.full_name, u.full_name_ar, COALESCE(SUM(r.weight_kg), 0) as total_production
+        FROM users u
+        LEFT JOIN rolls r ON u.id = r.printing_operator_id AND r.printing_end_time IS NOT NULL AND r.printing_end_time >= ${startOfMonth}
+        WHERE u.section_id::text = 'SEC04' OR u.section_id = 4
+        GROUP BY u.id, u.full_name, u.full_name_ar
+        ORDER BY total_production DESC
+        LIMIT 3
+      `),
+
+      // Top cutting workers (section SEC05)
+      db.execute(sql`
+        SELECT u.id, u.full_name, u.full_name_ar, COALESCE(SUM(c.net_weight_kg), 0) as total_production
+        FROM users u
+        LEFT JOIN cuts c ON u.id = c.operator_id AND c.created_at >= ${startOfMonth}
+        WHERE u.section_id::text = 'SEC05' OR u.section_id = 5
+        GROUP BY u.id, u.full_name, u.full_name_ar
+        ORDER BY total_production DESC
+        LIMIT 3
+      `),
+    ]);
+
+    // Get total employees for attendance percentage
+    const totalEmployeesResult = await db.execute(sql`
+      SELECT COUNT(*) as count FROM users WHERE is_active = true
+    `);
 
     const result = {
-      activeOrders,
-      productionRate,
-      qualityScore,
-      wastePercentage,
+      waitingOrders: {
+        count: Number(waitingOrdersResult.rows[0]?.count || 0),
+        totalKg: Number(waitingOrdersResult.rows[0]?.total_kg || 0),
+      },
+      inProductionOrders: {
+        count: Number(inProductionOrdersResult.rows[0]?.count || 0),
+        totalKg: Number(inProductionOrdersResult.rows[0]?.total_kg || 0),
+      },
+      monthlyProduction: Number(monthlyProductionResult.rows[0]?.total_kg || 0),
+      monthlyWaste: Number(monthlyWasteResult.rows[0]?.total_kg || 0),
+      presentEmployees: Number(presentEmployeesResult.rows[0]?.count || 0),
+      totalEmployees: Number(totalEmployeesResult.rows[0]?.count || 0),
+      maintenanceAlerts: Number(maintenanceAlertsResult.rows[0]?.count || 0),
+      topWorkers: {
+        film: topFilmWorkersResult.rows.map((r: any) => ({
+          id: r.id,
+          name: r.full_name_ar || r.full_name,
+          production: Number(r.total_production || 0),
+        })),
+        printing: topPrintingWorkersResult.rows.map((r: any) => ({
+          id: r.id,
+          name: r.full_name_ar || r.full_name,
+          production: Number(r.total_production || 0),
+        })),
+        cutting: topCuttingWorkersResult.rows.map((r: any) => ({
+          id: r.id,
+          name: r.full_name_ar || r.full_name,
+          production: Number(r.total_production || 0),
+        })),
+      },
+      // Legacy fields for compatibility
+      activeOrders: Number(waitingOrdersResult.rows[0]?.count || 0) + Number(inProductionOrdersResult.rows[0]?.count || 0),
+      productionRate: 0,
+      qualityScore: 95,
+      wastePercentage: 0,
     };
 
     // Cache the result for 2 minutes
