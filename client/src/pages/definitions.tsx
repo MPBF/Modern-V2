@@ -3151,7 +3151,7 @@ export default function Definitions() {
                                                 password: "",
                                                 phone: user.phone || "",
                                                 role_id: user.role_id
-                                                  ? `ROLE0${user.role_id < 10 ? "0" + user.role_id : user.role_id}`
+                                                  ? `ROLE${String(user.role_id).padStart(2, '0')}`
                                                   : "none",
                                                 section_id: (() => {
                                                   if (!user.section_id)
@@ -5260,7 +5260,7 @@ export default function Definitions() {
                                 .map((role: any) => (
                                   <SelectItem
                                     key={role.id}
-                                    value={`ROLE0${role.id}`}
+                                    value={`ROLE${String(role.id).padStart(2, '0')}`}
                                   >
                                     {role.name_ar || role.name}
                                   </SelectItem>
