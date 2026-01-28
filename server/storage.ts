@@ -6076,20 +6076,18 @@ export class DatabaseStorage implements IStorage {
       topPrintingWorkersResult,
       topCuttingWorkersResult,
     ] = await Promise.all([
-      // Orders waiting (count and total kg)
+      // Production orders pending (count and total kg)
       db.execute(sql`
-        SELECT COUNT(*) as count, COALESCE(SUM(po.quantity_kg), 0) as total_kg
-        FROM orders o
-        LEFT JOIN production_orders po ON o.id = po.order_id
-        WHERE o.status IN ('waiting', 'pending')
+        SELECT COUNT(*) as count, COALESCE(SUM(quantity_kg), 0) as total_kg
+        FROM production_orders
+        WHERE status = 'pending'
       `),
 
-      // Orders in production (count and total kg)
+      // Production orders in production/active (count and total kg)
       db.execute(sql`
-        SELECT COUNT(DISTINCT o.id) as count, COALESCE(SUM(po.quantity_kg), 0) as total_kg
-        FROM orders o
-        LEFT JOIN production_orders po ON o.id = po.order_id
-        WHERE o.status = 'in_production'
+        SELECT COUNT(*) as count, COALESCE(SUM(quantity_kg), 0) as total_kg
+        FROM production_orders
+        WHERE status IN ('active', 'in_production')
       `),
 
       // Total production for current month (from rolls)
@@ -6104,7 +6102,7 @@ export class DatabaseStorage implements IStorage {
         SELECT COALESCE(SUM(quantity_wasted), 0) as total_kg
         FROM waste
         WHERE created_at >= ${startOfMonth}
-      `),
+      `).catch(() => ({ rows: [{ total_kg: 0 }] })),
 
       // Present employees today
       db.execute(sql`
@@ -6123,33 +6121,33 @@ export class DatabaseStorage implements IStorage {
 
       // Top film workers (section SEC03) - using created_by or employee_id
       db.execute(sql`
-        SELECT u.id, u.full_name, u.full_name_ar, COALESCE(SUM(r.weight_kg), 0) as total_production
+        SELECT u.id, u.full_name, u.display_name_ar, COALESCE(SUM(r.weight_kg), 0) as total_production
         FROM users u
         LEFT JOIN rolls r ON (u.id = r.created_by OR u.id = r.employee_id) AND r.created_at >= ${startOfMonth}
         WHERE u.section_id::text = 'SEC03' OR u.section_id = 3
-        GROUP BY u.id, u.full_name, u.full_name_ar
+        GROUP BY u.id, u.full_name, u.display_name_ar
         ORDER BY total_production DESC
         LIMIT 3
       `),
 
       // Top printing workers (section SEC04) - using printed_by
       db.execute(sql`
-        SELECT u.id, u.full_name, u.full_name_ar, COALESCE(SUM(r.weight_kg), 0) as total_production
+        SELECT u.id, u.full_name, u.display_name_ar, COALESCE(SUM(r.weight_kg), 0) as total_production
         FROM users u
         LEFT JOIN rolls r ON u.id = r.printed_by AND r.printed_at IS NOT NULL AND r.printed_at >= ${startOfMonth}
         WHERE u.section_id::text = 'SEC04' OR u.section_id = 4
-        GROUP BY u.id, u.full_name, u.full_name_ar
+        GROUP BY u.id, u.full_name, u.display_name_ar
         ORDER BY total_production DESC
         LIMIT 3
       `),
 
       // Top cutting workers (section SEC05) - using performed_by and cut_weight_kg
       db.execute(sql`
-        SELECT u.id, u.full_name, u.full_name_ar, COALESCE(SUM(c.cut_weight_kg), 0) as total_production
+        SELECT u.id, u.full_name, u.display_name_ar, COALESCE(SUM(c.cut_weight_kg), 0) as total_production
         FROM users u
         LEFT JOIN cuts c ON u.id = c.performed_by AND c.created_at >= ${startOfMonth}
         WHERE u.section_id::text = 'SEC05' OR u.section_id = 5
-        GROUP BY u.id, u.full_name, u.full_name_ar
+        GROUP BY u.id, u.full_name, u.display_name_ar
         ORDER BY total_production DESC
         LIMIT 3
       `),
@@ -6177,17 +6175,17 @@ export class DatabaseStorage implements IStorage {
       topWorkers: {
         film: topFilmWorkersResult.rows.map((r: any) => ({
           id: r.id,
-          name: r.full_name_ar || r.full_name,
+          name: r.display_name_ar || r.full_name,
           production: Number(r.total_production || 0),
         })),
         printing: topPrintingWorkersResult.rows.map((r: any) => ({
           id: r.id,
-          name: r.full_name_ar || r.full_name,
+          name: r.display_name_ar || r.full_name,
           production: Number(r.total_production || 0),
         })),
         cutting: topCuttingWorkersResult.rows.map((r: any) => ({
           id: r.id,
-          name: r.full_name_ar || r.full_name,
+          name: r.display_name_ar || r.full_name,
           production: Number(r.total_production || 0),
         })),
       },
