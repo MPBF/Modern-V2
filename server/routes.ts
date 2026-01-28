@@ -3353,22 +3353,6 @@ Do not include quotes or explanations.`;
     }
   });
 
-  // Dashboard stats endpoint
-  app.get("/api/dashboard/stats", async (req, res) => {
-    try {
-      const stats = {
-        activeOrders: 12,
-        productionRate: 85,
-        presentEmployees: 18,
-        totalEmployees: 22,
-        maintenanceAlerts: 2,
-      };
-      res.json(stats);
-    } catch (error) {
-      res.status(500).json({ message: "خطأ في جلب إحصائيات لوحة المتابعة" });
-    }
-  });
-
   // Rolls endpoint
   app.get("/api/rolls", async (req, res) => {
     try {
