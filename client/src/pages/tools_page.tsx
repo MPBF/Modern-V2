@@ -1440,13 +1440,13 @@ function BarcodeGenerator(): JSX.Element {
               white-space: nowrap;
             }
             @media screen {
-              body { padding: 20px; text-align: center; }
+              body { padding: 10px; text-align: center; }
               .barcode-item { 
                 border: 1px dashed #ccc; 
-                margin: 10px auto;
+                margin: 5px auto;
                 display: inline-flex;
               }
-              .no-print { margin-bottom: 20px; }
+              .no-print { margin-bottom: 5px; }
             }
             @media print { 
               .no-print { display: none !important; } 
@@ -1459,7 +1459,7 @@ function BarcodeGenerator(): JSX.Element {
             <button onclick="window.print()" style="padding:10px 30px;font-size:16px;cursor:pointer;margin-bottom:10px;">
               ${t("tools.barcode.printNow")}
             </button>
-            <p style="color:#666;font-size:12px;">${t("tools.barcode.labelSize")}: ${labelWidthMm}×${labelHeightMm} ${t("common.mm") || "مم"}</p>
+            <p style="color:#666;font-size:14px;">${t("tools.barcode.labelSize")}: ${labelWidthMm}×${labelHeightMm} ${t("common.mm") || "مم"}</p>
           </div>
           ${barcodeItems}
         </body>
