@@ -67,6 +67,7 @@ import {
 import RoleManagementTab from "../components/RoleManagementTab";
 import NotificationCenter from "../components/notifications/NotificationCenter";
 import WhatsAppWebhooksTab from "../components/settings/WhatsAppWebhooksTab";
+import NotificationEventSettingsTab from "../components/settings/NotificationEventSettingsTab";
 import LocationMapPicker from "../components/LocationMapPicker";
 import { Plus, Eye, EyeOff } from "lucide-react";
 
@@ -1038,6 +1039,10 @@ export default function Settings() {
               <TabsTrigger value="whatsapp-webhooks" className="flex items-center gap-2">
                 <Webhook className="w-4 h-4" />
                 {t('settings.tabs.whatsappWebhooks')}
+              </TabsTrigger>
+              <TabsTrigger value="notification-events" className="flex items-center gap-2">
+                <Bell className="w-4 h-4" />
+                أحداث الإشعارات
               </TabsTrigger>
             </TabsList>
 
@@ -2262,6 +2267,10 @@ export default function Settings() {
 
             <TabsContent value="whatsapp-webhooks" className="space-y-6">
               <WhatsAppWebhooksTab />
+            </TabsContent>
+
+            <TabsContent value="notification-events" className="space-y-6">
+              <NotificationEventSettingsTab />
             </TabsContent>
                   </Tabs>
 
