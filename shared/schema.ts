@@ -1424,6 +1424,102 @@ export const notification_templates = pgTable("notification_templates", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
+// 🔔 جدول إعدادات أحداث الإشعارات - Notification Event Settings
+export const notification_event_settings = pgTable("notification_event_settings", {
+  id: serial("id").primaryKey(),
+  
+  // Event identification
+  event_key: varchar("event_key", { length: 100 }).notNull().unique(), // unique event identifier
+  event_name: varchar("event_name", { length: 200 }).notNull(),
+  event_name_ar: varchar("event_name_ar", { length: 200 }).notNull(),
+  event_description: text("event_description"),
+  event_description_ar: text("event_description_ar"),
+  event_category: varchar("event_category", { length: 50 }).notNull(), // orders, production, quality, maintenance, hr, system
+  
+  // Activation
+  is_enabled: boolean("is_enabled").default(true),
+  
+  // WhatsApp settings
+  whatsapp_enabled: boolean("whatsapp_enabled").default(false),
+  whatsapp_template_id: integer("whatsapp_template_id").references(() => notification_templates.id),
+  
+  // Message customization
+  message_template: text("message_template"), // Custom message template with variables
+  message_template_ar: text("message_template_ar"),
+  
+  // Recipients configuration
+  recipient_type: varchar("recipient_type", { length: 30 }).default("specific_users"), // all_admins, specific_users, specific_roles, customer
+  recipient_user_ids: json("recipient_user_ids").$type<number[]>(), // Array of user IDs
+  recipient_role_ids: json("recipient_role_ids").$type<number[]>(), // Array of role IDs
+  notify_customer: boolean("notify_customer").default(false), // Send to customer associated with the event
+  
+  // Condition settings (for threshold-based events)
+  condition_enabled: boolean("condition_enabled").default(false),
+  condition_field: varchar("condition_field", { length: 100 }), // Field to check
+  condition_operator: varchar("condition_operator", { length: 20 }), // gt, lt, eq, gte, lte
+  condition_value: varchar("condition_value", { length: 100 }), // Threshold value
+  
+  // Priority and timing
+  priority: varchar("priority", { length: 20 }).default("normal"), // low, normal, high, urgent
+  delay_minutes: integer("delay_minutes").default(0), // Delay before sending
+  
+  // Audit
+  created_by: integer("created_by").references(() => users.id),
+  updated_by: integer("updated_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// 📝 جدول سجل الإشعارات المرسلة - Notification Event Logs
+export const notification_event_logs = pgTable("notification_event_logs", {
+  id: serial("id").primaryKey(),
+  
+  // Event reference
+  event_setting_id: integer("event_setting_id").references(() => notification_event_settings.id),
+  event_key: varchar("event_key", { length: 100 }).notNull(),
+  
+  // Trigger context
+  trigger_context_type: varchar("trigger_context_type", { length: 50 }), // order, production_order, roll, maintenance, etc.
+  trigger_context_id: varchar("trigger_context_id", { length: 50 }),
+  trigger_data: json("trigger_data").$type<Record<string, any>>(), // Original event data
+  
+  // Message sent
+  message_sent: text("message_sent"),
+  message_sent_ar: text("message_sent_ar"),
+  
+  // Recipient info
+  recipient_phone: varchar("recipient_phone", { length: 30 }),
+  recipient_user_id: integer("recipient_user_id").references(() => users.id),
+  recipient_name: varchar("recipient_name", { length: 200 }),
+  
+  // Status
+  status: varchar("status", { length: 30 }).default("pending"), // pending, sent, delivered, failed, read
+  error_message: text("error_message"),
+  external_message_id: varchar("external_message_id", { length: 100 }), // WhatsApp/Twilio message ID
+  
+  // Timestamps
+  triggered_at: timestamp("triggered_at").defaultNow(),
+  sent_at: timestamp("sent_at"),
+  delivered_at: timestamp("delivered_at"),
+});
+
+// Insert schemas for new tables
+export const insertNotificationEventSettingSchema = createInsertSchema(notification_event_settings).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export const insertNotificationEventLogSchema = createInsertSchema(notification_event_logs).omit({
+  id: true,
+  triggered_at: true,
+});
+
+export type InsertNotificationEventSetting = z.infer<typeof insertNotificationEventSettingSchema>;
+export type NotificationEventSetting = typeof notification_event_settings.$inferSelect;
+export type InsertNotificationEventLog = z.infer<typeof insertNotificationEventLogSchema>;
+export type NotificationEventLog = typeof notification_event_logs.$inferSelect;
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   role: one(roles, { fields: [users.role_id], references: [roles.id] }),
