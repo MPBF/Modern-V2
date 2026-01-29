@@ -106,6 +106,23 @@ const getDeliveryDate = (createdDate: Date, days: number = 0) => {
   return result;
 };
 
+const getStatusText = (status: string | undefined): string => {
+  if (!status) return "-";
+  const statusMap: Record<string, string> = {
+    waiting: "قيد الانتظار",
+    for_production: "جاهز للإنتاج",
+    in_production: "قيد الإنتاج",
+    paused: "متوقف",
+    on_hold: "معلق",
+    pending: "معلق",
+    in_progress: "قيد التنفيذ",
+    completed: "مكتمل",
+    cancelled: "ملغي",
+    delivered: "تم التسليم",
+  };
+  return statusMap[status] || status;
+};
+
 /** ✅ عنوان عربي فوق وإنجليزي تحت + خط أكبر/أعرض */
 function Label2Lines({ ar, en }: { ar: string; en: string }) {
   return (
@@ -435,7 +452,7 @@ export default function OrderPrintTemplate({
                   <Label2Lines ar="الحالة" en="Status" />
                 </td>
 
-                <td style={{ ...styles.td, width: "8%", fontWeight: 900 }}>{order?.status || "-"}</td>
+                <td style={{ ...styles.td, width: "8%", fontWeight: 900 }}>{getStatusText(order?.status)}</td>
 
                 <td style={{ ...styles.td, background: "#1a365d", color: "white", width: "7%", fontWeight: 900 }}>
                   <Label2Lines ar="الإجمالي" en="Total" />

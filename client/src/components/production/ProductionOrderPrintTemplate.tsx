@@ -59,20 +59,39 @@ export default function ProductionOrderPrintTemplate({
 
   const getStatusText = (status: string) => {
     const statusMap: Record<string, string> = {
+      waiting: "قيد الانتظار",
+      for_production: "جاهز للإنتاج",
+      in_production: "قيد الإنتاج",
       pending: "معلق",
       active: "نشط",
+      paused: "متوقف",
+      on_hold: "معلق",
+      in_progress: "قيد التنفيذ",
       completed: "مكتمل",
       cancelled: "ملغي",
+      delivered: "تم التسليم",
     };
     return statusMap[status] || status;
   };
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
-      case "completed": return "print-badge print-badge-success";
-      case "active": return "print-badge print-badge-info";
-      case "cancelled": return "print-badge print-badge-danger";
-      default: return "print-badge print-badge-warning";
+      case "completed": 
+      case "delivered": 
+        return "print-badge print-badge-success";
+      case "active": 
+      case "in_production":
+      case "in_progress":
+        return "print-badge print-badge-info";
+      case "for_production":
+        return "print-badge print-badge-primary";
+      case "cancelled": 
+        return "print-badge print-badge-danger";
+      case "paused":
+      case "on_hold":
+        return "print-badge print-badge-secondary";
+      default: 
+        return "print-badge print-badge-warning";
     }
   };
 
