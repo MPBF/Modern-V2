@@ -6666,7 +6666,7 @@ Do not include quotes or explanations.`;
       }
       
       // Get roll to check its production order
-      const existingRoll = await storage.getRollById(id);
+      const existingRoll = await storage.getRollFullDetails(id);
       if (!existingRoll) {
         return res.status(404).json({ message: "الرول غير موجود" });
       }
@@ -6718,6 +6718,22 @@ Do not include quotes or explanations.`;
       const validated = validationSchema.parse(req.body);
       if (!req.session.userId) {
         return res.status(401).json({ message: "غير مسجل الدخول" });
+      }
+      
+      // Get roll to check its production order
+      const existingRoll = await storage.getRollFullDetails(validated.roll_id);
+      if (!existingRoll) {
+        return res.status(404).json({ message: "الرول غير موجود" });
+      }
+      
+      // Check if order is paused - block production entry
+      const pauseCheck = await checkOrderNotPaused(existingRoll.production_order_id);
+      if (pauseCheck.isPaused) {
+        return res.status(403).json({ 
+          success: false,
+          message: pauseCheck.message,
+          orderStatus: pauseCheck.orderStatus
+        });
       }
       
       // Validate cutting machine
