@@ -559,12 +559,79 @@ export default function NotificationEventSettingsTab() {
                   <Users className="h-4 w-4" />
                   المستلمون
                 </Label>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={selectedEvent.notify_customer ?? false}
-                    onCheckedChange={(checked) => setSelectedEvent({ ...selectedEvent, notify_customer: checked })}
-                  />
-                  <Label>إشعار العميل المرتبط بالحدث</Label>
+                
+                <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={selectedEvent.notify_customer ?? false}
+                      onCheckedChange={(checked) => setSelectedEvent({ ...selectedEvent, notify_customer: checked })}
+                    />
+                    <Label>إشعار العميل المرتبط بالحدث</Label>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm">الأدوار المستلمة</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {roles.map((role) => (
+                        <Badge
+                          key={role.id}
+                          variant={selectedEvent.recipient_role_ids?.includes(role.id) ? "default" : "outline"}
+                          className="cursor-pointer"
+                          onClick={() => {
+                            const currentIds = selectedEvent.recipient_role_ids || [];
+                            const newIds = currentIds.includes(role.id)
+                              ? currentIds.filter(id => id !== role.id)
+                              : [...currentIds, role.id];
+                            setSelectedEvent({ ...selectedEvent, recipient_role_ids: newIds });
+                          }}
+                        >
+                          {role.name_ar || role.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm">المستخدمون المحددون</Label>
+                    <Select
+                      value=""
+                      onValueChange={(value) => {
+                        const userId = parseInt(value);
+                        const currentIds = selectedEvent.recipient_user_ids || [];
+                        if (!currentIds.includes(userId)) {
+                          setSelectedEvent({ ...selectedEvent, recipient_user_ids: [...currentIds, userId] });
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر مستخدم للإضافة" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users.filter(u => !(selectedEvent.recipient_user_ids || []).includes(u.id)).map((user) => (
+                          <SelectItem key={user.id} value={String(user.id)}>
+                            {user.full_name || user.username}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(selectedEvent.recipient_user_ids || []).map((userId) => {
+                        const user = users.find(u => u.id === userId);
+                        return (
+                          <Badge key={userId} variant="secondary" className="gap-1">
+                            {user?.full_name || user?.username || `User ${userId}`}
+                            <XCircle 
+                              className="h-3 w-3 cursor-pointer" 
+                              onClick={() => {
+                                const newIds = (selectedEvent.recipient_user_ids || []).filter(id => id !== userId);
+                                setSelectedEvent({ ...selectedEvent, recipient_user_ids: newIds });
+                              }}
+                            />
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
 

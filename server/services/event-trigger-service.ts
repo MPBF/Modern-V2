@@ -192,7 +192,14 @@ export class EventTriggerService {
           case "contains":
             return String(fieldValue).includes(String(condition.value));
           case "in":
-            return Array.isArray(condition.value) && condition.value.includes(fieldValue);
+            try {
+              const valueList = typeof condition.value === "string" 
+                ? condition.value.split(",").map(v => v.trim())
+                : Array.isArray(condition.value) ? condition.value : [];
+              return valueList.includes(String(fieldValue));
+            } catch {
+              return false;
+            }
           default:
             return true;
         }
