@@ -1451,6 +1451,7 @@ export const notification_event_settings = pgTable("notification_event_settings"
   recipient_type: varchar("recipient_type", { length: 30 }).default("specific_users"), // all_admins, specific_users, specific_roles, customer
   recipient_user_ids: json("recipient_user_ids").$type<number[]>(), // Array of user IDs
   recipient_role_ids: json("recipient_role_ids").$type<number[]>(), // Array of role IDs
+  recipient_phone_numbers: json("recipient_phone_numbers").$type<string[]>(), // Array of direct phone numbers
   notify_customer: boolean("notify_customer").default(false), // Send to customer associated with the event
   
   // Condition settings (for threshold-based events)
