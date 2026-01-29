@@ -5064,11 +5064,16 @@ Do not include quotes or explanations.`;
 
         // Define valid state transitions based on business logic
         const validTransitions: Record<string, string[]> = {
-          waiting: ["in_production", "cancelled"], // بالإنتظار -> بالانتاج أو ملغي
-          in_production: ["paused", "completed", "cancelled"], // بالانتاج -> معلق أو مكتمل أو ملغي
+          waiting: ["for_production", "in_production", "cancelled", "on_hold"], // بالإنتظار -> جاهز للإنتاج أو بالانتاج أو ملغي أو معلق
+          for_production: ["in_production", "waiting", "cancelled", "on_hold"], // جاهز للإنتاج -> بالانتاج أو بالانتظار أو ملغي
+          in_production: ["paused", "completed", "cancelled", "on_hold"], // بالانتاج -> معلق أو مكتمل أو ملغي
           paused: ["in_production", "cancelled"], // معلق -> بالانتاج أو ملغي
+          on_hold: ["waiting", "for_production", "in_production", "cancelled"], // في الانتظار -> أي حالة
+          pending: ["waiting", "for_production", "cancelled"], // معلق -> بالانتظار أو جاهز للإنتاج
+          in_progress: ["paused", "completed", "cancelled"], // قيد التنفيذ -> معلق أو مكتمل أو ملغي
           completed: [], // مكتمل - حالة نهائية
           cancelled: [], // ملغي - حالة نهائية
+          delivered: [], // تم التسليم - حالة نهائية
         };
 
         // Check if transition is allowed
