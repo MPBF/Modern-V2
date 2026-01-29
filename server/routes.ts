@@ -8561,6 +8561,133 @@ Do not include quotes or explanations.`;
     }
   });
 
+  // ==========================================
+  // Notification Event Settings API
+  // ==========================================
+
+  // Get all notification event settings
+  app.get("/api/notification-event-settings", requireAuth, async (req, res) => {
+    try {
+      const settings = await storage.getAllNotificationEventSettings();
+      res.json({ data: settings, success: true });
+    } catch (error) {
+      console.error("Error fetching notification event settings:", error);
+      res.status(500).json({ message: "خطأ في جلب إعدادات أحداث الإشعارات", success: false });
+    }
+  });
+
+  // Get notification event setting by ID
+  app.get("/api/notification-event-settings/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const setting = await storage.getNotificationEventSettingById(id);
+      if (!setting) {
+        return res.status(404).json({ message: "إعداد الحدث غير موجود", success: false });
+      }
+      res.json({ data: setting, success: true });
+    } catch (error) {
+      console.error("Error fetching notification event setting:", error);
+      res.status(500).json({ message: "خطأ في جلب إعداد الحدث", success: false });
+    }
+  });
+
+  // Create notification event setting
+  app.post("/api/notification-event-settings", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      const settingData = { ...req.body, created_by: userId };
+      const setting = await storage.createNotificationEventSetting(settingData);
+      res.status(201).json({ data: setting, message: "تم إنشاء إعداد الحدث بنجاح", success: true });
+    } catch (error) {
+      console.error("Error creating notification event setting:", error);
+      res.status(500).json({ message: "خطأ في إنشاء إعداد الحدث", success: false });
+    }
+  });
+
+  // Update notification event setting
+  app.patch("/api/notification-event-settings/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user?.id;
+      const updates = { ...req.body, updated_by: userId };
+      const setting = await storage.updateNotificationEventSetting(id, updates);
+      res.json({ data: setting, message: "تم تحديث إعداد الحدث بنجاح", success: true });
+    } catch (error) {
+      console.error("Error updating notification event setting:", error);
+      res.status(500).json({ message: "خطأ في تحديث إعداد الحدث", success: false });
+    }
+  });
+
+  // Delete notification event setting
+  app.delete("/api/notification-event-settings/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteNotificationEventSetting(id);
+      res.json({ message: "تم حذف إعداد الحدث بنجاح", success: true });
+    } catch (error) {
+      console.error("Error deleting notification event setting:", error);
+      res.status(500).json({ message: "خطأ في حذف إعداد الحدث", success: false });
+    }
+  });
+
+  // Get notification event logs
+  app.get("/api/notification-event-logs", requireAuth, async (req, res) => {
+    try {
+      const { limit, offset, eventKey, status } = req.query;
+      const logs = await storage.getNotificationEventLogs({
+        limit: limit ? parseInt(limit as string) : 100,
+        offset: offset ? parseInt(offset as string) : 0,
+        eventKey: eventKey as string,
+        status: status as string,
+      });
+      res.json({ data: logs, success: true });
+    } catch (error) {
+      console.error("Error fetching notification event logs:", error);
+      res.status(500).json({ message: "خطأ في جلب سجلات الإشعارات", success: false });
+    }
+  });
+
+  // Test notification sending
+  app.post("/api/notification-event-settings/:id/test", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const setting = await storage.getNotificationEventSettingById(id);
+      if (!setting) {
+        return res.status(404).json({ message: "إعداد الحدث غير موجود", success: false });
+      }
+
+      // Get test data from request body
+      const { phone_number, test_variables } = req.body;
+      
+      if (!phone_number) {
+        return res.status(400).json({ message: "رقم الهاتف مطلوب للاختبار", success: false });
+      }
+
+      // Create log entry for the test
+      const log = await storage.createNotificationEventLog({
+        event_setting_id: id,
+        event_key: setting.event_key,
+        trigger_context_type: "test",
+        trigger_context_id: "test-" + Date.now(),
+        trigger_data: test_variables || {},
+        message_sent_ar: setting.message_template_ar,
+        recipient_phone: phone_number,
+        recipient_user_id: req.user?.id,
+        recipient_name: "Test User",
+        status: "pending",
+      });
+
+      res.json({ 
+        data: log, 
+        message: "تم إرسال إشعار اختباري بنجاح", 
+        success: true 
+      });
+    } catch (error) {
+      console.error("Error testing notification:", error);
+      res.status(500).json({ message: "خطأ في إرسال الإشعار الاختباري", success: false });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

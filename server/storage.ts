@@ -194,6 +194,14 @@ import {
   type InventoryCountItem,
   type InsertInventoryCountItem,
   suppliers,
+  
+  // Notification Event Settings
+  notification_event_settings,
+  notification_event_logs,
+  type NotificationEventSetting,
+  type InsertNotificationEventSetting,
+  type NotificationEventLog,
+  type InsertNotificationEventLog,
 } from "@shared/schema";
 
 import { db, pool } from "./db";
@@ -853,6 +861,19 @@ export interface IStorage {
   createNotificationTemplate(
     template: InsertNotificationTemplate,
   ): Promise<NotificationTemplate>;
+
+  // Notification Event Settings
+  getAllNotificationEventSettings(): Promise<NotificationEventSetting[]>;
+  getNotificationEventSettingById(id: number): Promise<NotificationEventSetting | undefined>;
+  getNotificationEventSettingByKey(eventKey: string): Promise<NotificationEventSetting | undefined>;
+  createNotificationEventSetting(setting: InsertNotificationEventSetting): Promise<NotificationEventSetting>;
+  updateNotificationEventSetting(id: number, setting: Partial<NotificationEventSetting>): Promise<NotificationEventSetting>;
+  deleteNotificationEventSetting(id: number): Promise<void>;
+  
+  // Notification Event Logs  
+  getNotificationEventLogs(options?: { limit?: number; offset?: number; eventKey?: string; status?: string }): Promise<NotificationEventLog[]>;
+  createNotificationEventLog(log: InsertNotificationEventLog): Promise<NotificationEventLog>;
+  updateNotificationEventLog(id: number, updates: Partial<NotificationEventLog>): Promise<NotificationEventLog>;
 
   // Maintenance Actions
   getAllMaintenanceActions(): Promise<MaintenanceAction[]>;
@@ -14001,6 +14022,165 @@ export class DatabaseStorage implements IStorage {
       },
       "lookupByBarcode",
       `البحث بالباركود ${barcode}`,
+    );
+  }
+
+  // ============ Notification Event Settings ============
+  async getAllNotificationEventSettings(): Promise<NotificationEventSetting[]> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const results = await db
+          .select()
+          .from(notification_event_settings)
+          .orderBy(notification_event_settings.event_key);
+        return results;
+      },
+      "getAllNotificationEventSettings",
+      "جلب إعدادات أحداث الإشعارات",
+    );
+  }
+
+  async getNotificationEventSettingById(id: number): Promise<NotificationEventSetting | undefined> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [setting] = await db
+          .select()
+          .from(notification_event_settings)
+          .where(eq(notification_event_settings.id, id))
+          .limit(1);
+        return setting;
+      },
+      "getNotificationEventSettingById",
+      `جلب إعداد حدث الإشعار ${id}`,
+    );
+  }
+
+  async getNotificationEventSettingByKey(eventKey: string): Promise<NotificationEventSetting | undefined> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [setting] = await db
+          .select()
+          .from(notification_event_settings)
+          .where(eq(notification_event_settings.event_key, eventKey))
+          .limit(1);
+        return setting;
+      },
+      "getNotificationEventSettingByKey",
+      `جلب إعداد حدث الإشعار بالمفتاح ${eventKey}`,
+    );
+  }
+
+  async createNotificationEventSetting(setting: InsertNotificationEventSetting): Promise<NotificationEventSetting> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [created] = await db
+          .insert(notification_event_settings)
+          .values(setting)
+          .returning();
+        return created;
+      },
+      "createNotificationEventSetting",
+      "إنشاء إعداد حدث إشعار جديد",
+    );
+  }
+
+  async updateNotificationEventSetting(id: number, setting: Partial<NotificationEventSetting>): Promise<NotificationEventSetting> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [updated] = await db
+          .update(notification_event_settings)
+          .set({
+            ...setting,
+            updated_at: new Date(),
+          })
+          .where(eq(notification_event_settings.id, id))
+          .returning();
+        
+        if (!updated) {
+          throw new Error(`إعداد حدث الإشعار ${id} غير موجود`);
+        }
+        return updated;
+      },
+      "updateNotificationEventSetting",
+      `تحديث إعداد حدث الإشعار ${id}`,
+    );
+  }
+
+  async deleteNotificationEventSetting(id: number): Promise<void> {
+    return withDatabaseErrorHandling(
+      async () => {
+        await db
+          .delete(notification_event_settings)
+          .where(eq(notification_event_settings.id, id));
+      },
+      "deleteNotificationEventSetting",
+      `حذف إعداد حدث الإشعار ${id}`,
+    );
+  }
+
+  // ============ Notification Event Logs ============
+  async getNotificationEventLogs(options?: { limit?: number; offset?: number; eventKey?: string; status?: string }): Promise<NotificationEventLog[]> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const limit = options?.limit || 100;
+        const offset = options?.offset || 0;
+        
+        let query = db.select().from(notification_event_logs);
+        
+        const conditions = [];
+        if (options?.eventKey) {
+          conditions.push(eq(notification_event_logs.event_key, options.eventKey));
+        }
+        if (options?.status) {
+          conditions.push(eq(notification_event_logs.status, options.status));
+        }
+        
+        if (conditions.length > 0) {
+          query = query.where(and(...conditions)) as any;
+        }
+        
+        const results = await query
+          .orderBy(desc(notification_event_logs.triggered_at))
+          .limit(limit)
+          .offset(offset);
+        
+        return results;
+      },
+      "getNotificationEventLogs",
+      "جلب سجلات أحداث الإشعارات",
+    );
+  }
+
+  async createNotificationEventLog(log: InsertNotificationEventLog): Promise<NotificationEventLog> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [created] = await db
+          .insert(notification_event_logs)
+          .values(log)
+          .returning();
+        return created;
+      },
+      "createNotificationEventLog",
+      "إنشاء سجل حدث إشعار جديد",
+    );
+  }
+
+  async updateNotificationEventLog(id: number, updates: Partial<NotificationEventLog>): Promise<NotificationEventLog> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [updated] = await db
+          .update(notification_event_logs)
+          .set(updates)
+          .where(eq(notification_event_logs.id, id))
+          .returning();
+        
+        if (!updated) {
+          throw new Error(`سجل حدث الإشعار ${id} غير موجود`);
+        }
+        return updated;
+      },
+      "updateNotificationEventLog",
+      `تحديث سجل حدث الإشعار ${id}`,
     );
   }
 }
