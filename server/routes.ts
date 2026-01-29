@@ -1913,6 +1913,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = insertRollSchema.parse(dataToValidate);
 
+      // Check if order is paused - block production entry
+      const pauseCheck = await checkOrderNotPaused(validatedData.production_order_id);
+      if (pauseCheck.isPaused) {
+        return res.status(403).json({ 
+          success: false,
+          message: pauseCheck.message,
+          orderStatus: pauseCheck.orderStatus
+        });
+      }
+
       const rollData = {
         ...validatedData,
         is_last_roll: req.body.is_last_roll || false,
@@ -1949,6 +1959,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const validatedData = insertRollSchema.parse(dataToValidate);
+
+      // Check if order is paused - block production entry
+      const pauseCheck = await checkOrderNotPaused(validatedData.production_order_id);
+      if (pauseCheck.isPaused) {
+        return res.status(403).json({ 
+          success: false,
+          message: pauseCheck.message,
+          orderStatus: pauseCheck.orderStatus
+        });
+      }
 
       const newRoll = await storage.createFinalRoll(validatedData);
       res.status(201).json({
@@ -6576,6 +6596,16 @@ Do not include quotes or explanations.`;
           });
         }
 
+        // Check if order is paused - block production entry
+        const pauseCheck = await checkOrderNotPaused(validatedRollData.production_order_id);
+        if (pauseCheck.isPaused) {
+          return res.status(403).json({ 
+            success: false,
+            message: pauseCheck.message,
+            orderStatus: pauseCheck.orderStatus
+          });
+        }
+
         // INVARIANT E: Validate film machine is active (printing and cutting machines assigned in later stages)
         const filmMachine = await storage.getMachineById(
           validatedRollData.film_machine_id,
@@ -6633,6 +6663,22 @@ Do not include quotes or explanations.`;
       const id = parseInt(req.params.id);
       if (!req.session.userId) {
         return res.status(401).json({ message: "غير مسجل الدخول" });
+      }
+      
+      // Get roll to check its production order
+      const existingRoll = await storage.getRollById(id);
+      if (!existingRoll) {
+        return res.status(404).json({ message: "الرول غير موجود" });
+      }
+      
+      // Check if order is paused - block production entry
+      const pauseCheck = await checkOrderNotPaused(existingRoll.production_order_id);
+      if (pauseCheck.isPaused) {
+        return res.status(403).json({ 
+          success: false,
+          message: pauseCheck.message,
+          orderStatus: pauseCheck.orderStatus
+        });
       }
       
       const { printing_machine_id } = req.body;
