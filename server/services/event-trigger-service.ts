@@ -56,8 +56,8 @@ export class EventTriggerService {
         return result;
       }
 
-      if (!eventSetting.is_active) {
-        logger.debug(`Event ${eventKey} is not active, skipping`);
+      if (!eventSetting.is_enabled) {
+        logger.debug(`Event ${eventKey} is not enabled, skipping`);
         return result;
       }
 
@@ -73,7 +73,7 @@ export class EventTriggerService {
 
       for (const recipient of recipients) {
         try {
-          const message = this.formatMessage(eventSetting.message_template_ar, context.data);
+          const message = this.formatMessage(eventSetting.message_template_ar || "", context.data);
           
           const log = await this.storage.createNotificationEventLog({
             event_setting_id: eventSetting.id,
@@ -88,13 +88,13 @@ export class EventTriggerService {
             status: "pending",
           });
 
-          if (eventSetting.notification_type === "whatsapp") {
+          if (eventSetting.whatsapp_enabled) {
             const sendResult = await this.notificationService.metaWhatsApp.sendTextMessage(
               recipient.phone,
               message,
               {
                 title: eventSetting.event_name_ar,
-                priority: eventSetting.priority,
+                priority: eventSetting.priority || undefined,
                 context_type: context.type,
                 context_id: String(context.id),
               }
@@ -104,7 +104,6 @@ export class EventTriggerService {
               await this.storage.updateNotificationEventLog(log.id, {
                 status: "sent",
                 delivered_at: new Date(),
-                whatsapp_message_id: sendResult.messageId,
               });
               result.sent_count++;
               result.details.push({
@@ -162,12 +161,16 @@ export class EventTriggerService {
     setting: NotificationEventSetting,
     context: EventContext
   ): boolean {
-    if (!setting.trigger_condition) {
+    if (!setting.condition_enabled) {
       return true;
     }
 
     try {
-      const condition = setting.trigger_condition as Record<string, any>;
+      const condition = {
+        field: setting.condition_field,
+        operator: setting.condition_operator,
+        value: setting.condition_value,
+      };
       
       if (condition.field && condition.operator && condition.value !== undefined) {
         const fieldValue = this.getNestedValue(context.data, condition.field);
@@ -212,27 +215,15 @@ export class EventTriggerService {
   ): Promise<Array<{ phone: string; user_id?: number; name: string }>> {
     const recipients: Array<{ phone: string; user_id?: number; name: string }> = [];
 
-    const recipientConfig = setting.recipient_roles as any;
-    
-    if (!recipientConfig) {
-      return recipients;
-    }
-
-    if (recipientConfig.phone_numbers && Array.isArray(recipientConfig.phone_numbers)) {
-      for (const phone of recipientConfig.phone_numbers) {
-        recipients.push({ phone, name: "Direct Number" });
-      }
-    }
-
-    if (recipientConfig.user_ids && Array.isArray(recipientConfig.user_ids)) {
-      for (const userId of recipientConfig.user_ids) {
+    if (setting.recipient_user_ids && Array.isArray(setting.recipient_user_ids)) {
+      for (const userId of setting.recipient_user_ids) {
         try {
           const user = await this.storage.getUserById(userId);
           if (user && user.phone) {
             recipients.push({
               phone: user.phone,
               user_id: user.id,
-              name: user.full_name || user.username,
+              name: user.full_name || user.username || "",
             });
           }
         } catch (error) {
@@ -241,8 +232,8 @@ export class EventTriggerService {
       }
     }
 
-    if (recipientConfig.role_ids && Array.isArray(recipientConfig.role_ids)) {
-      for (const roleId of recipientConfig.role_ids) {
+    if (setting.recipient_role_ids && Array.isArray(setting.recipient_role_ids)) {
+      for (const roleId of setting.recipient_role_ids) {
         try {
           const users = await this.storage.getSafeUsersByRole(roleId);
           for (const user of users) {
@@ -251,7 +242,7 @@ export class EventTriggerService {
               recipients.push({
                 phone: fullUser.phone,
                 user_id: fullUser.id,
-                name: fullUser.full_name || fullUser.username,
+                name: fullUser.full_name || fullUser.username || "",
               });
             }
           }
@@ -261,14 +252,14 @@ export class EventTriggerService {
       }
     }
 
-    if (recipientConfig.context_user === true && context.user_id) {
+    if (setting.notify_customer && context.user_id) {
       try {
         const user = await this.storage.getUserById(context.user_id);
         if (user && user.phone && !recipients.find(r => r.user_id === user.id)) {
           recipients.push({
             phone: user.phone,
             user_id: user.id,
-            name: user.full_name || user.username,
+            name: user.full_name || user.username || "",
           });
         }
       } catch (error) {
