@@ -33,7 +33,9 @@ import {
   ChevronRight,
   Users,
   RefreshCw,
-  Search
+  Search,
+  Download,
+  Upload
 } from "lucide-react";
 import { useToast } from "../../hooks/use-toast";
 import { format, addDays, subDays } from "date-fns";
@@ -77,8 +79,11 @@ export default function AttendanceManagement() {
   const [modifiedEntries, setModifiedEntries] = useState<Map<number, ModifiedEntry>>(new Map());
   const [selectAll, setSelectAll] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [uploadingUserId, setUploadingUserId] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  const fileInputRef = useState<{ [key: number]: HTMLInputElement | null }>({});
 
   const dateString = format(selectedDate, "yyyy-MM-dd");
 
@@ -131,6 +136,77 @@ export default function AttendanceManagement() {
       });
     },
   });
+
+  const importMutation = useMutation({
+    mutationFn: async ({ userId, file }: { userId: number; file: File }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("userId", userId.toString());
+      
+      const response = await fetch("/api/attendance/import", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || "خطأ في استيراد البيانات");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/attendance/manual"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/attendance"] });
+      setUploadingUserId(null);
+      toast({
+        title: "تم استيراد البيانات بنجاح",
+        description: data.message || `تم استيراد ${data.importedCount || 0} سجل`,
+      });
+    },
+    onError: (error: Error) => {
+      setUploadingUserId(null);
+      toast({
+        title: "خطأ في استيراد البيانات",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleExportTemplate = async (userId: number, userName: string) => {
+    try {
+      const month = format(selectedDate, "yyyy-MM");
+      const response = await fetch(`/api/attendance/template/${userId}?month=${month}`);
+      if (!response.ok) {
+        throw new Error("خطأ في تحميل القالب");
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `attendance_template_${userName}_${month}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "تم تحميل القالب",
+        description: `قالب الحضور للموظف ${userName} للشهر ${month}`,
+      });
+    } catch (error) {
+      toast({
+        title: "خطأ في تحميل القالب",
+        description: error instanceof Error ? error.message : "حدث خطأ",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleImportFile = (userId: number, file: File) => {
+    setUploadingUserId(userId);
+    importMutation.mutate({ userId, file });
+  };
 
   const handleSelectAll = (checked: boolean) => {
     setSelectAll(checked);
@@ -598,18 +674,21 @@ export default function AttendanceManagement() {
                     <TableHead className="text-center min-w-[80px]">
                       الإضافي
                     </TableHead>
+                    <TableHead className="text-center min-w-[150px]">
+                      إجراءات
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                         {t("common.loading")}
                       </TableCell>
                     </TableRow>
                   ) : filteredData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                         {t("common.noData")}
                       </TableCell>
                     </TableRow>
@@ -695,6 +774,45 @@ export default function AttendanceManagement() {
                             ) : (
                               <span className="text-gray-400">-</span>
                             )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleExportTemplate(entry.user_id, entry.display_name_ar || entry.username)}
+                                title="تصدير قالب الشهر"
+                                className="h-7 px-2"
+                              >
+                                <Download className="h-3 w-3" />
+                              </Button>
+                              <label className="cursor-pointer">
+                                <input
+                                  type="file"
+                                  accept=".xlsx,.xls"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      handleImportFile(entry.user_id, file);
+                                      e.target.value = "";
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  asChild
+                                  disabled={uploadingUserId === entry.user_id}
+                                  title="استيراد من ملف اكسل"
+                                  className="h-7 px-2"
+                                >
+                                  <span>
+                                    <Upload className="h-3 w-3" />
+                                  </span>
+                                </Button>
+                              </label>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );

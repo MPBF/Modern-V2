@@ -5794,6 +5794,194 @@ Do not include quotes or explanations.`;
     }
   });
 
+  // تصدير قالب حضور الموظف للشهر كامل
+  app.get("/api/attendance/template/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
+      
+      // Get user info
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "الموظف غير موجود" });
+      }
+      
+      // Generate days of the month
+      const [year, monthNum] = month.split("-").map(Number);
+      const daysInMonth = new Date(year, monthNum, 0).getDate();
+      
+      // Create template data with all days of the month
+      const templateData = [];
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(monthNum).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        const dayDate = new Date(year, monthNum - 1, day);
+        const dayName = dayDate.toLocaleDateString("ar-SA", { weekday: "long" });
+        
+        templateData.push({
+          "التاريخ": dateStr,
+          "اليوم": dayName,
+          "رقم الموظف": userId,
+          "اسم الموظف": user.display_name_ar || user.display_name || user.username,
+          "الحالة": "",
+          "وقت الحضور": "",
+          "وقت الانصراف": "",
+          "ملاحظات": ""
+        });
+      }
+      
+      // Create Excel workbook
+      const ws = XLSX.utils.json_to_sheet(templateData);
+      
+      // Set column widths
+      ws["!cols"] = [
+        { wch: 12 },  // التاريخ
+        { wch: 10 },  // اليوم
+        { wch: 10 },  // رقم الموظف
+        { wch: 25 },  // اسم الموظف
+        { wch: 10 },  // الحالة
+        { wch: 12 },  // وقت الحضور
+        { wch: 12 },  // وقت الانصراف
+        { wch: 25 },  // ملاحظات
+      ];
+      
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "حضور الموظف");
+      
+      // Add instructions sheet
+      const instructionsData = [
+        { "التعليمات": "تعليمات ملء قالب الحضور" },
+        { "التعليمات": "-----------------------------" },
+        { "التعليمات": "1. الحالة: أدخل أحد القيم التالية: حاضر، غائب، مغادر، إجازة" },
+        { "التعليمات": "2. وقت الحضور: أدخل الوقت بصيغة HH:MM (مثال: 08:00)" },
+        { "التعليمات": "3. وقت الانصراف: أدخل الوقت بصيغة HH:MM (مثال: 17:00)" },
+        { "التعليمات": "4. لا تغير رقم الموظف أو التاريخ" },
+        { "التعليمات": "5. بعد الانتهاء، ارفع الملف من زر الاستيراد" },
+      ];
+      const wsInstructions = XLSX.utils.json_to_sheet(instructionsData);
+      wsInstructions["!cols"] = [{ wch: 60 }];
+      XLSX.utils.book_append_sheet(wb, wsInstructions, "تعليمات");
+      
+      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      
+      res.setHeader("Content-Disposition", `attachment; filename=attendance_template_${userId}_${month}.xlsx`);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error generating attendance template:", error);
+      res.status(500).json({ message: "خطأ في إنشاء قالب الحضور" });
+    }
+  });
+
+  // استيراد بيانات الحضور من ملف Excel
+  app.post("/api/attendance/import", upload.single("file"), async (req, res) => {
+    try {
+      const userId = parseInt(req.body.userId);
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "يجب رفع ملف" });
+      }
+      
+      if (!userId || isNaN(userId)) {
+        return res.status(400).json({ message: "رقم الموظف غير صحيح" });
+      }
+      
+      // Parse Excel file
+      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet) as any[];
+      
+      if (!data || data.length === 0) {
+        return res.status(400).json({ message: "الملف فارغ أو غير صحيح" });
+      }
+      
+      // Process and validate each row
+      const entries = [];
+      const errors = [];
+      
+      for (const row of data) {
+        const dateStr = row["التاريخ"];
+        const status = row["الحالة"];
+        const checkIn = row["وقت الحضور"];
+        const checkOut = row["وقت الانصراف"];
+        const notes = row["ملاحظات"];
+        
+        // Skip rows without status
+        if (!status || status.trim() === "") {
+          continue;
+        }
+        
+        // Validate date format
+        if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          errors.push(`تاريخ غير صحيح: ${dateStr}`);
+          continue;
+        }
+        
+        // Map status to valid values
+        const statusMap: { [key: string]: string } = {
+          "حاضر": "حاضر",
+          "غائب": "غائب",
+          "مغادر": "مغادر",
+          "إجازة": "إجازة",
+          "اجازة": "إجازة",
+        };
+        
+        const mappedStatus = statusMap[status.trim()];
+        if (!mappedStatus) {
+          errors.push(`حالة غير صحيحة في ${dateStr}: ${status}`);
+          continue;
+        }
+        
+        // Format times
+        let formattedCheckIn = null;
+        let formattedCheckOut = null;
+        
+        if (checkIn && checkIn.trim() !== "") {
+          const timeMatch = String(checkIn).match(/^(\d{1,2}):(\d{2})$/);
+          if (timeMatch) {
+            formattedCheckIn = `${dateStr}T${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}:00`;
+          }
+        }
+        
+        if (checkOut && checkOut.trim() !== "") {
+          const timeMatch = String(checkOut).match(/^(\d{1,2}):(\d{2})$/);
+          if (timeMatch) {
+            formattedCheckOut = `${dateStr}T${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}:00`;
+          }
+        }
+        
+        entries.push({
+          user_id: userId,
+          date: dateStr,
+          status: mappedStatus,
+          check_in_time: formattedCheckIn,
+          check_out_time: formattedCheckOut,
+          notes: notes || "",
+        });
+      }
+      
+      if (entries.length === 0) {
+        return res.status(400).json({ 
+          message: "لم يتم العثور على بيانات صالحة للاستيراد",
+          errors 
+        });
+      }
+      
+      // Save attendance data
+      const results = await storage.upsertManualAttendance(entries);
+      
+      res.json({ 
+        success: true, 
+        message: `تم استيراد ${results.length} سجل حضور بنجاح`,
+        importedCount: results.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("Error importing attendance:", error);
+      res.status(500).json({ message: "خطأ في استيراد بيانات الحضور" });
+    }
+  });
+
   // تسجيل الحضور مع تحقق الموقع الجغرافي المحسّن
   app.post("/api/attendance", async (req, res) => {
     try {
