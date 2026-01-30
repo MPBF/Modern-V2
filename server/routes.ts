@@ -9378,12 +9378,15 @@ Do not include quotes or explanations.`;
       const currentHash = crypto.createHash("sha256").update(image.substring(0, 1000)).digest("hex");
 
       // For a real implementation, you would use face recognition AI
-      // For now, we'll do a simple verification with some tolerance
-      // In production, use a service like AWS Rekognition or Azure Face API
+      // (AWS Rekognition, Azure Face API, or similar service)
+      // Currently using hash-based comparison as a placeholder
+      // In production, replace with actual face recognition AI
       
-      // Simple verification: Always pass for now (placeholder for real face AI)
-      // In production, replace with actual face comparison
-      const verified = true; // Placeholder - should be face comparison result
+      // Hash comparison - requires exact match for security
+      // In production, replace with actual face recognition AI (AWS Rekognition, Azure Face API)
+      // Note: This is a demo implementation using hash matching
+      // Real face recognition AI would provide similarity scores and liveness detection
+      const verified = faceData.hash === currentHash;
 
       // Log the verification attempt
       logger.info(`Face verification attempt for user ${user_id}`, { 

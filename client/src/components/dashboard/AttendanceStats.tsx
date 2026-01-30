@@ -139,19 +139,20 @@ export default function AttendanceStats({ userId }: AttendanceStatsProps) {
       }
     });
 
-    const totalDaysInPeriod = differenceInDays(getDateRange.end, getDateRange.start) + 1;
-    const workDays = totalDaysInPeriod - Math.floor(totalDaysInPeriod / 7);
-    const calculatedAbsent = workDays - presentDays - leaveDays;
+    const totalWorkingDaysRecorded = presentDays + absentDays;
+    const attendanceRate = totalWorkingDaysRecorded > 0 
+      ? Math.round((presentDays / totalWorkingDaysRecorded) * 100) 
+      : 0;
 
     return {
       totalWorkHours: Math.round((totalWorkMinutes / 60) * 100) / 100,
       totalOvertimeHours: Math.round((totalOvertimeMinutes / 60) * 100) / 100,
       totalBreakMinutes,
       presentDays,
-      absentDays: Math.max(0, calculatedAbsent),
+      absentDays,
       lateDays,
       leaveDays,
-      attendanceRate: workDays > 0 ? Math.round((presentDays / workDays) * 100) : 0,
+      attendanceRate,
     };
   }, [filteredRecords, getDateRange]);
 
