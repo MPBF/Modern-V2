@@ -1897,7 +1897,7 @@ export default function Definitions() {
                                       </div>
                                       <div className="grid grid-cols-2 gap-2 text-sm">
                                         <div><span className="text-gray-500">الهاتف:</span> {customer.phone || "-"}</div>
-                                        <div><span className="text-gray-500">المندوب:</span> {rep ? (rep.name_ar || rep.name) : "-"}</div>
+                                        <div><span className="text-gray-500">المندوب:</span> {rep ? (rep.display_name_ar || rep.display_name) : "-"}</div>
                                         <div><span className="text-gray-500">رقم الدرج:</span> {customer.plate_drawer_code || "-"}</div>
                                       </div>
                                     </div>
@@ -1972,7 +1972,7 @@ export default function Definitions() {
                                         {(() => {
                                           if (!Array.isArray(salesReps)) return "-";
                                           const rep = salesReps.find((r: any) => r.id === customer.sales_rep_id);
-                                          return rep ? (rep.name_ar || rep.name || "-") : "-";
+                                          return rep ? (rep.display_name_ar || rep.display_name || "-") : "-";
                                         })()}
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
