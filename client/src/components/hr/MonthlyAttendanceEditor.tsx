@@ -574,17 +574,17 @@ export default function MonthlyAttendanceEditor() {
               )}
 
               <div ref={printRef} className="border rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
+                <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+                  <Table className="text-xs">
+                    <TableHeader className="sticky top-0 z-10">
                       <TableRow className="bg-gray-50 dark:bg-gray-800">
-                        <TableHead className="text-right w-[100px]">التاريخ</TableHead>
-                        <TableHead className="text-right w-[80px]">اليوم</TableHead>
-                        <TableHead className="text-center w-[120px]">الحالة</TableHead>
-                        <TableHead className="text-center w-[100px]">وقت الحضور</TableHead>
-                        <TableHead className="text-center w-[100px]">وقت الانصراف</TableHead>
-                        <TableHead className="text-center w-[80px]">ساعات العمل</TableHead>
-                        <TableHead className="text-right">ملاحظات</TableHead>
+                        <TableHead className="text-right py-1 px-2 w-[70px]">التاريخ</TableHead>
+                        <TableHead className="text-right py-1 px-2 w-[60px]">اليوم</TableHead>
+                        <TableHead className="text-center py-1 px-2 w-[100px]">الحالة</TableHead>
+                        <TableHead className="text-center py-1 px-2 w-[80px]">حضور</TableHead>
+                        <TableHead className="text-center py-1 px-2 w-[80px]">انصراف</TableHead>
+                        <TableHead className="text-center py-1 px-2 w-[50px]">ساعات</TableHead>
+                        <TableHead className="text-right py-1 px-2">ملاحظات</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -608,18 +608,18 @@ export default function MonthlyAttendanceEditor() {
                                 hover:bg-gray-50 dark:hover:bg-gray-800
                               `}
                             >
-                              <TableCell className="font-medium">
+                              <TableCell className="font-medium py-1 px-2">
                                 {format(new Date(record.date), "dd/MM")}
                               </TableCell>
-                              <TableCell className={isFriday ? "font-bold text-red-600" : ""}>
+                              <TableCell className={`py-1 px-2 ${isFriday ? "font-bold text-red-600" : ""}`}>
                                 {record.dayName}
                               </TableCell>
-                              <TableCell className="text-center">
+                              <TableCell className="text-center py-1 px-2">
                                 <Select
                                   value={getRecordValue(record.date, 'status', record.status) || "غائب"}
                                   onValueChange={(value) => handleFieldChange(record.date, 'status', value, record)}
                                 >
-                                  <SelectTrigger className="h-8 w-[110px]">
+                                  <SelectTrigger className="h-6 w-[90px] text-xs">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -631,31 +631,31 @@ export default function MonthlyAttendanceEditor() {
                                   </SelectContent>
                                 </Select>
                               </TableCell>
-                              <TableCell className="text-center">
+                              <TableCell className="text-center py-1 px-2">
                                 <Input
                                   type="time"
                                   value={getRecordValue(record.date, 'check_in_time', record.check_in_time) || ""}
                                   onChange={(e) => handleFieldChange(record.date, 'check_in_time', e.target.value || null, record)}
-                                  className="h-8 w-[100px] text-center"
+                                  className="h-6 w-[75px] text-center text-xs px-1"
                                 />
                               </TableCell>
-                              <TableCell className="text-center">
+                              <TableCell className="text-center py-1 px-2">
                                 <Input
                                   type="time"
                                   value={getRecordValue(record.date, 'check_out_time', record.check_out_time) || ""}
                                   onChange={(e) => handleFieldChange(record.date, 'check_out_time', e.target.value || null, record)}
-                                  className="h-8 w-[100px] text-center"
+                                  className="h-6 w-[75px] text-center text-xs px-1"
                                 />
                               </TableCell>
-                              <TableCell className="text-center font-mono">
+                              <TableCell className="text-center font-mono py-1 px-2">
                                 {record.work_hours ? record.work_hours.toFixed(1) : "-"}
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="py-1 px-2">
                                 <Input
                                   value={getRecordValue(record.date, 'notes', record.notes) || ""}
                                   onChange={(e) => handleFieldChange(record.date, 'notes', e.target.value, record)}
                                   placeholder="ملاحظات..."
-                                  className="h-8"
+                                  className="h-6 text-xs"
                                 />
                               </TableCell>
                             </TableRow>
