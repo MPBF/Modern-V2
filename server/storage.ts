@@ -1450,10 +1450,13 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
-  async getSafeUsersBySection(sectionId: number): Promise<SafeUser[]> {
+  async getSafeUsersBySection(sectionId: number | string): Promise<SafeUser[]> {
     return withDatabaseErrorHandling(
       async () => {
-        if (!sectionId || typeof sectionId !== "number" || sectionId <= 0) {
+        // Convert to string for comparison (section_id in DB is stored as varchar)
+        const sectionIdStr = String(sectionId);
+        
+        if (!sectionIdStr || sectionIdStr === 'undefined' || sectionIdStr === 'null') {
           throw new Error("معرف القسم غير صحيح");
         }
 
@@ -1477,7 +1480,7 @@ export class DatabaseStorage implements IStorage {
             updated_at: users.updated_at,
           })
           .from(users)
-          .where(eq(users.section_id, sectionId));
+          .where(sql`${users.section_id}::text = ${sectionIdStr}`);
       },
       "جلب المستخدمين حسب القسم",
       `القسم رقم ${sectionId}`,
