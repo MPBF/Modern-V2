@@ -1,7 +1,5 @@
 import { Route, Switch, Redirect } from "wouter";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
-import { queryClient } from "./lib/queryClient";
 import { Toaster } from "./components/ui/toaster";
 
 import Login from "./pages/login";
@@ -278,12 +276,10 @@ function AppRoutes() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <AppRoutes />
-        <Toaster />
-      </AuthProvider>
-    </QueryClientProvider>
+    <AuthProvider>
+      <AppRoutes />
+      <Toaster />
+    </AuthProvider>
   );
 }
 
