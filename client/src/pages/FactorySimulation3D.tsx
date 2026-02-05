@@ -2,12 +2,15 @@ import { useState, useRef, useCallback, Suspense, useEffect } from 'react';
 import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Environment, Html } from '@react-three/drei';
 import * as THREE from 'three';
+import { useQuery } from '@tanstack/react-query';
 import Header from '../components/layout/Header';
 import Sidebar from '../components/layout/Sidebar';
 import MobileShell from '../components/layout/MobileShell';
 import { Button } from '../components/ui/button';
-import { Card, CardContent } from '../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { ScrollArea } from '../components/ui/scroll-area';
 import { 
   RotateCcw, 
   Save, 
@@ -21,7 +24,13 @@ import {
   Home,
   Plus,
   Trash2,
-  X
+  X,
+  Activity,
+  Clock,
+  Package,
+  Printer,
+  Scissors,
+  RefreshCw
 } from 'lucide-react';
 
 const HALL_WIDTH = 20;
@@ -35,6 +44,7 @@ interface Machine {
   name: string;
   nameAr: string;
   customName?: string;
+  linkedMachineId?: string;
   type: 'film' | 'printing' | 'mixer' | 'cutting' | 'compressor' | 'transformer' | 'cylinder_rack' | 'pallet';
   color: string;
   position: [number, number, number];
@@ -42,6 +52,37 @@ interface Machine {
   scale?: number;
   rotation?: number;
   hasPrintingLine?: boolean;
+}
+
+interface ActiveRoll {
+  id: number;
+  roll_number: string;
+  stage: 'film' | 'printing' | 'cutting';
+  weight_kg: string;
+  film_machine_id: string;
+  printing_machine_id: string | null;
+  cutting_machine_id: string | null;
+  printed_at: string | null;
+  cut_completed_at: string | null;
+  created_at: string;
+  production_order_number: string;
+  master_batch_id: string | null;
+  roll_color: string;
+  color_name: string;
+  customer_name: string;
+}
+
+interface MachineStats {
+  machine: any;
+  todayStats: {
+    rolls_count: string;
+    total_weight_kg: string;
+    film_rolls: string;
+    printing_rolls: string;
+    cutting_rolls: string;
+    completed_rolls: string;
+  };
+  recentRolls: any[];
 }
 
 const equipmentTemplates: Omit<Machine, 'id' | 'position'>[] = [
@@ -661,7 +702,45 @@ function GenericEquipment({ machine, isSelected, onSelect, onDrag, onDragStart, 
   );
 }
 
-function Scene({ machines, selectedMachine, onSelectMachine, onDragMachine, onDragStart, onDragEnd, hideRoof }: {
+function Roll3D({ roll, position, onSelect }: {
+  roll: ActiveRoll;
+  position: [number, number, number];
+  onSelect: () => void;
+}) {
+  const weight = parseFloat(roll.weight_kg) || 10;
+  const radius = Math.min(0.3 + (weight / 100) * 0.3, 0.8);
+  const height = Math.min(0.4 + (weight / 50) * 0.2, 1);
+  const isPrinted = !!roll.printed_at;
+
+  return (
+    <group position={position} onClick={(e) => { e.stopPropagation(); onSelect(); }}>
+      <mesh castShadow rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[radius, radius, height, 32]} />
+        <meshStandardMaterial 
+          color={roll.roll_color} 
+          roughness={0.3} 
+          metalness={0.2}
+        />
+      </mesh>
+      
+      {isPrinted && (
+        <mesh position={[0, radius + 0.1, 0]}>
+          <boxGeometry args={[0.3, 0.05, 0.3]} />
+          <meshStandardMaterial color="#22c55e" emissive="#22c55e" emissiveIntensity={0.5} />
+        </mesh>
+      )}
+
+      <Html position={[0, radius + 0.3, 0]} center>
+        <div className="bg-black/80 text-white px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap cursor-pointer hover:bg-black/90">
+          {roll.roll_number}
+          {isPrinted && <span className="mr-1 text-green-400">✓</span>}
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+function Scene({ machines, selectedMachine, onSelectMachine, onDragMachine, onDragStart, onDragEnd, hideRoof, activeRolls, onSelectRoll }: {
   machines: Machine[];
   selectedMachine: string | null;
   onSelectMachine: (id: string | null) => void;
@@ -669,7 +748,28 @@ function Scene({ machines, selectedMachine, onSelectMachine, onDragMachine, onDr
   onDragStart: () => void;
   onDragEnd: () => void;
   hideRoof: boolean;
+  activeRolls: ActiveRoll[];
+  onSelectRoll: (roll: ActiveRoll) => void;
 }) {
+  const getRollPositionNearMachine = (roll: ActiveRoll, index: number): [number, number, number] => {
+    const machineId = roll.stage === 'film' ? roll.film_machine_id 
+      : roll.stage === 'printing' ? roll.printing_machine_id 
+      : roll.cutting_machine_id;
+    
+    const linkedMachine = machines.find(m => m.linkedMachineId === machineId);
+    
+    if (linkedMachine) {
+      const offsetX = (index % 5) * 0.8 - 1.6;
+      const offsetZ = Math.floor(index / 5) * 0.8 + 2;
+      return [
+        linkedMachine.position[0] + offsetX,
+        0.3,
+        linkedMachine.position[2] + offsetZ
+      ];
+    }
+    
+    return [5 + (index % 10) * 1, 0.3, 20 + Math.floor(index / 10) * 1];
+  };
   return (
     <>
       <ambientLight intensity={0.4} />
@@ -715,6 +815,15 @@ function Scene({ machines, selectedMachine, onSelectMachine, onDragMachine, onDr
         }
       })}
 
+      {activeRolls.map((roll, index) => (
+        <Roll3D 
+          key={roll.id} 
+          roll={roll} 
+          position={getRollPositionNearMachine(roll, index)}
+          onSelect={() => onSelectRoll(roll)}
+        />
+      ))}
+
     </>
   );
 }
@@ -741,6 +850,23 @@ export default function FactorySimulation3D() {
   const [viewMode, setViewMode] = useState<'3d' | 'top'>('3d');
   const [isDraggingMachine, setIsDraggingMachine] = useState(false);
   const [hideRoof, setHideRoof] = useState(false);
+  const [selectedRoll, setSelectedRoll] = useState<ActiveRoll | null>(null);
+  const [showMachineStats, setShowMachineStats] = useState(false);
+  const [selectedMachineForStats, setSelectedMachineForStats] = useState<string | null>(null);
+
+  const { data: activeRolls = [], refetch: refetchRolls } = useQuery<ActiveRoll[]>({
+    queryKey: ['/api/factory-3d/active-rolls'],
+    refetchInterval: 10000,
+  });
+
+  const { data: machineStats } = useQuery<MachineStats>({
+    queryKey: ['/api/factory-3d/machine-stats', selectedMachineForStats],
+    enabled: !!selectedMachineForStats,
+  });
+
+  const { data: realMachines = [] } = useQuery<any[]>({
+    queryKey: ['/api/machines'],
+  });
 
   useEffect(() => {
     const saved = localStorage.getItem('factoryLayout');
@@ -883,6 +1009,8 @@ export default function FactorySimulation3D() {
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                   hideRoof={hideRoof}
+                  activeRolls={activeRolls}
+                  onSelectRoll={setSelectedRoll}
                 />
                 <CameraControls isDragging={isDraggingMachine} />
                 <Environment preset="warehouse" />
@@ -1023,10 +1151,44 @@ export default function FactorySimulation3D() {
                         </div>
                       </div>
 
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 dark:text-gray-400">ربط بماكينة حقيقية</label>
+                        <select
+                          className="w-full mt-1 px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
+                          value={selectedMachineData.linkedMachineId || ''}
+                          onChange={(e) => updateMachine(selectedMachineData.id, { linkedMachineId: e.target.value || undefined })}
+                        >
+                          <option value="">-- بدون ربط --</option>
+                          {realMachines.map((m: any) => (
+                            <option key={m.id} value={m.id}>
+                              {m.name_ar || m.name} ({m.id})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {selectedMachineData.linkedMachineId && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => {
+                            setSelectedMachineForStats(selectedMachineData.linkedMachineId!);
+                            setShowMachineStats(true);
+                          }}
+                        >
+                          <Activity className="h-4 w-4 ml-2" />
+                          عرض بيانات الإنتاج
+                        </Button>
+                      )}
+
                       <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
                         <div className="text-xs text-gray-500 space-y-1">
                           <p><strong>النوع:</strong> {selectedMachineData.nameAr}</p>
                           <p><strong>الموقع:</strong> X: {selectedMachineData.position[0].toFixed(1)}م, Z: {selectedMachineData.position[2].toFixed(1)}م</p>
+                          {selectedMachineData.linkedMachineId && (
+                            <p className="text-green-600"><strong>مرتبطة:</strong> {selectedMachineData.linkedMachineId}</p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1095,11 +1257,139 @@ export default function FactorySimulation3D() {
             </Button>
           </div>
 
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-lg text-sm">
-            صالة الإنتاج: {20}م × {50}م | الارتفاع: {6}م-{8}م | البوابة: {9}م
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-4">
+            <span>صالة الإنتاج: {20}م × {50}م | الارتفاع: {6}م-{8}م | البوابة: {9}م</span>
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <Package className="h-3 w-3" />
+              {activeRolls.length} رول نشط
+            </Badge>
+            <Button size="sm" variant="ghost" className="text-white hover:text-white/80" onClick={() => refetchRolls()}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>
+
+        <Dialog open={!!selectedRoll} onOpenChange={() => setSelectedRoll(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                تفاصيل الرول
+              </DialogTitle>
+            </DialogHeader>
+            {selectedRoll && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-12 h-12 rounded-full"
+                    style={{ backgroundColor: selectedRoll.roll_color }}
+                  />
+                  <div>
+                    <div className="font-bold text-lg">{selectedRoll.roll_number}</div>
+                    <div className="text-sm text-gray-500">{selectedRoll.color_name}</div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded">
+                    <div className="text-gray-500">أمر الإنتاج</div>
+                    <div className="font-medium">{selectedRoll.production_order_number}</div>
+                  </div>
+                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded">
+                    <div className="text-gray-500">الوزن</div>
+                    <div className="font-medium">{parseFloat(selectedRoll.weight_kg).toFixed(2)} كجم</div>
+                  </div>
+                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded">
+                    <div className="text-gray-500">العميل</div>
+                    <div className="font-medium">{selectedRoll.customer_name}</div>
+                  </div>
+                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded">
+                    <div className="text-gray-500">المرحلة</div>
+                    <div className="font-medium flex items-center gap-1">
+                      {selectedRoll.stage === 'film' && <><Activity className="h-4 w-4 text-blue-500" /> فيلم</>}
+                      {selectedRoll.stage === 'printing' && <><Printer className="h-4 w-4 text-green-500" /> طباعة</>}
+                      {selectedRoll.stage === 'cutting' && <><Scissors className="h-4 w-4 text-orange-500" /> قطع</>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-xs text-gray-500 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-3 w-3" />
+                    تم الإنشاء: {new Date(selectedRoll.created_at).toLocaleString('ar-SA')}
+                  </div>
+                  {selectedRoll.printed_at && (
+                    <div className="flex items-center gap-2 text-green-600">
+                      <Printer className="h-3 w-3" />
+                      تمت الطباعة: {new Date(selectedRoll.printed_at).toLocaleString('ar-SA')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showMachineStats} onOpenChange={setShowMachineStats}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                إحصائيات الماكينة
+              </DialogTitle>
+            </DialogHeader>
+            {machineStats && (
+              <div className="space-y-4">
+                <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+                  <h4 className="font-bold mb-2">{machineStats.machine?.name_ar || machineStats.machine?.name}</h4>
+                  <Badge variant={machineStats.machine?.status === 'active' ? 'default' : 'destructive'}>
+                    {machineStats.machine?.status === 'active' ? 'تعمل' : 'متوقفة'}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded">
+                    <div className="text-2xl font-bold text-blue-600">{machineStats.todayStats?.rolls_count || 0}</div>
+                    <div className="text-xs text-gray-500">رولات اليوم</div>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded">
+                    <div className="text-2xl font-bold text-green-600">{parseFloat(machineStats.todayStats?.total_weight_kg || '0').toFixed(1)}</div>
+                    <div className="text-xs text-gray-500">كجم اليوم</div>
+                  </div>
+                  <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded">
+                    <div className="text-2xl font-bold text-orange-600">{machineStats.todayStats?.completed_rolls || 0}</div>
+                    <div className="text-xs text-gray-500">مكتمل</div>
+                  </div>
+                </div>
+
+                <div>
+                  <h5 className="font-medium mb-2">آخر الرولات</h5>
+                  <ScrollArea className="h-48">
+                    <div className="space-y-2">
+                      {machineStats.recentRolls?.map((roll: any) => (
+                        <div key={roll.id} className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                          <div 
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: roll.roll_color }}
+                          />
+                          <div className="flex-1 text-sm">
+                            <div className="font-medium">{roll.roll_number}</div>
+                            <div className="text-xs text-gray-500">{roll.production_order_number}</div>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {parseFloat(roll.weight_kg).toFixed(1)} كجم
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
         </main>
       </div>
     </div>

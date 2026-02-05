@@ -9601,6 +9601,116 @@ Do not include quotes or explanations.`;
     }
   });
 
+  // ============ Factory 3D Simulation API Routes ============
+
+  // Get active rolls with master batch colors for 3D visualization
+  app.get("/api/factory-3d/active-rolls", requireAuth, async (req, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT 
+          r.id,
+          r.roll_number,
+          r.stage,
+          r.weight_kg,
+          r.film_machine_id,
+          r.printing_machine_id,
+          r.cutting_machine_id,
+          r.printed_at,
+          r.cut_completed_at,
+          r.created_at,
+          po.production_order_number,
+          cp.master_batch_id,
+          COALESCE(mbc.color_hex, '#808080') as roll_color,
+          COALESCE(mbc.name_ar, cp.master_batch_id) as color_name,
+          c.name as customer_name
+        FROM rolls r
+        JOIN production_orders po ON r.production_order_id = po.id
+        JOIN customer_products cp ON po.customer_product_id = cp.id
+        LEFT JOIN master_batch_colors mbc ON cp.master_batch_id = mbc.id
+        JOIN orders o ON po.order_id = o.id
+        JOIN customers c ON o.customer_id = c.id
+        WHERE r.stage IN ('film', 'printing', 'cutting')
+        ORDER BY r.created_at DESC
+        LIMIT 100
+      `);
+      
+      res.json(result.rows);
+    } catch (error) {
+      console.error("Error fetching active rolls for 3D:", error);
+      res.status(500).json({ message: "خطأ في جلب الرولات النشطة" });
+    }
+  });
+
+  // Get machine production statistics for 3D visualization
+  app.get("/api/factory-3d/machine-stats/:machineId", requireAuth, async (req, res) => {
+    try {
+      const machineId = req.params.machineId;
+      
+      // Get machine info
+      const machineResult = await db.execute(sql`
+        SELECT * FROM machines WHERE id = ${machineId}
+      `);
+      
+      if (machineResult.rows.length === 0) {
+        return res.status(404).json({ message: "الماكينة غير موجودة" });
+      }
+      
+      const machine = machineResult.rows[0];
+      
+      // Get today's statistics
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const statsResult = await db.execute(sql`
+        SELECT 
+          COUNT(*) as rolls_count,
+          COALESCE(SUM(weight_kg::numeric), 0) as total_weight_kg,
+          COUNT(CASE WHEN stage = 'film' THEN 1 END) as film_rolls,
+          COUNT(CASE WHEN stage = 'printing' THEN 1 END) as printing_rolls,
+          COUNT(CASE WHEN stage = 'cutting' THEN 1 END) as cutting_rolls,
+          COUNT(CASE WHEN stage = 'done' THEN 1 END) as completed_rolls
+        FROM rolls 
+        WHERE (film_machine_id = ${machineId} 
+               OR printing_machine_id = ${machineId} 
+               OR cutting_machine_id = ${machineId})
+          AND created_at >= ${today}
+      `);
+      
+      // Get recent rolls for this machine
+      const recentRollsResult = await db.execute(sql`
+        SELECT 
+          r.id,
+          r.roll_number,
+          r.stage,
+          r.weight_kg,
+          r.created_at,
+          r.printed_at,
+          r.cut_completed_at,
+          po.production_order_number,
+          COALESCE(mbc.color_hex, '#808080') as roll_color,
+          COALESCE(mbc.name_ar, 'بدون لون') as color_name
+        FROM rolls r
+        JOIN production_orders po ON r.production_order_id = po.id
+        JOIN customer_products cp ON po.customer_product_id = cp.id
+        LEFT JOIN master_batch_colors mbc ON cp.master_batch_id = mbc.id
+        WHERE r.film_machine_id = ${machineId} 
+           OR r.printing_machine_id = ${machineId} 
+           OR r.cutting_machine_id = ${machineId}
+        ORDER BY r.created_at DESC
+        LIMIT 10
+      `);
+      
+      res.json({
+        machine,
+        todayStats: statsResult.rows[0] || {},
+        recentRolls: recentRollsResult.rows
+      });
+    } catch (error) {
+      console.error("Error fetching machine stats for 3D:", error);
+      res.status(500).json({ message: "خطأ في جلب إحصائيات الماكينة" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
