@@ -18,7 +18,10 @@ import {
   ChevronRight,
   ZoomIn,
   ZoomOut,
-  Home
+  Home,
+  Plus,
+  Trash2,
+  X
 } from 'lucide-react';
 
 const HALL_WIDTH = 20;
@@ -31,13 +34,23 @@ interface Machine {
   id: string;
   name: string;
   nameAr: string;
-  type: 'film' | 'printing' | 'mixer' | 'cutting';
+  type: 'film' | 'printing' | 'mixer' | 'cutting' | 'compressor' | 'transformer' | 'cylinder_rack' | 'pallet';
   color: string;
   position: [number, number, number];
   size: [number, number, number];
   rotation?: number;
   hasPrintingLine?: boolean;
 }
+
+const equipmentTemplates: Omit<Machine, 'id' | 'position'>[] = [
+  { name: 'Mixer', nameAr: 'خلاط', type: 'mixer', color: '#dc2626', size: [2.5, 3, 2.5] },
+  { name: 'Air Compressor', nameAr: 'كمبريسور هواء', type: 'compressor', color: '#0d9488', size: [2, 1.5, 1.5] },
+  { name: 'Transformer', nameAr: 'محول كهربائي', type: 'transformer', color: '#7c3aed', size: [1.5, 2, 1.5] },
+  { name: 'Cylinder Rack', nameAr: 'سلم سلندرات', type: 'cylinder_rack', color: '#ea580c', size: [3, 2.5, 1] },
+  { name: 'Pallet', nameAr: 'طبلية', type: 'pallet', color: '#854d0e', size: [1.2, 0.15, 1] },
+  { name: 'Film Machine', nameAr: 'ماكينة فيلم', type: 'film', color: '#2563eb', size: [3, 4, 5], hasPrintingLine: false },
+  { name: 'Printing Machine', nameAr: 'ماكينة طباعة', type: 'printing', color: '#059669', size: [4, 3, 3] },
+];
 
 const initialMachines: Machine[] = [
   { id: 'film-c', name: 'Film C', nameAr: 'ماكينة فيلم C', type: 'film', color: '#2563eb', position: [-7, 0, -18], size: [3, 4, 5], hasPrintingLine: true },
@@ -149,11 +162,13 @@ function RoofStructure({ width, length, sideHeight, centerHeight }: { width: num
   );
 }
 
-function FilmMachine({ machine, isSelected, onSelect, onDrag }: { 
+function FilmMachine({ machine, isSelected, onSelect, onDrag, onDragStart, onDragEnd }: { 
   machine: Machine; 
   isSelected: boolean;
   onSelect: () => void;
   onDrag: (newPosition: [number, number, number]) => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -163,11 +178,13 @@ function FilmMachine({ machine, isSelected, onSelect, onDrag }: {
     e.stopPropagation();
     onSelect();
     setIsDragging(true);
+    onDragStart();
     gl.domElement.style.cursor = 'grabbing';
   };
 
   const handlePointerUp = () => {
     setIsDragging(false);
+    onDragEnd();
     gl.domElement.style.cursor = 'auto';
   };
 
@@ -259,11 +276,13 @@ function FilmMachine({ machine, isSelected, onSelect, onDrag }: {
   );
 }
 
-function PrintingMachine({ machine, isSelected, onSelect, onDrag }: { 
+function PrintingMachine({ machine, isSelected, onSelect, onDrag, onDragStart, onDragEnd }: { 
   machine: Machine; 
   isSelected: boolean;
   onSelect: () => void;
   onDrag: (newPosition: [number, number, number]) => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -273,11 +292,13 @@ function PrintingMachine({ machine, isSelected, onSelect, onDrag }: {
     e.stopPropagation();
     onSelect();
     setIsDragging(true);
+    onDragStart();
     gl.domElement.style.cursor = 'grabbing';
   };
 
   const handlePointerUp = () => {
     setIsDragging(false);
+    onDragEnd();
     gl.domElement.style.cursor = 'auto';
   };
 
@@ -353,11 +374,13 @@ function PrintingMachine({ machine, isSelected, onSelect, onDrag }: {
   );
 }
 
-function MixerMachine({ machine, isSelected, onSelect, onDrag }: { 
+function MixerMachine({ machine, isSelected, onSelect, onDrag, onDragStart, onDragEnd }: { 
   machine: Machine; 
   isSelected: boolean;
   onSelect: () => void;
   onDrag: (newPosition: [number, number, number]) => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -367,11 +390,13 @@ function MixerMachine({ machine, isSelected, onSelect, onDrag }: {
     e.stopPropagation();
     onSelect();
     setIsDragging(true);
+    onDragStart();
     gl.domElement.style.cursor = 'grabbing';
   };
 
   const handlePointerUp = () => {
     setIsDragging(false);
+    onDragEnd();
     gl.domElement.style.cursor = 'auto';
   };
 
@@ -445,11 +470,164 @@ function MixerMachine({ machine, isSelected, onSelect, onDrag }: {
   );
 }
 
-function Scene({ machines, selectedMachine, onSelectMachine, onDragMachine }: {
+function GenericEquipment({ machine, isSelected, onSelect, onDrag, onDragStart, onDragEnd }: {
+  machine: Machine;
+  isSelected: boolean;
+  onSelect: () => void;
+  onDrag: (newPosition: [number, number, number]) => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const { camera, gl } = useThree();
+
+  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
+    onSelect();
+    setIsDragging(true);
+    onDragStart();
+    gl.domElement.style.cursor = 'grabbing';
+  };
+
+  const handlePointerUp = () => {
+    setIsDragging(false);
+    onDragEnd();
+    gl.domElement.style.cursor = 'auto';
+  };
+
+  const handlePointerMove = (e: ThreeEvent<PointerEvent>) => {
+    if (!isDragging) return;
+    e.stopPropagation();
+    
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2(
+      (e.nativeEvent.offsetX / gl.domElement.clientWidth) * 2 - 1,
+      -(e.nativeEvent.offsetY / gl.domElement.clientHeight) * 2 + 1
+    );
+    raycaster.setFromCamera(mouse, camera);
+    
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const intersectPoint = new THREE.Vector3();
+    raycaster.ray.intersectPlane(plane, intersectPoint);
+    
+    if (intersectPoint) {
+      const maxX = HALL_WIDTH / 2 - machine.size[0] / 2 - 1;
+      const maxZ = HALL_LENGTH / 2 - machine.size[2] / 2 - 1;
+      const clampedX = Math.max(-maxX, Math.min(maxX, intersectPoint.x));
+      const clampedZ = Math.max(-maxZ, Math.min(maxZ, intersectPoint.z));
+      onDrag([clampedX, 0, clampedZ]);
+    }
+  };
+
+  const getEquipmentMesh = () => {
+    switch (machine.type) {
+      case 'compressor':
+        return (
+          <group>
+            <mesh position={[0, machine.size[1]/2, 0]} castShadow>
+              <cylinderGeometry args={[machine.size[0]/2, machine.size[0]/2, machine.size[1], 16]} />
+              <meshStandardMaterial color={machine.color} metalness={0.6} roughness={0.3} />
+            </mesh>
+            <mesh position={[machine.size[0]/2 + 0.2, machine.size[1]/2, 0]}>
+              <boxGeometry args={[0.3, 0.4, 0.3]} />
+              <meshStandardMaterial color="#374151" />
+            </mesh>
+          </group>
+        );
+      case 'transformer':
+        return (
+          <group>
+            <mesh position={[0, machine.size[1]/2, 0]} castShadow>
+              <boxGeometry args={machine.size} />
+              <meshStandardMaterial color={machine.color} metalness={0.5} roughness={0.4} />
+            </mesh>
+            <mesh position={[0, machine.size[1] + 0.2, 0]}>
+              <cylinderGeometry args={[0.15, 0.15, 0.4, 8]} />
+              <meshStandardMaterial color="#1f2937" />
+            </mesh>
+          </group>
+        );
+      case 'cylinder_rack':
+        return (
+          <group>
+            <mesh position={[0, 0.1, 0]} castShadow>
+              <boxGeometry args={[machine.size[0], 0.2, machine.size[2]]} />
+              <meshStandardMaterial color="#374151" />
+            </mesh>
+            {[-0.8, 0, 0.8].map((offset, i) => (
+              <mesh key={i} position={[offset, machine.size[1]/2 + 0.2, 0]}>
+                <boxGeometry args={[0.1, machine.size[1], 0.1]} />
+                <meshStandardMaterial color={machine.color} />
+              </mesh>
+            ))}
+            {[0.5, 1.2, 1.9].map((h, i) => (
+              <mesh key={`shelf-${i}`} position={[0, h, 0]}>
+                <boxGeometry args={[machine.size[0] - 0.2, 0.05, machine.size[2]]} />
+                <meshStandardMaterial color="#6b7280" />
+              </mesh>
+            ))}
+          </group>
+        );
+      case 'pallet':
+        return (
+          <group>
+            <mesh position={[0, machine.size[1]/2, 0]} castShadow>
+              <boxGeometry args={machine.size} />
+              <meshStandardMaterial color={machine.color} roughness={0.9} />
+            </mesh>
+            {[-0.4, 0, 0.4].map((offset, i) => (
+              <mesh key={i} position={[offset, 0.02, 0]}>
+                <boxGeometry args={[0.1, 0.04, machine.size[2]]} />
+                <meshStandardMaterial color="#78350f" />
+              </mesh>
+            ))}
+          </group>
+        );
+      default:
+        return (
+          <mesh position={[0, machine.size[1]/2, 0]} castShadow>
+            <boxGeometry args={machine.size} />
+            <meshStandardMaterial color={machine.color} />
+          </mesh>
+        );
+    }
+  };
+
+  return (
+    <group 
+      ref={groupRef}
+      position={machine.position}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerUp}
+    >
+      {getEquipmentMesh()}
+
+      {isSelected && (
+        <mesh position={[0, 0.1, 0]} rotation={[-Math.PI/2, 0, 0]}>
+          <ringGeometry args={[Math.max(...machine.size) * 0.6, Math.max(...machine.size) * 0.7, 32]} />
+          <meshBasicMaterial color="#fbbf24" transparent opacity={0.8} />
+        </mesh>
+      )}
+
+      <Html position={[0, machine.size[1] + 0.5, 0]} center>
+        <div className="bg-black/80 text-white px-2 py-1 rounded text-xs whitespace-nowrap font-bold">
+          {machine.nameAr}
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+function Scene({ machines, selectedMachine, onSelectMachine, onDragMachine, onDragStart, onDragEnd }: {
   machines: Machine[];
   selectedMachine: string | null;
   onSelectMachine: (id: string | null) => void;
   onDragMachine: (id: string, position: [number, number, number]) => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
 }) {
   return (
     <>
@@ -478,6 +656,8 @@ function Scene({ machines, selectedMachine, onSelectMachine, onDragMachine }: {
           isSelected,
           onSelect: () => onSelectMachine(machine.id),
           onDrag: (pos: [number, number, number]) => onDragMachine(machine.id, pos),
+          onDragStart,
+          onDragEnd,
         };
 
         switch (machine.type) {
@@ -488,7 +668,7 @@ function Scene({ machines, selectedMachine, onSelectMachine, onDragMachine }: {
           case 'mixer':
             return <MixerMachine key={machine.id} {...commonProps} />;
           default:
-            return null;
+            return <GenericEquipment key={machine.id} {...commonProps} />;
         }
       })}
 
@@ -496,12 +676,12 @@ function Scene({ machines, selectedMachine, onSelectMachine, onDragMachine }: {
   );
 }
 
-function CameraControls() {
+function CameraControls({ isDragging }: { isDragging: boolean }) {
   return (
     <OrbitControls 
-      enablePan={true}
-      enableZoom={true}
-      enableRotate={true}
+      enablePan={!isDragging}
+      enableZoom={!isDragging}
+      enableRotate={!isDragging}
       minDistance={10}
       maxDistance={80}
       maxPolarAngle={Math.PI / 2.1}
@@ -514,7 +694,9 @@ export default function FactorySimulation3D() {
   const [machines, setMachines] = useState<Machine[]>(initialMachines);
   const [selectedMachine, setSelectedMachine] = useState<string | null>(null);
   const [showMachineList, setShowMachineList] = useState(true);
+  const [showEquipmentPalette, setShowEquipmentPalette] = useState(false);
   const [viewMode, setViewMode] = useState<'3d' | 'top'>('3d');
+  const [isDraggingMachine, setIsDraggingMachine] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('factoryLayout');
@@ -539,6 +721,33 @@ export default function FactorySimulation3D() {
       m.id === id ? { ...m, position } : m
     ));
   }, []);
+
+  const handleDragStart = useCallback(() => {
+    setIsDraggingMachine(true);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    setIsDraggingMachine(false);
+  }, []);
+
+  const deleteMachine = () => {
+    if (selectedMachine) {
+      setMachines(prev => prev.filter(m => m.id !== selectedMachine));
+      setSelectedMachine(null);
+    }
+  };
+
+  const addEquipment = (template: Omit<Machine, 'id' | 'position'>) => {
+    const newId = `${template.type}-${Date.now()}`;
+    const newMachine: Machine = {
+      ...template,
+      id: newId,
+      position: [0, 0, 0],
+    };
+    setMachines(prev => [...prev, newMachine]);
+    setSelectedMachine(newId);
+    setShowEquipmentPalette(false);
+  };
 
   const resetPositions = () => {
     setMachines(initialMachines);
@@ -611,8 +820,10 @@ export default function FactorySimulation3D() {
                   selectedMachine={selectedMachine}
                   onSelectMachine={handleSelectMachine}
                   onDragMachine={handleDragMachine}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
                 />
-                <CameraControls />
+                <CameraControls isDragging={isDraggingMachine} />
                 <Environment preset="warehouse" />
               </Suspense>
             </Canvas>
@@ -663,9 +874,28 @@ export default function FactorySimulation3D() {
                   ))}
                 </div>
 
+                <Button 
+                  className="w-full mt-4" 
+                  variant="outline"
+                  onClick={() => setShowEquipmentPalette(true)}
+                >
+                  <Plus className="h-4 w-4 ml-2" />
+                  إضافة معدات
+                </Button>
+
                 {selectedMachineData && (
                   <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <h4 className="font-bold mb-2">الماكينة المحددة</h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-bold">الماكينة المحددة</h4>
+                      <Button 
+                        size="sm" 
+                        variant="destructive"
+                        onClick={deleteMachine}
+                      >
+                        <Trash2 className="h-4 w-4 ml-1" />
+                        حذف
+                      </Button>
+                    </div>
                     <div className="text-sm space-y-1">
                       <p><strong>الاسم:</strong> {selectedMachineData.nameAr}</p>
                       <p><strong>النوع:</strong> {selectedMachineData.type}</p>
@@ -687,6 +917,43 @@ export default function FactorySimulation3D() {
               </div>
             )}
           </div>
+
+          {showEquipmentPalette && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-lg">إضافة معدات جديدة</h3>
+                  <Button 
+                    size="icon" 
+                    variant="ghost"
+                    onClick={() => setShowEquipmentPalette(false)}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {equipmentTemplates.map((template, index) => (
+                    <Card 
+                      key={index}
+                      className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      onClick={() => addEquipment(template)}
+                    >
+                      <CardContent className="p-3 flex items-center gap-3">
+                        <div 
+                          className="w-8 h-8 rounded"
+                          style={{ backgroundColor: template.color }}
+                        />
+                        <div>
+                          <div className="font-medium text-sm">{template.nameAr}</div>
+                          <div className="text-xs text-gray-500">{template.name}</div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="absolute bottom-4 right-4 flex flex-col gap-2">
             <Button size="icon" variant="secondary" onClick={() => setViewMode('3d')}>
