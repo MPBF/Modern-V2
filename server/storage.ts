@@ -1792,6 +1792,20 @@ export class DatabaseStorage implements IStorage {
           .delete(rolls)
           .where(eq(rolls.production_order_id, prodOrder.id));
 
+        // Delete mixing batch ingredients and batches for this production order
+        const batchesToDelete = await tx
+          .select({ id: mixing_batches.id })
+          .from(mixing_batches)
+          .where(eq(mixing_batches.production_order_id, prodOrder.id));
+
+        for (const batch of batchesToDelete) {
+          await tx.delete(batch_ingredients).where(eq(batch_ingredients.batch_id, batch.id));
+        }
+
+        await tx
+          .delete(mixing_batches)
+          .where(eq(mixing_batches.production_order_id, prodOrder.id));
+
         // Delete related notifications
         await tx
           .delete(notifications)
