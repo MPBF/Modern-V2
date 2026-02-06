@@ -232,6 +232,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .json({ message: "بيانات تسجيل الدخول غير صحيحة" });
         }
 
+        // Get role information before saving session
+        let roleName = "user";
+        let roleNameAr = "مستخدم";
+        let permissions: string[] = [];
+
+        if (user.role_id) {
+          const roles = await storage.getRoles();
+          const userRole = roles.find(r => r.id === user.role_id);
+
+          if (userRole) {
+            roleName = userRole.name || "user";
+            roleNameAr = userRole.name_ar || "مستخدم";
+
+            if (userRole.permissions) {
+              try {
+                if (Array.isArray(userRole.permissions)) {
+                  permissions = userRole.permissions;
+                } else if (typeof userRole.permissions === 'string') {
+                  const parsed = JSON.parse(userRole.permissions);
+                  permissions = Array.isArray(parsed) ? parsed : [];
+                }
+              } catch (e) {
+                if (typeof userRole.permissions === 'string' && (userRole.permissions as string).trim()) {
+                  permissions = [(userRole.permissions as string).trim()];
+                } else {
+                  permissions = [];
+                }
+              }
+            }
+          }
+        }
+
         // Save user session with explicit save callback
         req.session.userId = user.id;
 
@@ -249,7 +281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           logger.session("created and saved", user.id);
 
-          // Session saved successfully - safe property access
+          // Session saved successfully - include role and permissions to match /api/me response
           res.json({
             user: {
               id: user.id ?? null,
@@ -257,7 +289,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               display_name: user.display_name ?? "",
               display_name_ar: user.display_name_ar ?? "",
               role_id: user.role_id ?? null,
+              role_name: roleName,
+              role_name_ar: roleNameAr,
               section_id: user.section_id ?? null,
+              permissions: permissions,
             },
           });
         });
