@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, Suspense, useEffect } from 'react';
+import { useState, useRef, useCallback, Suspense, useEffect, useMemo } from 'react';
 import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Environment, Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { ScrollArea } from '../components/ui/scroll-area';
+import { Slider } from '../components/ui/slider';
 import { 
   RotateCcw, 
   Save, 
@@ -30,7 +31,14 @@ import {
   Package,
   Printer,
   Scissors,
-  RefreshCw
+  RefreshCw,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  History,
+  FastForward,
+  Calendar
 } from 'lucide-react';
 
 const HALL_WIDTH = 20;
@@ -83,6 +91,33 @@ interface MachineStats {
     completed_rolls: string;
   };
   recentRolls: any[];
+}
+
+interface HistoryEvent {
+  type: 'created' | 'film_completed' | 'printed' | 'cut';
+  timestamp: string;
+  roll?: {
+    id: number;
+    roll_number: string;
+    stage: string;
+    weight_kg: string;
+    film_machine_id: string;
+    roll_color: string;
+    color_name: string;
+    customer_name: string;
+    production_order_number: string;
+  };
+  rollId?: number;
+  roll_number?: string;
+  printing_machine_id?: string;
+  cutting_machine_id?: string;
+}
+
+interface HistoryResponse {
+  startDate: string;
+  endDate: string;
+  totalRolls: number;
+  events: HistoryEvent[];
 }
 
 const equipmentTemplates: Omit<Machine, 'id' | 'position'>[] = [
@@ -854,9 +889,27 @@ export default function FactorySimulation3D() {
   const [showMachineStats, setShowMachineStats] = useState(false);
   const [selectedMachineForStats, setSelectedMachineForStats] = useState<string | null>(null);
 
+  // Time-lapse state
+  const [timelapseMode, setTimelapseMode] = useState(false);
+  const [timelapseStartDate, setTimelapseStartDate] = useState(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString().split('T')[0];
+  });
+  const [timelapseEndDate, setTimelapseEndDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [currentEventIndex, setCurrentEventIndex] = useState(0);
+  const [timelapseRolls, setTimelapseRolls] = useState<Map<number, ActiveRoll>>(new Map());
+  const [showTimelapsePicker, setShowTimelapsePicker] = useState(false);
+  const playbackTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [eventLog, setEventLog] = useState<{text: string; color: string; time: string}[]>([]);
+
   const { data: activeRolls = [], refetch: refetchRolls } = useQuery<ActiveRoll[]>({
     queryKey: ['/api/factory-3d/active-rolls'],
-    refetchInterval: 10000,
+    refetchInterval: timelapseMode ? false : 10000,
   });
 
   const { data: machineStats } = useQuery<MachineStats>({
@@ -867,6 +920,178 @@ export default function FactorySimulation3D() {
   const { data: realMachines = [] } = useQuery<any[]>({
     queryKey: ['/api/machines'],
   });
+
+  const { data: historyData } = useQuery<HistoryResponse>({
+    queryKey: ['/api/factory-3d/history', timelapseStartDate, timelapseEndDate],
+    queryFn: async () => {
+      const res = await fetch(`/api/factory-3d/history?startDate=${timelapseStartDate}T00:00:00&endDate=${timelapseEndDate}T23:59:59`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch history');
+      return res.json();
+    },
+    enabled: timelapseMode,
+  });
+
+  const historyEvents = useMemo(() => historyData?.events || [], [historyData]);
+
+  const currentTimelapseTime = useMemo(() => {
+    if (!historyEvents.length || currentEventIndex >= historyEvents.length) return null;
+    return new Date(historyEvents[currentEventIndex].timestamp);
+  }, [historyEvents, currentEventIndex]);
+
+  // Process a single event and update timelapseRolls
+  const processEvent = useCallback((event: HistoryEvent) => {
+    setTimelapseRolls(prev => {
+      const next = new Map(prev);
+      if (event.type === 'created' && event.roll) {
+        next.set(event.roll.id, {
+          id: event.roll.id,
+          roll_number: event.roll.roll_number,
+          stage: 'film' as const,
+          weight_kg: event.roll.weight_kg,
+          film_machine_id: event.roll.film_machine_id,
+          printing_machine_id: null,
+          cutting_machine_id: null,
+          printed_at: null,
+          cut_completed_at: null,
+          created_at: event.timestamp,
+          production_order_number: event.roll.production_order_number,
+          master_batch_id: null,
+          roll_color: event.roll.roll_color,
+          color_name: event.roll.color_name,
+          customer_name: event.roll.customer_name,
+        });
+        setEventLog(l => [...l.slice(-19), {
+          text: `🆕 ${event.roll!.roll_number} - ${event.roll!.customer_name}`,
+          color: event.roll!.roll_color,
+          time: new Date(event.timestamp).toLocaleTimeString('ar-SA')
+        }]);
+      } else if (event.type === 'film_completed' && event.rollId) {
+        setEventLog(l => [...l.slice(-19), {
+          text: `🎬 ${event.roll_number} اكتمل الفيلم`,
+          color: '#3b82f6',
+          time: new Date(event.timestamp).toLocaleTimeString('ar-SA')
+        }]);
+      } else if (event.type === 'printed' && event.rollId) {
+        const existing = next.get(event.rollId);
+        if (existing) {
+          next.set(event.rollId, {
+            ...existing,
+            stage: 'printing' as const,
+            printed_at: event.timestamp,
+            printing_machine_id: event.printing_machine_id || null,
+          });
+        }
+        setEventLog(l => [...l.slice(-19), {
+          text: `🖨️ ${event.roll_number} طباعة`,
+          color: '#22c55e',
+          time: new Date(event.timestamp).toLocaleTimeString('ar-SA')
+        }]);
+      } else if (event.type === 'cut' && event.rollId) {
+        next.delete(event.rollId);
+        setEventLog(l => [...l.slice(-19), {
+          text: `✂️ ${event.roll_number} قطع`,
+          color: '#f59e0b',
+          time: new Date(event.timestamp).toLocaleTimeString('ar-SA')
+        }]);
+      }
+      return next;
+    });
+  }, []);
+
+  // Playback timer
+  useEffect(() => {
+    if (isPlaying && historyEvents.length > 0) {
+      const baseInterval = 500;
+      const interval = baseInterval / playbackSpeed;
+
+      playbackTimerRef.current = setInterval(() => {
+        setCurrentEventIndex(prev => {
+          const next = prev + 1;
+          if (next >= historyEvents.length) {
+            setIsPlaying(false);
+            return prev;
+          }
+          processEvent(historyEvents[next]);
+          return next;
+        });
+      }, interval);
+
+      return () => {
+        if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
+      };
+    }
+    return () => {
+      if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
+    };
+  }, [isPlaying, playbackSpeed, historyEvents, processEvent]);
+
+  const startTimelapse = useCallback(() => {
+    setTimelapseMode(true);
+    setCurrentEventIndex(0);
+    setTimelapseRolls(new Map());
+    setEventLog([]);
+    setIsPlaying(false);
+    setShowTimelapsePicker(false);
+  }, []);
+
+  const exitTimelapse = useCallback(() => {
+    setTimelapseMode(false);
+    setIsPlaying(false);
+    setCurrentEventIndex(0);
+    setTimelapseRolls(new Map());
+    setEventLog([]);
+    if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
+  }, []);
+
+  const seekTo = useCallback((index: number) => {
+    setIsPlaying(false);
+    setTimelapseRolls(new Map());
+    setEventLog([]);
+    const newRolls = new Map<number, ActiveRoll>();
+    for (let i = 0; i <= index && i < historyEvents.length; i++) {
+      const event = historyEvents[i];
+      if (event.type === 'created' && event.roll) {
+        newRolls.set(event.roll.id, {
+          id: event.roll.id,
+          roll_number: event.roll.roll_number,
+          stage: 'film' as const,
+          weight_kg: event.roll.weight_kg,
+          film_machine_id: event.roll.film_machine_id,
+          printing_machine_id: null,
+          cutting_machine_id: null,
+          printed_at: null,
+          cut_completed_at: null,
+          created_at: event.timestamp,
+          production_order_number: event.roll.production_order_number,
+          master_batch_id: null,
+          roll_color: event.roll.roll_color,
+          color_name: event.roll.color_name,
+          customer_name: event.roll.customer_name,
+        });
+      } else if (event.type === 'printed' && event.rollId) {
+        const existing = newRolls.get(event.rollId);
+        if (existing) {
+          newRolls.set(event.rollId, {
+            ...existing,
+            stage: 'printing' as const,
+            printed_at: event.timestamp,
+            printing_machine_id: event.printing_machine_id || null,
+          });
+        }
+      } else if (event.type === 'cut' && event.rollId) {
+        newRolls.delete(event.rollId);
+      }
+    }
+    setTimelapseRolls(newRolls);
+    setCurrentEventIndex(index);
+  }, [historyEvents]);
+
+  const displayRolls = useMemo(() => {
+    if (timelapseMode) {
+      return Array.from(timelapseRolls.values());
+    }
+    return activeRolls;
+  }, [timelapseMode, timelapseRolls, activeRolls]);
 
   useEffect(() => {
     const saved = localStorage.getItem('factoryLayout');
@@ -989,6 +1214,17 @@ export default function FactorySimulation3D() {
               <Home className="h-4 w-4 ml-2" />
               {hideRoof ? 'إظهار السقف' : 'إخفاء السقف'}
             </Button>
+            {timelapseMode ? (
+              <Button variant="destructive" size="sm" onClick={exitTimelapse}>
+                <X className="h-4 w-4 ml-2" />
+                خروج من التشغيل الزمني
+              </Button>
+            ) : (
+              <Button variant="secondary" size="sm" onClick={() => setShowTimelapsePicker(true)}>
+                <History className="h-4 w-4 ml-2" />
+                تشغيل زمني
+              </Button>
+            )}
           </div>
         </div>
 
@@ -1009,7 +1245,7 @@ export default function FactorySimulation3D() {
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                   hideRoof={hideRoof}
-                  activeRolls={activeRolls}
+                  activeRolls={displayRolls}
                   onSelectRoll={setSelectedRoll}
                 />
                 <CameraControls isDragging={isDraggingMachine} />
@@ -1257,16 +1493,125 @@ export default function FactorySimulation3D() {
             </Button>
           </div>
 
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-4">
-            <span>صالة الإنتاج: {20}م × {50}م | الارتفاع: {6}م-{8}م | البوابة: {9}م</span>
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Package className="h-3 w-3" />
-              {activeRolls.length} رول نشط
-            </Badge>
-            <Button size="sm" variant="ghost" className="text-white hover:text-white/80" onClick={() => refetchRolls()}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-          </div>
+          {timelapseMode ? (
+            <>
+              {/* Time-lapse playback controls */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-black/60 text-white p-4">
+                {historyEvents.length === 0 && (
+                  <div className="text-center py-2 mb-2 text-yellow-300 text-sm">
+                    <Clock className="h-4 w-4 inline ml-1" />
+                    لا توجد أحداث في هذه الفترة - جرب تغيير التاريخ
+                  </div>
+                )}
+                {/* Current time display */}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <History className="h-4 w-4 text-purple-400" />
+                    <span className="text-purple-300 font-medium text-sm">وضع التشغيل الزمني</span>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold">
+                      {currentTimelapseTime ? currentTimelapseTime.toLocaleString('ar-SA', { 
+                        year: 'numeric', month: 'short', day: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                      }) : '--:--:--'}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      <Package className="h-3 w-3" />
+                      {timelapseRolls.size} رول
+                    </Badge>
+                    <Badge variant="outline" className="text-white border-white/30">
+                      {currentEventIndex + 1} / {historyEvents.length} حدث
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Progress slider */}
+                <div className="mb-3">
+                  <Slider
+                    value={[currentEventIndex]}
+                    min={0}
+                    max={Math.max(historyEvents.length - 1, 0)}
+                    step={1}
+                    onValueChange={(v) => seekTo(v[0])}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                    <span>{historyEvents[0] ? new Date(historyEvents[0].timestamp).toLocaleString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                    <span>{historyEvents.length > 0 ? new Date(historyEvents[historyEvents.length - 1].timestamp).toLocaleString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                  </div>
+                </div>
+
+                {/* Playback buttons */}
+                <div className="flex items-center justify-center gap-3">
+                  <Button size="icon" variant="ghost" className="text-white h-8 w-8" onClick={() => seekTo(0)}>
+                    <SkipBack className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="icon" 
+                    className="bg-purple-600 hover:bg-purple-700 h-10 w-10 rounded-full"
+                    onClick={() => setIsPlaying(!isPlaying)}
+                  >
+                    {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                  </Button>
+                  <Button size="icon" variant="ghost" className="text-white h-8 w-8" onClick={() => seekTo(historyEvents.length - 1)}>
+                    <SkipForward className="h-4 w-4" />
+                  </Button>
+
+                  <div className="h-6 w-px bg-white/20 mx-2" />
+
+                  <div className="flex items-center gap-1">
+                    <FastForward className="h-3 w-3 text-gray-400" />
+                    {[0.5, 1, 2, 5, 10].map(speed => (
+                      <Button 
+                        key={speed}
+                        size="sm" 
+                        variant={playbackSpeed === speed ? 'default' : 'ghost'}
+                        className={`h-7 px-2 text-xs ${playbackSpeed === speed ? 'bg-purple-600' : 'text-white'}`}
+                        onClick={() => setPlaybackSpeed(speed)}
+                      >
+                        {speed}x
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Event log panel */}
+              {eventLog.length > 0 && (
+                <div className="absolute top-4 right-4 w-56 bg-black/70 rounded-lg p-3 text-white">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity className="h-3 w-3 text-purple-400" />
+                    <span className="text-xs font-medium text-purple-300">سجل الأحداث</span>
+                  </div>
+                  <ScrollArea className="h-48">
+                    <div className="space-y-1">
+                      {eventLog.slice().reverse().map((log, i) => (
+                        <div key={i} className="flex items-center gap-2 text-[10px]">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: log.color }} />
+                          <span className="text-gray-400">{log.time}</span>
+                          <span className="truncate">{log.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-4">
+              <span>صالة الإنتاج: {20}م × {50}م | الارتفاع: {6}م-{8}م | البوابة: {9}م</span>
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Package className="h-3 w-3" />
+                {activeRolls.length} رول نشط
+              </Badge>
+              <Button size="sm" variant="ghost" className="text-white hover:text-white/80" onClick={() => refetchRolls()}>
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1387,6 +1732,96 @@ export default function FactorySimulation3D() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showTimelapsePicker} onOpenChange={setShowTimelapsePicker}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <History className="h-5 w-5 text-purple-600" />
+                إعادة التشغيل الزمني
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500">
+                اختر الفترة الزمنية لمشاهدة تاريخ الإنتاج بالحركة البطيئة
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">
+                    <Calendar className="h-3 w-3 inline ml-1" />
+                    من تاريخ
+                  </label>
+                  <input
+                    type="date"
+                    value={timelapseStartDate}
+                    onChange={(e) => setTimelapseStartDate(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md text-sm bg-white dark:bg-gray-800 dark:border-gray-600"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">
+                    <Calendar className="h-3 w-3 inline ml-1" />
+                    إلى تاريخ
+                  </label>
+                  <input
+                    type="date"
+                    value={timelapseEndDate}
+                    onChange={(e) => setTimelapseEndDate(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md text-sm bg-white dark:bg-gray-800 dark:border-gray-600"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setHours(0, 0, 0, 0);
+                    setTimelapseStartDate(d.toISOString().split('T')[0]);
+                    setTimelapseEndDate(d.toISOString().split('T')[0]);
+                  }}
+                >
+                  اليوم
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() - 1);
+                    setTimelapseStartDate(d.toISOString().split('T')[0]);
+                    setTimelapseEndDate(d.toISOString().split('T')[0]);
+                  }}
+                >
+                  أمس
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => {
+                    const end = new Date();
+                    const start = new Date();
+                    start.setDate(start.getDate() - 7);
+                    setTimelapseStartDate(start.toISOString().split('T')[0]);
+                    setTimelapseEndDate(end.toISOString().split('T')[0]);
+                  }}
+                >
+                  آخر 7 أيام
+                </Button>
+              </div>
+
+              <Button className="w-full bg-purple-600 hover:bg-purple-700" onClick={startTimelapse}>
+                <Play className="h-4 w-4 ml-2" />
+                بدء التشغيل الزمني
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
 
