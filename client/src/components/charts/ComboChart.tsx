@@ -159,7 +159,6 @@ export function ComboChart({
 
             {elements.map((element) => {
               const commonProps = {
-                key: element.key,
                 dataKey: element.key,
                 name: element.name,
                 yAxisId: element.yAxisId || "left",
@@ -169,6 +168,7 @@ export function ComboChart({
                 case "bar":
                   return (
                     <Bar
+                      key={element.key}
                       {...commonProps}
                       fill={element.color}
                       radius={[2, 2, 0, 0]}
@@ -177,6 +177,7 @@ export function ComboChart({
                 case "line":
                   return (
                     <Line
+                      key={element.key}
                       {...commonProps}
                       type="monotone"
                       stroke={element.color}
@@ -192,6 +193,7 @@ export function ComboChart({
                 case "area":
                   return (
                     <Area
+                      key={element.key}
                       {...commonProps}
                       type="monotone"
                       stroke={element.color}
