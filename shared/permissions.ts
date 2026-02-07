@@ -442,7 +442,7 @@ export const ROUTE_PERMISSIONS: Record<string, PermissionKey[]> = {
   '/dashboard': ['view_dashboard'],
   '/orders': ['view_orders', 'manage_orders'],
   '/production': ['view_production', 'manage_production'],
-  '/production-dashboard': ['view_film_dashboard', 'view_printing_dashboard', 'view_cutting_dashboard', 'view_production'],
+  '/production-dashboard': ['view_production', 'manage_production', 'view_film_dashboard', 'view_printing_dashboard', 'view_cutting_dashboard'],
   '/maintenance': ['view_maintenance', 'manage_maintenance'],
   '/quality': ['view_quality', 'manage_quality'],
   '/warehouse': ['view_warehouse', 'manage_warehouse'],
@@ -455,6 +455,17 @@ export const ROUTE_PERMISSIONS: Record<string, PermissionKey[]> = {
   '/user-dashboard': ['view_user_dashboard'],
   '/notifications': ['view_notifications'],
   
+  // Production sub-pages
+  '/production-orders-management': ['view_production', 'manage_production'],
+  '/production-queues': ['view_production', 'manage_production', 'view_orders', 'manage_orders'],
+  '/roll-search': ['view_production', 'manage_production'],
+  '/production-reports': ['view_production_reports', 'view_reports', 'view_production'],
+  
+  // Operator dashboards
+  '/film-operator': ['view_film_dashboard', 'view_production', 'manage_production'],
+  '/printing-operator': ['view_printing_dashboard', 'view_production', 'manage_production'],
+  '/cutting-operator': ['view_cutting_dashboard', 'view_production', 'manage_production'],
+  
   // Monitoring and alerts
   '/alerts': ['view_alerts', 'manage_alerts'],
   '/system-health': ['view_system_health'],
@@ -464,6 +475,9 @@ export const ROUTE_PERMISSIONS: Record<string, PermissionKey[]> = {
   // Tools and utilities
   '/tools': ['view_tools', 'view_production', 'manage_production'],
   '/material-mixing': ['view_mixing', 'manage_mixing', 'view_production'],
+  
+  // Factory simulation
+  '/factory-simulation': ['view_production', 'manage_production', 'admin'],
   
   // WhatsApp integration
   '/meta-whatsapp-setup': ['manage_whatsapp', 'admin'],
