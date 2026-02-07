@@ -1,10 +1,5 @@
-// ===============================================
-// 🔹 Code Health Checker
-// ===============================================
-// فحص آلي للكود المكرر والملفات غير المستخدمة
-// ===============================================
-
-import fs from 'fs';
+import fs from 'fs/promises';
+import fsSync from 'fs';
 import path from 'path';
 
 export interface CodeIssue {
@@ -34,31 +29,25 @@ export class CodeHealthChecker {
   private static clientDir = path.join(process.cwd(), 'client', 'src');
   private static serverDir = path.join(process.cwd(), 'server');
 
-  /**
-   * تشغيل فحص شامل للكود
-   */
   static async runFullHealthCheck(): Promise<CodeHealthReport> {
     const issues: CodeIssue[] = [];
 
     try {
-      // 1. فحص الملفات الكبيرة
-      const largeFiles = await this.checkLargeFiles();
+      const files = await this.getAllFiles([this.clientDir, this.serverDir]);
+      const tsFiles = files.filter(f => f.endsWith('.ts') || f.endsWith('.tsx'));
+
+      const fileContents = await this.readFilesInBatches(tsFiles, 10);
+
+      const largeFiles = this.checkLargeFilesFromContent(fileContents);
       issues.push(...largeFiles);
 
-      // 2. فحص الأنماط المهجورة
-      const deprecatedPatterns = await this.checkDeprecatedPatterns();
+      const deprecatedPatterns = this.checkDeprecatedPatternsFromContent(fileContents);
       issues.push(...deprecatedPatterns);
 
-      // 3. فحص ملفات النسخ الاحتياطي
-      const backupFiles = await this.checkBackupFiles();
+      const backupFiles = this.checkBackupFilesFromList(files);
       issues.push(...backupFiles);
 
-      // 4. فحص imports غير المستخدمة
-      const unusedImports = await this.checkUnusedImports();
-      issues.push(...unusedImports);
-
-      // 5. فحص الكود المكرر
-      const duplicates = await this.checkDuplicateCode();
+      const duplicates = this.checkDuplicateCodeFromContent(fileContents);
       issues.push(...duplicates);
 
       const summary = {
@@ -73,7 +62,7 @@ export class CodeHealthChecker {
 
       return {
         timestamp: new Date(),
-        totalFiles: await this.countFiles(),
+        totalFiles: tsFiles.length,
         issues,
         summary,
         recommendations
@@ -84,19 +73,34 @@ export class CodeHealthChecker {
     }
   }
 
-  /**
-   * فحص الملفات الكبيرة التي قد تحتاج إلى تقسيم
-   */
-  private static async checkLargeFiles(): Promise<CodeIssue[]> {
+  private static async readFilesInBatches(files: string[], batchSize: number): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+
+    for (let i = 0; i < files.length; i += batchSize) {
+      const batch = files.slice(i, i + batchSize);
+      const contents = await Promise.all(
+        batch.map(async (file) => {
+          try {
+            const content = await fs.readFile(file, 'utf-8');
+            return { file, content };
+          } catch {
+            return { file, content: '' };
+          }
+        })
+      );
+      for (const { file, content } of contents) {
+        result.set(file, content);
+      }
+    }
+
+    return result;
+  }
+
+  private static checkLargeFilesFromContent(fileContents: Map<string, string>): CodeIssue[] {
     const issues: CodeIssue[] = [];
-    const maxLines = 500; // الحد الأقصى للسطور
+    const maxLines = 500;
 
-    const files = await this.getAllFiles([this.clientDir, this.serverDir]);
-
-    for (const file of files) {
-      if (!file.endsWith('.ts') && !file.endsWith('.tsx')) continue;
-
-      const content = fs.readFileSync(file, 'utf-8');
+    Array.from(fileContents.entries()).forEach(([file, content]) => {
       const lines = content.split('\n').length;
 
       if (lines > maxLines) {
@@ -104,53 +108,38 @@ export class CodeHealthChecker {
           type: 'large_file',
           severity: lines > 1000 ? 'high' : 'medium',
           file: this.relativePath(file),
-          message: `File has ${lines} lines (recommended: < ${maxLines})`,
-          suggestion: 'Consider splitting into smaller, focused modules'
+          message: `الملف يحتوي ${lines} سطر (الحد المقترح: < ${maxLines})`,
+          suggestion: 'يُنصح بتقسيم الملف إلى وحدات أصغر'
         });
       }
-    }
+    });
 
     return issues;
   }
 
-  /**
-   * فحص الأنماط المهجورة في الكود
-   */
-  private static async checkDeprecatedPatterns(): Promise<CodeIssue[]> {
+  private static checkDeprecatedPatternsFromContent(fileContents: Map<string, string>): CodeIssue[] {
     const issues: CodeIssue[] = [];
 
     const deprecatedPatterns = [
       {
         pattern: /onError[\s\S]*useQuery/,
-        message: 'TanStack Query v5: onError in useQuery is deprecated',
-        suggestion: 'Use error state or useEffect instead'
+        message: 'TanStack Query v5: onError في useQuery مهجور',
+        suggestion: 'استخدم error state أو useEffect بدلاً من ذلك',
+        clientOnly: true
       },
       {
         pattern: /import React from ['"]react['"]/,
-        message: 'Explicit React import not needed with modern JSX transform',
-        suggestion: 'Remove "import React" line'
-      },
-      {
-        pattern: /process\.env\./,
-        message: 'Frontend should use import.meta.env instead of process.env',
-        suggestion: 'Use import.meta.env with VITE_ prefix'
+        message: 'لا حاجة لاستيراد React صريحاً مع JSX transform الحديث',
+        suggestion: 'أزل سطر "import React"',
+        clientOnly: true
       }
     ];
 
-    const files = await this.getAllFiles([this.clientDir]);
+    Array.from(fileContents.entries()).forEach(([file, content]) => {
+      for (const { pattern, message, suggestion, clientOnly } of deprecatedPatterns) {
+        if (clientOnly && file.includes('server')) continue;
 
-    for (const file of files) {
-      if (!file.endsWith('.ts') && !file.endsWith('.tsx')) continue;
-
-      const content = fs.readFileSync(file, 'utf-8');
-
-      for (const { pattern, message, suggestion } of deprecatedPatterns) {
         if (pattern.test(content)) {
-          // تخطي false positives (مثل server code)
-          if (file.includes('server') && pattern === deprecatedPatterns[2].pattern) {
-            continue;
-          }
-
           issues.push({
             type: 'deprecated_pattern',
             severity: 'medium',
@@ -160,17 +149,13 @@ export class CodeHealthChecker {
           });
         }
       }
-    }
+    });
 
     return issues;
   }
 
-  /**
-   * فحص ملفات النسخ الاحتياطي
-   */
-  private static async checkBackupFiles(): Promise<CodeIssue[]> {
+  private static checkBackupFilesFromList(files: string[]): CodeIssue[] {
     const issues: CodeIssue[] = [];
-    const files = await this.getAllFiles([this.clientDir, this.serverDir]);
 
     const backupPatterns = [
       /-backup\.(ts|tsx|js|jsx)$/,
@@ -187,8 +172,8 @@ export class CodeHealthChecker {
             type: 'unused_file',
             severity: 'low',
             file: this.relativePath(file),
-            message: 'Backup or old file detected',
-            suggestion: 'Remove if no longer needed to reduce codebase size'
+            message: 'ملف نسخة احتياطية أو قديم',
+            suggestion: 'أزله إذا لم يعد مطلوباً لتقليل حجم الكود'
           });
           break;
         }
@@ -198,72 +183,15 @@ export class CodeHealthChecker {
     return issues;
   }
 
-  /**
-   * فحص imports غير المستخدمة (فحص بسيط)
-   */
-  private static async checkUnusedImports(): Promise<CodeIssue[]> {
+  private static checkDuplicateCodeFromContent(fileContents: Map<string, string>): CodeIssue[] {
     const issues: CodeIssue[] = [];
-    // هذا فحص بسيط - أداة مثل ts-prune ستكون أفضل
-    
-    // للآن، نتحقق فقط من imports لم تُستخدم بوضوح
-    const files = await this.getAllFiles([this.clientDir, this.serverDir]);
-
-    for (const file of files) {
-      if (!file.endsWith('.ts') && !file.endsWith('.tsx')) continue;
-
-      const content = fs.readFileSync(file, 'utf-8');
-      const lines = content.split('\n');
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        
-        // تحقق من imports غير مستخدمة بوضوح
-        const importMatch = line.match(/import\s+{([^}]+)}\s+from/);
-        if (importMatch) {
-          const imports = importMatch[1].split(',').map(s => s.trim());
-          
-          for (const imp of imports) {
-            // بحث بسيط - قد يكون false positive
-            const usageCount = content.split(imp).length - 1;
-            if (usageCount === 1) { // ظهر مرة واحدة فقط (في import)
-              issues.push({
-                type: 'unused_file',
-                severity: 'low',
-                file: this.relativePath(file),
-                line: i + 1,
-                message: `Possibly unused import: ${imp}`,
-                suggestion: 'Run ts-prune for accurate unused import detection'
-              });
-            }
-          }
-        }
-      }
-    }
-
-    return issues;
-  }
-
-  /**
-   * فحص الكود المكرر (فحص بسيط)
-   */
-  private static async checkDuplicateCode(): Promise<CodeIssue[]> {
-    const issues: CodeIssue[] = [];
-    
-    // فحص بسيط للدوال المكررة
-    const files = await this.getAllFiles([this.clientDir, this.serverDir]);
     const functionSignatures = new Map<string, string[]>();
 
-    for (const file of files) {
-      if (!file.endsWith('.ts') && !file.endsWith('.tsx')) continue;
-
-      const content = fs.readFileSync(file, 'utf-8');
-      
-      // البحث عن تعريفات الدوال
+    Array.from(fileContents.entries()).forEach(([file, content]) => {
       const functionRegex = /(?:function|const|let|var)\s+(\w+)\s*[=:]?\s*(?:\([^)]*\)|\([^)]*\)\s*=>)/g;
       let match;
 
       while ((match = functionRegex.exec(content)) !== null) {
-        const funcName = match[1];
         const signature = match[0];
 
         if (!functionSignatures.has(signature)) {
@@ -271,17 +199,16 @@ export class CodeHealthChecker {
         }
         functionSignatures.get(signature)!.push(file);
       }
-    }
+    });
 
-    // الإبلاغ عن الدوال المكررة
-    Array.from(functionSignatures.entries()).forEach(([signature, files]) => {
-      if (files.length > 1) {
+    Array.from(functionSignatures.entries()).forEach(([, filesList]) => {
+      if (filesList.length > 1) {
         issues.push({
           type: 'duplicate_code',
           severity: 'medium',
-          file: files.map((f: string) => this.relativePath(f)).join(', '),
-          message: `Similar function found in ${files.length} files`,
-          suggestion: 'Consider creating a shared utility function'
+          file: filesList.map((f: string) => this.relativePath(f)).join(', '),
+          message: `دالة مشابهة موجودة في ${filesList.length} ملفات`,
+          suggestion: 'يُنصح بإنشاء دالة مشتركة'
         });
       }
     });
@@ -289,77 +216,64 @@ export class CodeHealthChecker {
     return issues;
   }
 
-  /**
-   * توليد توصيات بناءً على النتائج
-   */
   private static generateRecommendations(summary: CodeHealthReport['summary']): string[] {
     const recommendations: string[] = [];
 
     if (summary.largeFiles > 0) {
-      recommendations.push(`📦 Found ${summary.largeFiles} large file(s). Consider splitting them into smaller modules for better maintainability.`);
+      recommendations.push(`تم العثور على ${summary.largeFiles} ملف كبير. يُنصح بتقسيمها لتسهيل الصيانة.`);
     }
 
     if (summary.deprecatedPatterns > 0) {
-      recommendations.push(`⚠️ Found ${summary.deprecatedPatterns} deprecated pattern(s). Update to use modern practices.`);
+      recommendations.push(`تم العثور على ${summary.deprecatedPatterns} نمط مهجور. يُنصح بالتحديث للممارسات الحديثة.`);
     }
 
     if (summary.unusedFiles > 0) {
-      recommendations.push(`🗑️ Found ${summary.unusedFiles} potentially unused file(s). Remove to reduce bundle size.`);
+      recommendations.push(`تم العثور على ${summary.unusedFiles} ملف غير مستخدم محتمل. أزلها لتقليل حجم المشروع.`);
     }
 
     if (summary.duplicateCode > 0) {
-      recommendations.push(`♻️ Found ${summary.duplicateCode} instance(s) of duplicate code. Refactor into shared utilities.`);
+      recommendations.push(`تم العثور على ${summary.duplicateCode} حالة كود مكرر. يُنصح بالدمج في وحدات مشتركة.`);
     }
 
     if (recommendations.length === 0) {
-      recommendations.push('✅ Code health looks good! No major issues detected.');
+      recommendations.push('صحة الكود جيدة! لم يتم العثور على مشاكل رئيسية.');
     }
 
     return recommendations;
   }
 
-  /**
-   * الحصول على جميع الملفات من المجلدات
-   */
   private static async getAllFiles(dirs: string[]): Promise<string[]> {
     const files: string[] = [];
 
-    const walk = (dir: string) => {
-      if (!fs.existsSync(dir)) return;
+    const walk = async (dir: string) => {
+      try {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
 
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
 
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-
-        if (entry.isDirectory()) {
-          if (entry.name !== 'node_modules' && entry.name !== '.git' && entry.name !== 'dist') {
-            walk(fullPath);
+          if (entry.isDirectory()) {
+            if (entry.name !== 'node_modules' && entry.name !== '.git' && entry.name !== 'dist') {
+              await walk(fullPath);
+            }
+          } else {
+            files.push(fullPath);
           }
-        } else {
-          files.push(fullPath);
         }
+      } catch {
+        // skip inaccessible dirs
       }
     };
 
     for (const dir of dirs) {
-      walk(dir);
+      if (fsSync.existsSync(dir)) {
+        await walk(dir);
+      }
     }
 
     return files;
   }
 
-  /**
-   * حساب عدد الملفات
-   */
-  private static async countFiles(): Promise<number> {
-    const files = await this.getAllFiles([this.clientDir, this.serverDir]);
-    return files.filter(f => f.endsWith('.ts') || f.endsWith('.tsx')).length;
-  }
-
-  /**
-   * تحويل المسار إلى مسار نسبي
-   */
   private static relativePath(file: string): string {
     return path.relative(process.cwd(), file);
   }

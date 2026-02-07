@@ -1,9 +1,3 @@
-// ===============================================
-// 🔹 Monitoring & Performance API Routes
-// ===============================================
-// توفير endpoints لمراقبة الأداء والصحة
-// ===============================================
-
 import { Router } from 'express';
 import { PerformanceMonitor } from '../middleware/performance-monitor';
 import { DatabaseMonitor } from '../middleware/database-monitor';
@@ -15,7 +9,44 @@ import { desc, gte } from 'drizzle-orm';
 
 const router = Router();
 
-// 📊 تقرير الأداء الشامل
+router.get('/api/monitoring/diagnostics', async (req, res) => {
+  try {
+    const diagnostics = MemoryMonitor.getFullDiagnostics();
+    const apiPerformance = await PerformanceMonitor.getPerformanceReport();
+    const databaseStats = DatabaseMonitor.getQueryStats();
+    const slowQueries = DatabaseMonitor.getSlowQueries(20);
+    const queryPatterns = await DatabaseMonitor.analyzeQueryPatterns();
+
+    const minutes = parseInt(req.query.minutes as string) || 30;
+    const history = MemoryMonitor.getMemoryHistory(minutes);
+
+    const overallStatus = calculateOverallStatus(diagnostics, apiPerformance);
+
+    res.json({
+      timestamp: new Date(),
+      overallStatus,
+      ...diagnostics,
+      api: apiPerformance,
+      database: {
+        ...databaseStats,
+        slowQueries: slowQueries.slice(0, 10),
+        patterns: queryPatterns.slice(0, 10),
+      },
+      memoryHistory: history.map(h => ({
+        timestamp: h.timestamp,
+        heapUsedMB: +(h.heapUsed / 1024 / 1024).toFixed(2),
+        rssMB: +(h.rss / 1024 / 1024).toFixed(2),
+        externalMB: +(h.external / 1024 / 1024).toFixed(2),
+        eventLoopLag: +h.eventLoopLag.toFixed(2),
+        cpuUsage: +h.cpuUsage.toFixed(1),
+      })),
+    });
+  } catch (error) {
+    console.error('Error generating diagnostics:', error);
+    res.status(500).json({ error: 'Failed to generate diagnostics' });
+  }
+});
+
 router.get('/api/monitoring/performance-report', async (req, res) => {
   try {
     const apiPerformance = await PerformanceMonitor.getPerformanceReport();
@@ -41,7 +72,6 @@ router.get('/api/monitoring/performance-report', async (req, res) => {
   }
 });
 
-// 🐌 الاستعلامات البطيئة
 router.get('/api/monitoring/slow-queries', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 50;
@@ -64,7 +94,6 @@ router.get('/api/monitoring/slow-queries', async (req, res) => {
   }
 });
 
-// 🐌 النقاط البطيئة في API
 router.get('/api/monitoring/slow-endpoints', async (req, res) => {
   try {
     const threshold = parseInt(req.query.threshold as string) || 500;
@@ -81,7 +110,6 @@ router.get('/api/monitoring/slow-endpoints', async (req, res) => {
   }
 });
 
-// 💾 إحصائيات الذاكرة
 router.get('/api/monitoring/memory', async (req, res) => {
   try {
     const stats = MemoryMonitor.getMemoryStats();
@@ -102,7 +130,6 @@ router.get('/api/monitoring/memory', async (req, res) => {
   }
 });
 
-// 🗑️ تشغيل Garbage Collection
 router.post('/api/monitoring/gc', async (req, res) => {
   try {
     const result = MemoryMonitor.forceGarbageCollection();
@@ -113,24 +140,19 @@ router.post('/api/monitoring/gc', async (req, res) => {
   }
 });
 
-// 📈 بيانات الأداء من قاعدة البيانات
 router.get('/api/monitoring/metrics', async (req, res) => {
   try {
     const hours = parseInt(req.query.hours as string) || 24;
-    const category = req.query.category as string;
 
     const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-    let query = db
+    const metrics = await db
       .select()
       .from(system_performance_metrics)
       .where(gte(system_performance_metrics.timestamp, cutoff))
       .orderBy(desc(system_performance_metrics.timestamp))
       .limit(1000);
 
-    const metrics = await query;
-
-    // تجميع حسب الفئة
     const byCategory = metrics.reduce((acc, m) => {
       if (!acc[m.metric_category]) {
         acc[m.metric_category] = [];
@@ -151,7 +173,6 @@ router.get('/api/monitoring/metrics', async (req, res) => {
   }
 });
 
-// 🏥 فحص الصحة
 router.get('/api/monitoring/health', async (req, res) => {
   try {
     const memoryStats = MemoryMonitor.getMemoryStats();
@@ -187,23 +208,18 @@ router.get('/api/monitoring/health', async (req, res) => {
   }
 });
 
-// 🔍 فحص صحة الكود
-// Cache full results for 5 minutes to prevent blocking the event loop
-// The cache is automatically evicted after expiry
 let codeHealthCache: { report: any; timestamp: number } | null = null;
-const CODE_HEALTH_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CODE_HEALTH_CACHE_DURATION = 5 * 60 * 1000;
 
 router.get('/api/monitoring/code-health', async (req, res) => {
   try {
     const now = Date.now();
     const forceRefresh = req.query.force === 'true';
     
-    // Evict expired cache
     if (codeHealthCache && (now - codeHealthCache.timestamp) >= CODE_HEALTH_CACHE_DURATION) {
       codeHealthCache = null;
     }
     
-    // Return cached result if available
     if (!forceRefresh && codeHealthCache) {
       return res.json({
         ...codeHealthCache.report,
@@ -212,13 +228,10 @@ router.get('/api/monitoring/code-health', async (req, res) => {
       });
     }
     
-    // Run health check
     const fullReport = await CodeHealthChecker.runFullHealthCheck();
     
-    // Store full report in cache (auto-evicted after 5 minutes)
     codeHealthCache = { report: fullReport, timestamp: now };
     
-    // Return full report to client
     res.json({ ...fullReport, cached: false });
   } catch (error) {
     console.error('Error running code health check:', error);
@@ -226,7 +239,25 @@ router.get('/api/monitoring/code-health', async (req, res) => {
   }
 });
 
-// دالة مساعدة لتنسيق وقت التشغيل
+function calculateOverallStatus(diagnostics: any, apiPerformance: any): 'healthy' | 'warning' | 'critical' {
+  const issues: string[] = [];
+
+  if (diagnostics.memory.warnings.length > 0) {
+    const hasCritical = diagnostics.memory.warnings.some((w: string) => w.includes('حرج'));
+    if (hasCritical) return 'critical';
+    issues.push('memory');
+  }
+
+  if (diagnostics.eventLoop.status === 'critical') return 'critical';
+  if (diagnostics.eventLoop.status === 'warning') issues.push('eventloop');
+
+  if ((apiPerformance.slowRequestsPercent || 0) > 30) issues.push('api');
+
+  if (diagnostics.memory.trend.isMemoryLeak) issues.push('leak');
+
+  return issues.length > 1 ? 'warning' : issues.length === 1 ? 'warning' : 'healthy';
+}
+
 function formatUptime(seconds: number): string {
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
