@@ -6,6 +6,7 @@ import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { formatNumberAr } from "../../../shared/number-utils";
 import { apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "../hooks/use-toast";
@@ -16,7 +17,8 @@ import {
   ArrowRight,
   Loader2,
   Info,
-  Clock
+  Clock,
+  AlertCircle
 } from "lucide-react";
 
 interface RollDetails {
@@ -42,6 +44,14 @@ interface ProductionOrderWithRolls {
   printing_cylinder?: string;
 }
 
+interface Machine {
+  id: string;
+  name: string;
+  name_ar: string;
+  section_id: string;
+  status: string;
+}
+
 interface PrintingOperatorDashboardProps {
   hideLayout?: boolean;
 }
@@ -50,17 +60,26 @@ export default function PrintingOperatorDashboard({ hideLayout = false }: Printi
   const { t } = useTranslation();
   const { toast } = useToast();
   const [processingRollIds, setProcessingRollIds] = useState<Set<number>>(new Set());
+  const [selectedMachineId, setSelectedMachineId] = useState<string>("");
 
   const { data: productionOrders = [], isLoading } = useQuery<ProductionOrderWithRolls[]>({
     queryKey: ["/api/rolls/active-for-printing"],
     refetchInterval: 30000,
   });
 
+  const { data: allMachines = [] } = useQuery<Machine[]>({
+    queryKey: ["/api/machines"],
+  });
+
+  const printingMachines = allMachines.filter(
+    (m) => m.section_id === "SEC04" && m.status === "active"
+  );
+
   const moveToPrintingMutation = useMutation({
-    mutationFn: async (rollId: number) => {
+    mutationFn: async ({ rollId, machineId }: { rollId: number; machineId: string }) => {
       return await apiRequest(`/api/rolls/${rollId}`, {
         method: "PATCH",
-        body: JSON.stringify({ stage: "printing" }),
+        body: JSON.stringify({ stage: "printing", printing_machine_id: machineId }),
       });
     },
     onSuccess: () => {
@@ -73,9 +92,17 @@ export default function PrintingOperatorDashboard({ hideLayout = false }: Printi
   });
 
   const handleMoveToPrinting = async (rollId: number) => {
+    if (!selectedMachineId) {
+      toast({
+        title: t('operators.common.error'),
+        description: "يرجى تحديد ماكينة الطباعة أولاً",
+        variant: "destructive",
+      });
+      return;
+    }
     setProcessingRollIds(prev => new Set(prev).add(rollId));
     try {
-      await moveToPrintingMutation.mutateAsync(rollId);
+      await moveToPrintingMutation.mutateAsync({ rollId, machineId: selectedMachineId });
     } finally {
       setProcessingRollIds(prev => {
         const newSet = new Set(prev);
@@ -112,8 +139,48 @@ export default function PrintingOperatorDashboard({ hideLayout = false }: Printi
     );
   }
 
+  const selectedMachine = printingMachines.find(m => m.id === selectedMachineId);
+
   const mainContent = (
     <div className="space-y-6">
+      <Card className="border-2 border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/10">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Printer className="h-5 w-5 text-purple-600" />
+            تحديد ماكينة الطباعة
+          </CardTitle>
+          <CardDescription>اختر الماكينة التي ستعمل عليها قبل بدء الطباعة</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3">
+            <Select value={selectedMachineId} onValueChange={setSelectedMachineId}>
+              <SelectTrigger className="w-full max-w-xs bg-white dark:bg-gray-900">
+                <SelectValue placeholder="اختر ماكينة الطباعة..." />
+              </SelectTrigger>
+              <SelectContent>
+                {printingMachines.map((machine) => (
+                  <SelectItem key={machine.id} value={machine.id}>
+                    {machine.name_ar || machine.name} ({machine.id})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedMachine && (
+              <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 whitespace-nowrap">
+                <CheckCircle2 className="h-3 w-3 ml-1" />
+                {selectedMachine.name_ar || selectedMachine.name}
+              </Badge>
+            )}
+          </div>
+          {!selectedMachineId && (
+            <div className="flex items-center gap-2 mt-3 text-amber-600 dark:text-amber-400 text-sm">
+              <AlertCircle className="h-4 w-4" />
+              <span>يجب تحديد الماكينة قبل البدء بالطباعة</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <Card data-testid="card-active-orders">
               <CardHeader className="pb-3">
@@ -244,9 +311,10 @@ export default function PrintingOperatorDashboard({ hideLayout = false }: Printi
                               
                               <Button
                                 onClick={() => handleMoveToPrinting(roll.roll_id)}
-                                disabled={processingRollIds.has(roll.roll_id)}
+                                disabled={processingRollIds.has(roll.roll_id) || !selectedMachineId}
                                 size="sm"
                                 data-testid={`button-move-to-printing-${roll.roll_id}`}
+                                title={!selectedMachineId ? "يرجى تحديد ماكينة الطباعة أولاً" : ""}
                               >
                                 {processingRollIds.has(roll.roll_id) ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />

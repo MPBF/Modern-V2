@@ -1713,7 +1713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/rolls/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { stage, weight_kg, waste_kg, cut_weight_total_kg } = req.body;
+      const { stage, weight_kg, waste_kg, cut_weight_total_kg, printing_machine_id } = req.body;
 
       // Prepare safe updates object
       const safeUpdates: any = {};
@@ -1727,6 +1727,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (stage === "printing") {
             safeUpdates.printed_by = userId;
             safeUpdates.printed_at = new Date();
+            if (printing_machine_id) {
+              safeUpdates.printing_machine_id = printing_machine_id;
+            }
           } else if (stage === "cutting") {
             safeUpdates.cut_by = userId;
             // Note: cut_completed_at is set only when moving to 'done'
