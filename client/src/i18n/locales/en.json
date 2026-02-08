@@ -2373,17 +2373,6 @@
     "roll": "Roll",
     "demoMode": "Demo Mode",
     "demoModeActive": "Demo Active",
-    "timelapse": "Time-Lapse",
-    "startDate": "Start Date",
-    "endDate": "End Date",
-    "loadHistory": "Load History",
-    "today": "Today",
-    "thisWeek": "This Week",
-    "playback": "Playback",
-    "speed": "Speed",
-    "events": "Events",
-    "eventLog": "Event Log",
-    "noEvents": "No events yet",
     "kg": "kg",
     "hallDimensions": "Production Hall: {{width}}m × {{length}}m | Height: {{minHeight}}m-{{maxHeight}}m | Gate: {{gateWidth}}m",
     "hasPrintingLine": "Attached Printing Line",
@@ -2394,8 +2383,7 @@
     "pallet": "Pallet",
     "type": "Type",
     "position": "Position",
-    "simulationTitle": "3D Production Hall Simulation",
-    "exitTimelapse": "Exit Time-Lapse"
+    "simulationTitle": "3D Production Hall Simulation"
   },
   "factoryFloor": {
     "title": "Factory Floor",

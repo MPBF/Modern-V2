@@ -2371,17 +2371,6 @@
     "roll": "رول",
     "demoMode": "عرض تجريبي",
     "demoModeActive": "وضع العرض",
-    "timelapse": "التسلسل الزمني",
-    "startDate": "تاريخ البداية",
-    "endDate": "تاريخ النهاية",
-    "loadHistory": "تحميل السجل",
-    "today": "اليوم",
-    "thisWeek": "هذا الأسبوع",
-    "playback": "التشغيل",
-    "speed": "السرعة",
-    "events": "أحداث",
-    "eventLog": "سجل الأحداث",
-    "noEvents": "لا توجد أحداث بعد",
     "kg": "كجم",
     "hallDimensions": "صالة الإنتاج: {{width}}م × {{length}}م | الارتفاع: {{minHeight}}م-{{maxHeight}}م | البوابة: {{gateWidth}}م",
     "hasPrintingLine": "خط طباعة ملحق",
@@ -2392,8 +2381,7 @@
     "pallet": "طبلية",
     "type": "النوع",
     "position": "الموقع",
-    "simulationTitle": "محاكاة صالة الإنتاج 3D",
-    "exitTimelapse": "خروج من التسلسل الزمني"
+    "simulationTitle": "محاكاة صالة الإنتاج 3D"
   },
   "factoryFloor": {
     "title": "خريطة المصنع",
