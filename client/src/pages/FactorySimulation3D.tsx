@@ -1,305 +1,67 @@
-import { useState, useRef, useCallback, Suspense, useEffect, useMemo } from 'react';
+import { useState, Suspense } from 'react';
 import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Environment, Html } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, Environment, Html, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { useQuery } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
+
+// UI Components
 import Header from '../components/layout/Header';
 import Sidebar from '../components/layout/Sidebar';
-import MobileShell from '../components/layout/MobileShell';
 import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
-import { ScrollArea } from '../components/ui/scroll-area';
-import { Slider } from '../components/ui/slider';
+import { Card, CardContent } from '../components/ui/card';
 import { 
-  RotateCcw, 
-  Save, 
-  Eye, 
-  Layers, 
-  Factory,
-  ChevronLeft,
-  ChevronRight,
-  ZoomIn,
-  ZoomOut,
-  Home,
-  Plus,
-  Trash2,
-  X,
-  Activity,
-  Clock,
-  Package,
-  Printer,
-  Scissors,
-  RefreshCw,
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
-  History,
-  FastForward,
-  Calendar
+  Eye, Layers, Plus, Trash2 
 } from 'lucide-react';
 
+// --- الثوابت ---
 const HALL_WIDTH = 20;
 const HALL_LENGTH = 50;
-const HALL_SIDE_HEIGHT = 6;
-const HALL_CENTER_HEIGHT = 8;
-const GATE_WIDTH = 9;
 
 interface Machine {
   id: string;
-  name: string;
   nameAr: string;
-  customName?: string;
-  linkedMachineId?: string;
-  type: 'film' | 'printing' | 'mixer' | 'cutting' | 'compressor' | 'transformer' | 'cylinder_rack' | 'pallet';
+  type: 'film' | 'printing' | 'cutting' | 'mixer' | 'pallet';
   color: string;
   position: [number, number, number];
   size: [number, number, number];
-  scale?: number;
+  customName?: string;
   rotation?: number;
-  hasPrintingLine?: boolean;
 }
 
 interface ActiveRoll {
   id: number;
   roll_number: string;
   stage: 'film' | 'printing' | 'cutting';
+  roll_color: string;
   weight_kg: string;
-  cut_weight_total_kg?: string;
   film_machine_id: string;
-  printing_machine_id: string | null;
-  cutting_machine_id: string | null;
-  printed_at: string | null;
-  cut_completed_at: string | null;
-  created_at: string;
-  production_order_id?: number;
-  production_order_number: string;
-  master_batch_id: string | null;
-  roll_color: string;
-  color_name: string;
-  customer_name: string;
 }
 
-interface CuttingBundle {
-  production_order_id: number;
-  production_order_number: string;
-  customer_name: string;
-  roll_color: string;
-  color_name: string;
-  cutting_machine_id: string | null;
-  total_weight_kg: number;
-  roll_count: number;
-  rolls: ActiveRoll[];
-}
-
-interface MachineStats {
-  machine: any;
-  todayStats: {
-    rolls_count: string;
-    total_weight_kg: string;
-    film_rolls: string;
-    printing_rolls: string;
-    cutting_rolls: string;
-    completed_rolls: string;
-  };
-  recentRolls: any[];
-}
-
-interface HistoryEvent {
-  type: 'created' | 'film_completed' | 'printed' | 'cut';
-  timestamp: string;
-  roll?: {
-    id: number;
-    roll_number: string;
-    stage: string;
-    weight_kg: string;
-    film_machine_id: string;
-    roll_color: string;
-    color_name: string;
-    customer_name: string;
-    production_order_number: string;
-  };
-  rollId?: number;
-  roll_number?: string;
-  printing_machine_id?: string;
-  cutting_machine_id?: string;
-}
-
-interface HistoryResponse {
-  startDate: string;
-  endDate: string;
-  totalRolls: number;
-  events: HistoryEvent[];
-}
-
-const equipmentTemplates: Omit<Machine, 'id' | 'position'>[] = [
-  { name: 'Film Machine', nameAr: 'ماكينة فيلم (اكسترودر)', type: 'film', color: '#2563eb', size: [3, 4, 5], hasPrintingLine: false },
-  { name: 'Printing Machine', nameAr: 'ماكينة طباعة', type: 'printing', color: '#059669', size: [6, 2, 2] },
-  { name: 'Cutting Machine', nameAr: 'ماكينة قطع', type: 'cutting', color: '#f59e0b', size: [5, 1.8, 2] },
-  { name: 'Mixer', nameAr: 'خلاط', type: 'mixer', color: '#dc2626', size: [2.5, 3, 2.5] },
-  { name: 'Air Compressor', nameAr: 'كمبريسور هواء', type: 'compressor', color: '#0d9488', size: [2, 1.5, 1.5] },
-  { name: 'Transformer', nameAr: 'محول كهربائي', type: 'transformer', color: '#7c3aed', size: [1.5, 2, 1.5] },
-  { name: 'Cylinder Rack', nameAr: 'سلم سلندرات', type: 'cylinder_rack', color: '#ea580c', size: [3, 2.5, 1] },
-  { name: 'Pallet', nameAr: 'طبلية', type: 'pallet', color: '#854d0e', size: [1.2, 0.15, 1] },
-];
-
-const demoRolls: ActiveRoll[] = [
-  { id: 9001, roll_number: 'R-DEMO-001', stage: 'film', weight_kg: '45.5', film_machine_id: 'MAC01', printing_machine_id: null, cutting_machine_id: null, printed_at: null, cut_completed_at: null, created_at: new Date().toISOString(), production_order_id: 101, production_order_number: 'PO-2026-001', master_batch_id: null, roll_color: '#3b82f6', color_name: 'أزرق', customer_name: 'شركة الأمل' },
-  { id: 9002, roll_number: 'R-DEMO-002', stage: 'film', weight_kg: '52.3', film_machine_id: 'MAC01', printing_machine_id: null, cutting_machine_id: null, printed_at: null, cut_completed_at: null, created_at: new Date().toISOString(), production_order_id: 101, production_order_number: 'PO-2026-001', master_batch_id: null, roll_color: '#3b82f6', color_name: 'أزرق', customer_name: 'شركة الأمل' },
-  { id: 9003, roll_number: 'R-DEMO-003', stage: 'film', weight_kg: '38.7', film_machine_id: 'MAC03', printing_machine_id: null, cutting_machine_id: null, printed_at: null, cut_completed_at: null, created_at: new Date().toISOString(), production_order_id: 102, production_order_number: 'PO-2026-002', master_batch_id: null, roll_color: '#ef4444', color_name: 'أحمر', customer_name: 'مؤسسة النور' },
-  { id: 9004, roll_number: 'R-DEMO-004', stage: 'film', weight_kg: '60.1', film_machine_id: 'MAC08', printing_machine_id: null, cutting_machine_id: null, printed_at: null, cut_completed_at: null, created_at: new Date().toISOString(), production_order_id: 103, production_order_number: 'PO-2026-003', master_batch_id: null, roll_color: '#22c55e', color_name: 'أخضر', customer_name: 'مصنع الرياض' },
-  { id: 9005, roll_number: 'R-DEMO-005', stage: 'printing', weight_kg: '48.2', film_machine_id: 'MAC01', printing_machine_id: 'MAC11', cutting_machine_id: null, printed_at: new Date().toISOString(), cut_completed_at: null, created_at: new Date(Date.now() - 3600000).toISOString(), production_order_id: 101, production_order_number: 'PO-2026-001', master_batch_id: null, roll_color: '#3b82f6', color_name: 'أزرق', customer_name: 'شركة الأمل' },
-  { id: 9006, roll_number: 'R-DEMO-006', stage: 'printing', weight_kg: '55.0', film_machine_id: 'MAC03', printing_machine_id: 'MAC12', cutting_machine_id: null, printed_at: new Date().toISOString(), cut_completed_at: null, created_at: new Date(Date.now() - 3600000).toISOString(), production_order_id: 102, production_order_number: 'PO-2026-002', master_batch_id: null, roll_color: '#ef4444', color_name: 'أحمر', customer_name: 'مؤسسة النور' },
-  { id: 9007, roll_number: 'R-DEMO-007', stage: 'printing', weight_kg: '42.8', film_machine_id: 'MAC08', printing_machine_id: 'MAC13', cutting_machine_id: null, printed_at: new Date().toISOString(), cut_completed_at: null, created_at: new Date(Date.now() - 7200000).toISOString(), production_order_id: 103, production_order_number: 'PO-2026-003', master_batch_id: null, roll_color: '#f59e0b', color_name: 'أصفر', customer_name: 'مصنع الرياض' },
-  { id: 9008, roll_number: 'R-DEMO-008', stage: 'cutting', weight_kg: '50.0', cut_weight_total_kg: '48.5', film_machine_id: 'MAC01', printing_machine_id: 'MAC11', cutting_machine_id: 'MAC17', printed_at: new Date(Date.now() - 7200000).toISOString(), cut_completed_at: null, created_at: new Date(Date.now() - 14400000).toISOString(), production_order_id: 101, production_order_number: 'PO-2026-001', master_batch_id: null, roll_color: '#3b82f6', color_name: 'أزرق', customer_name: 'شركة الأمل' },
-  { id: 9009, roll_number: 'R-DEMO-009', stage: 'cutting', weight_kg: '47.3', cut_weight_total_kg: '45.8', film_machine_id: 'MAC01', printing_machine_id: 'MAC11', cutting_machine_id: 'MAC17', printed_at: new Date(Date.now() - 7200000).toISOString(), cut_completed_at: null, created_at: new Date(Date.now() - 14400000).toISOString(), production_order_id: 101, production_order_number: 'PO-2026-001', master_batch_id: null, roll_color: '#3b82f6', color_name: 'أزرق', customer_name: 'شركة الأمل' },
-  { id: 9010, roll_number: 'R-DEMO-010', stage: 'cutting', weight_kg: '53.6', cut_weight_total_kg: '52.1', film_machine_id: 'MAC03', printing_machine_id: 'MAC12', cutting_machine_id: 'MAC18', printed_at: new Date(Date.now() - 7200000).toISOString(), cut_completed_at: null, created_at: new Date(Date.now() - 14400000).toISOString(), production_order_id: 102, production_order_number: 'PO-2026-002', master_batch_id: null, roll_color: '#ef4444', color_name: 'أحمر', customer_name: 'مؤسسة النور' },
-];
-
-const initialMachines: Machine[] = [
-  { id: 'film-c', name: 'Film C', nameAr: 'ماكينة فيلم C', type: 'film', color: '#2563eb', position: [-7, 0, -18], size: [3, 4, 5], hasPrintingLine: true },
-  { id: 'film-h', name: 'Film H', nameAr: 'ماكينة فيلم H', type: 'film', color: '#7c3aed', position: [7, 0, -18], size: [3, 4, 5], hasPrintingLine: true },
-  { id: 'film-g', name: 'Film G', nameAr: 'ماكينة فيلم G', type: 'film', color: '#7c3aed', position: [7, 0, -12], size: [3, 4, 5], hasPrintingLine: true },
-  { id: 'mixer-500', name: 'Mixer 500kg', nameAr: 'خلاط 500 كيلو', type: 'mixer', color: '#dc2626', position: [-7, 0, -10], size: [2.5, 3, 2.5] },
-  { id: 'film-d', name: 'Film D', nameAr: 'ماكينة فيلم D', type: 'film', color: '#0891b2', position: [7, 0, -4], size: [3, 4, 5] },
-  { id: 'film-b', name: 'Film B', nameAr: 'ماكينة فيلم B', type: 'film', color: '#0891b2', position: [7, 0, 2], size: [3, 4, 5] },
-  { id: 'film-a', name: 'Film A', nameAr: 'ماكينة فيلم A', type: 'film', color: '#0891b2', position: [7, 0, 8], size: [3, 4, 5] },
-  { id: 'printing-a', name: 'Printing A', nameAr: 'ماكينة طباعة A', type: 'printing', color: '#059669', position: [-7, 0, 0], size: [4, 3, 3] },
-  { id: 'printing-b', name: 'Printing B', nameAr: 'ماكينة طباعة B', type: 'printing', color: '#059669', position: [-7, 0, 5], size: [4, 3, 3] },
-  { id: 'printing-c', name: 'Printing C', nameAr: 'ماكينة طباعة C', type: 'printing', color: '#059669', position: [-7, 0, 10], size: [4, 3, 3] },
-];
-
-function ProductionHall({ hideRoof = false }: { hideRoof?: boolean }) {
-  const width = HALL_WIDTH;
-  const length = HALL_LENGTH;
-  const sideHeight = HALL_SIDE_HEIGHT;
-  const centerHeight = HALL_CENTER_HEIGHT;
-  const gateWidth = GATE_WIDTH;
-  const wallThickness = 0.3;
-  
-  return (
-    <group>
-      <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[width, length]} />
-        <meshStandardMaterial color="#e5e7eb" roughness={0.8} />
-      </mesh>
-
-      <mesh position={[-width/2 + wallThickness/2, sideHeight/2, 0]} castShadow receiveShadow>
-        <boxGeometry args={[wallThickness, sideHeight, length]} />
-        <meshStandardMaterial color="#94a3b8" roughness={0.5} />
-      </mesh>
-      
-      <mesh position={[width/2 - wallThickness/2, sideHeight/2, 0]} castShadow receiveShadow>
-        <boxGeometry args={[wallThickness, sideHeight, length]} />
-        <meshStandardMaterial color="#94a3b8" roughness={0.5} />
-      </mesh>
-
-      <mesh position={[-(gateWidth/2 + (width/2 - gateWidth/2)/2), sideHeight/2, -length/2 + wallThickness/2]} castShadow receiveShadow>
-        <boxGeometry args={[(width - gateWidth)/2, sideHeight, wallThickness]} />
-        <meshStandardMaterial color="#94a3b8" roughness={0.5} />
-      </mesh>
-      
-      <mesh position={[(gateWidth/2 + (width/2 - gateWidth/2)/2), sideHeight/2, -length/2 + wallThickness/2]} castShadow receiveShadow>
-        <boxGeometry args={[(width - gateWidth)/2, sideHeight, wallThickness]} />
-        <meshStandardMaterial color="#94a3b8" roughness={0.5} />
-      </mesh>
-
-      <mesh position={[0, sideHeight/2, length/2 - wallThickness/2]} castShadow receiveShadow>
-        <boxGeometry args={[width, sideHeight, wallThickness]} />
-        <meshStandardMaterial color="#94a3b8" roughness={0.5} />
-      </mesh>
-
-      <mesh position={[0, sideHeight + 0.75, -length/2 + wallThickness/2]}>
-        <boxGeometry args={[gateWidth, 1.5, wallThickness]} />
-        <meshStandardMaterial color="#64748b" />
-      </mesh>
-
-      {!hideRoof && <RoofStructure width={width} length={length} sideHeight={sideHeight} centerHeight={centerHeight} />}
-
-      <mesh position={[0, sideHeight + 0.05, -length/2 + 2]}>
-        <boxGeometry args={[gateWidth - 0.5, 0.1, 0.1]} />
-        <meshStandardMaterial color="#1e3a8a" />
-      </mesh>
-    </group>
-  );
-}
-
-function RoofStructure({ width, length, sideHeight, centerHeight }: { width: number; length: number; sideHeight: number; centerHeight: number }) {
-  const roofAngle = Math.atan((centerHeight - sideHeight) / (width / 2));
-  const roofLength = (width / 2) / Math.cos(roofAngle);
-  
-  return (
-    <group>
-      <mesh 
-        position={[-width/4, sideHeight + (centerHeight - sideHeight)/2, 0]} 
-        rotation={[0, 0, roofAngle]}
-      >
-        <boxGeometry args={[roofLength, 0.15, length]} />
-        <meshStandardMaterial color="#475569" metalness={0.6} roughness={0.4} />
-      </mesh>
-      
-      <mesh 
-        position={[width/4, sideHeight + (centerHeight - sideHeight)/2, 0]} 
-        rotation={[0, 0, -roofAngle]}
-      >
-        <boxGeometry args={[roofLength, 0.15, length]} />
-        <meshStandardMaterial color="#475569" metalness={0.6} roughness={0.4} />
-      </mesh>
-
-      {[-20, -10, 0, 10, 20].map((z, i) => (
-        <group key={i} position={[0, 0, z]}>
-          <mesh position={[0, centerHeight - 0.5, 0]}>
-            <boxGeometry args={[width - 1, 0.3, 0.15]} />
-            <meshStandardMaterial color="#374151" />
-          </mesh>
-          <mesh position={[-width/4, sideHeight + (centerHeight - sideHeight)/4, 0]} rotation={[0, 0, roofAngle]}>
-            <boxGeometry args={[roofLength * 0.9, 0.15, 0.15]} />
-            <meshStandardMaterial color="#374151" />
-          </mesh>
-          <mesh position={[width/4, sideHeight + (centerHeight - sideHeight)/4, 0]} rotation={[0, 0, -roofAngle]}>
-            <boxGeometry args={[roofLength * 0.9, 0.15, 0.15]} />
-            <meshStandardMaterial color="#374151" />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  );
-}
-
+// --- Hook للسحب والإفلات ---
 function useDraggable(
-  machine: Machine,
+  id: string,
   isSelected: boolean,
-  onSelect: () => void,
-  onDrag: (newPosition: [number, number, number]) => void,
-  onDragStart: () => void,
-  onDragEnd: () => void
+  onDrag: (id: string, pos: [number, number, number]) => void
 ) {
   const [isDragging, setIsDragging] = useState(false);
   const { camera, gl } = useThree();
 
-  const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => {
+  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
+    if (!isSelected) return;
     e.stopPropagation();
-    onSelect();
     setIsDragging(true);
-    onDragStart();
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-    gl.domElement.style.cursor = 'grabbing';
-  }, [onSelect, onDragStart, gl.domElement.style]);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
 
-  const handlePointerUp = useCallback((e: ThreeEvent<PointerEvent>) => {
+  const handlePointerUp = (e: ThreeEvent<PointerEvent>) => {
     setIsDragging(false);
-    onDragEnd();
-    (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
-    gl.domElement.style.cursor = 'auto';
-  }, [onDragEnd, gl.domElement.style]);
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+  };
 
-  const handlePointerMove = useCallback((e: ThreeEvent<PointerEvent>) => {
-    if (!isDragging || !isSelected) return;
+  const handlePointerMove = (e: ThreeEvent<PointerEvent>) => {
+    if (!isDragging) return;
     e.stopPropagation();
-    
+
     const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2(
@@ -307,1835 +69,195 @@ function useDraggable(
       -(e.nativeEvent.clientY / gl.domElement.clientHeight) * 2 + 1
     );
     raycaster.setFromCamera(mouse, camera);
-    
     const intersectPoint = new THREE.Vector3();
-    raycaster.ray.intersectPlane(plane, intersectPoint);
-    
-    if (intersectPoint) {
-      const maxX = HALL_WIDTH / 2 - machine.size[0] / 2 - 1;
-      const maxZ = HALL_LENGTH / 2 - machine.size[2] / 2 - 1;
-      const clampedX = Math.max(-maxX, Math.min(maxX, intersectPoint.x));
-      const clampedZ = Math.max(-maxZ, Math.min(maxZ, intersectPoint.z));
-      onDrag([clampedX, 0, clampedZ]);
+    if (raycaster.ray.intersectPlane(plane, intersectPoint)) {
+      onDrag(id, [intersectPoint.x, 0, intersectPoint.z]);
     }
-  }, [isDragging, isSelected, camera, gl.domElement, machine.size, onDrag]);
+  };
 
   return { handlePointerDown, handlePointerUp, handlePointerMove, isDragging };
 }
 
-function FilmMachine({ machine, isSelected, onSelect, onDrag, onDragStart, onDragEnd }: { 
-  machine: Machine; 
-  isSelected: boolean;
-  onSelect: () => void;
-  onDrag: (newPosition: [number, number, number]) => void;
-  onDragStart: () => void;
-  onDragEnd: () => void;
-}) {
-  const groupRef = useRef<THREE.Group>(null);
-  const { handlePointerDown, handlePointerUp, handlePointerMove } = useDraggable(
-    machine, isSelected, onSelect, onDrag, onDragStart, onDragEnd
-  );
+// --- المجسمات ---
 
-  const towerHeight = 5;
-  
-  const rotationY = ((machine.rotation || 0) * Math.PI) / 180;
-  const scale = machine.scale || 1;
-  const displayName = machine.customName || machine.nameAr;
-  
+function ProfessionalFilmMachine({ machine, isSelected }: { machine: Machine; isSelected: boolean }) {
+  const towerHeight = 5.5;
   return (
-    <group 
-      ref={groupRef}
-      position={machine.position}
-      rotation={[0, rotationY, 0]}
-      scale={[scale, scale, scale]}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerMove={handlePointerMove}
-    >
-      <mesh position={[0, 0.8, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[0.5, 0.6, 2.5, 16]} />
-        <meshStandardMaterial 
-          color={machine.color} 
-          emissive={isSelected ? machine.color : '#000000'}
-          emissiveIntensity={isSelected ? 0.3 : 0}
-          roughness={0.3}
-          metalness={0.7}
-        />
+    <group rotation={[0, (machine.rotation || 0) * Math.PI / 180, 0]}>
+      <mesh castShadow position={[1.2, 0.5, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.35, 0.35, 2, 20]} />
+        <meshStandardMaterial color="#334155" metalness={0.8} />
       </mesh>
-      
-      <mesh position={[1.5, 0.5, 0]} castShadow>
-        <boxGeometry args={[0.8, 1, 1.2]} />
-        <meshStandardMaterial color="#374151" metalness={0.6} roughness={0.4} />
+      <mesh castShadow position={[1.8, 1.3, 0]}>
+        <cylinderGeometry args={[0.4, 0.15, 0.7, 16]} />
+        <meshStandardMaterial color="#fbbf24" />
       </mesh>
-      
-      <mesh position={[-1.8, 0.6, 0]} castShadow>
-        <boxGeometry args={[1, 1.2, 1.4]} />
-        <meshStandardMaterial color="#1f2937" metalness={0.5} roughness={0.5} />
-      </mesh>
-
-      <mesh position={[0, towerHeight / 2 + 0.5, 0.8]} castShadow>
-        <boxGeometry args={[0.3, towerHeight, 0.3]} />
-        <meshStandardMaterial color="#64748b" metalness={0.8} roughness={0.2} />
-      </mesh>
-      <mesh position={[0, towerHeight / 2 + 0.5, -0.8]} castShadow>
-        <boxGeometry args={[0.3, towerHeight, 0.3]} />
-        <meshStandardMaterial color="#64748b" metalness={0.8} roughness={0.2} />
-      </mesh>
-      
-      <mesh position={[0, towerHeight + 0.5, 0]} castShadow>
-        <boxGeometry args={[1.5, 0.4, 2]} />
-        <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.3} />
-      </mesh>
-      
-      <mesh position={[0, towerHeight + 1.2, 0]} castShadow>
-        <cylinderGeometry args={[0.4, 0.4, 1.2, 16]} />
-        <meshStandardMaterial color={machine.color} metalness={0.6} roughness={0.3} />
-      </mesh>
-      
-      <mesh position={[0, towerHeight + 2.2, 0]}>
-        <sphereGeometry args={[0.5, 16, 16]} />
-        <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.3} />
-      </mesh>
-
-      {machine.hasPrintingLine && (
-        <group position={[-3.5, 0, 0]}>
-          <mesh position={[0, 1, 0]} castShadow>
-            <boxGeometry args={[2, 2, 2.5]} />
-            <meshStandardMaterial color="#059669" roughness={0.5} metalness={0.4} />
-          </mesh>
-          {[0.6, 0, -0.6].map((z, i) => (
-            <mesh key={i} position={[1.2, 1, z]} rotation={[0, 0, Math.PI/2]}>
-              <cylinderGeometry args={[0.15, 0.15, 0.4, 16]} />
-              <meshStandardMaterial color="#1f2937" metalness={0.8} />
-            </mesh>
-          ))}
-        </group>
-      )}
-
-      {isSelected && (
-        <mesh position={[0, 0.05, 0]} rotation={[-Math.PI/2, 0, 0]}>
-          <ringGeometry args={[3, 3.3, 32]} />
-          <meshBasicMaterial color="#fbbf24" transparent opacity={0.8} />
-        </mesh>
-      )}
-
-      <Html position={[0, towerHeight + 3, 0]} center>
-        <div className="bg-black/80 text-white px-2 py-1 rounded text-xs whitespace-nowrap font-bold">
-          {displayName}
-        </div>
-      </Html>
-    </group>
-  );
-}
-
-function PrintingMachine({ machine, isSelected, onSelect, onDrag, onDragStart, onDragEnd }: { 
-  machine: Machine; 
-  isSelected: boolean;
-  onSelect: () => void;
-  onDrag: (newPosition: [number, number, number]) => void;
-  onDragStart: () => void;
-  onDragEnd: () => void;
-}) {
-  const groupRef = useRef<THREE.Group>(null);
-  const { handlePointerDown, handlePointerUp, handlePointerMove } = useDraggable(
-    machine, isSelected, onSelect, onDrag, onDragStart, onDragEnd
-  );
-
-  const rotationY = ((machine.rotation || 0) * Math.PI) / 180;
-  const scale = machine.scale || 1;
-  const displayName = machine.customName || machine.nameAr;
-
-  return (
-    <group 
-      ref={groupRef}
-      position={machine.position}
-      rotation={[0, rotationY, 0]}
-      scale={[scale, scale, scale]}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerMove={handlePointerMove}
-    >
-      <mesh position={[0, 1, 0]} castShadow>
-        <boxGeometry args={[machine.size[0], machine.size[1], machine.size[2]]} />
-        <meshStandardMaterial 
-          color={machine.color} 
-          emissive={isSelected ? machine.color : '#000000'}
-          emissiveIntensity={isSelected ? 0.3 : 0}
-          roughness={0.4}
-          metalness={0.5}
-        />
-      </mesh>
-
-      {[-1.5, -0.5, 0.5, 1.5].map((offset, i) => (
-        <mesh key={i} position={[offset, 1.8, machine.size[2]/2 + 0.2]} rotation={[Math.PI/2, 0, 0]}>
-          <cylinderGeometry args={[0.25, 0.25, 0.4, 16]} />
-          <meshStandardMaterial color="#1f2937" metalness={0.8} />
+      {[[-0.8, -0.8], [-0.8, 0.8], [0.8, -0.8], [0.8, 0.8]].map((pos, i) => (
+        <mesh key={i} position={[pos[0], towerHeight / 2, pos[1]]}>
+          <boxGeometry args={[0.1, towerHeight, 0.1]} />
+          <meshStandardMaterial color="#64748b" />
         </mesh>
       ))}
-
-      <mesh position={[-machine.size[0]/2 - 0.6, 1, 0]}>
-        <boxGeometry args={[1, 1.5, 1.8]} />
-        <meshStandardMaterial color="#1f2937" metalness={0.6} />
-      </mesh>
-      
-      <mesh position={[machine.size[0]/2 + 0.6, 1, 0]}>
-        <boxGeometry args={[1, 1.5, 1.8]} />
-        <meshStandardMaterial color="#1f2937" metalness={0.6} />
-      </mesh>
-
-      <mesh position={[0, machine.size[1] + 0.3, 0]}>
-        <boxGeometry args={[0.8, 0.3, 0.8]} />
-        <meshStandardMaterial color="#3b82f6" emissive="#3b82f6" emissiveIntensity={0.2} />
-      </mesh>
-
       {isSelected && (
-        <mesh position={[0, 0.05, 0]} rotation={[-Math.PI/2, 0, 0]}>
-          <ringGeometry args={[Math.max(machine.size[0], machine.size[2]) * 0.6, Math.max(machine.size[0], machine.size[2]) * 0.7, 32]} />
-          <meshBasicMaterial color="#fbbf24" transparent opacity={0.8} />
+        <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[2.8, 3, 32]} />
+          <meshBasicMaterial color="#fbbf24" />
         </mesh>
       )}
-
-      <Html position={[0, machine.size[1] + 1.5, 0]} center>
-        <div className="bg-black/80 text-white px-2 py-1 rounded text-xs whitespace-nowrap font-bold">
-          {displayName}
-        </div>
-      </Html>
     </group>
   );
 }
 
-function CuttingMachine({ machine, isSelected, onSelect, onDrag, onDragStart, onDragEnd }: { 
-  machine: Machine; 
-  isSelected: boolean;
-  onSelect: () => void;
-  onDrag: (newPosition: [number, number, number]) => void;
-  onDragStart: () => void;
-  onDragEnd: () => void;
-}) {
-  const groupRef = useRef<THREE.Group>(null);
-  const { handlePointerDown, handlePointerUp, handlePointerMove } = useDraggable(
-    machine, isSelected, onSelect, onDrag, onDragStart, onDragEnd
-  );
-
-  const rotationY = ((machine.rotation || 0) * Math.PI) / 180;
-  const scale = machine.scale || 1;
-  const displayName = machine.customName || machine.nameAr;
-
+function ProfessionalMixer({ machine, isSelected }: { machine: Machine; isSelected: boolean }) {
   return (
-    <group 
-      ref={groupRef}
-      position={machine.position}
-      rotation={[0, rotationY, 0]}
-      scale={[scale, scale, scale]}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerMove={handlePointerMove}
-    >
-      <mesh position={[0, 0.9, 0]} castShadow>
-        <boxGeometry args={[machine.size[0], machine.size[1], machine.size[2]]} />
-        <meshStandardMaterial 
-          color={machine.color} 
-          emissive={isSelected ? machine.color : '#000000'}
-          emissiveIntensity={isSelected ? 0.3 : 0}
-          roughness={0.4}
-          metalness={0.5}
-        />
+    <group rotation={[0, (machine.rotation || 0) * Math.PI / 180, 0]}>
+      <mesh castShadow position={[0, 2, 0]}>
+        <cylinderGeometry args={[1, 0.8, 2.5, 16]} />
+        <meshStandardMaterial color={machine.color} metalness={0.6} />
       </mesh>
-
-      <mesh position={[-machine.size[0]/2 + 0.5, 1.5, 0]} rotation={[Math.PI/2, 0, 0]}>
-        <cylinderGeometry args={[0.4, 0.4, machine.size[2] - 0.4, 16]} />
-        <meshStandardMaterial color="#64748b" metalness={0.7} />
+      <mesh castShadow position={[0, 0.4, 0]}>
+        <boxGeometry args={[1.5, 0.8, 1.5]} />
+        <meshStandardMaterial color="#334155" />
       </mesh>
-      <mesh position={[machine.size[0]/2 - 0.5, 1.5, 0]} rotation={[Math.PI/2, 0, 0]}>
-        <cylinderGeometry args={[0.4, 0.4, machine.size[2] - 0.4, 16]} />
-        <meshStandardMaterial color="#64748b" metalness={0.7} />
-      </mesh>
-
-      <mesh position={[0, machine.size[1] + 0.3, 0]}>
-        <boxGeometry args={[machine.size[0] * 0.8, 0.1, 0.1]} />
-        <meshStandardMaterial color="#dc2626" emissive="#dc2626" emissiveIntensity={0.3} />
-      </mesh>
-
-      <mesh position={[-machine.size[0]/2 - 0.4, 0.8, 0]}>
-        <boxGeometry args={[0.6, 1.6, 1.2]} />
-        <meshStandardMaterial color="#1f2937" metalness={0.6} />
-      </mesh>
-      <mesh position={[machine.size[0]/2 + 0.4, 0.8, 0]}>
-        <boxGeometry args={[0.6, 1.6, 1.2]} />
-        <meshStandardMaterial color="#1f2937" metalness={0.6} />
-      </mesh>
-
       {isSelected && (
-        <mesh position={[0, 0.05, 0]} rotation={[-Math.PI/2, 0, 0]}>
-          <ringGeometry args={[Math.max(machine.size[0], machine.size[2]) * 0.5, Math.max(machine.size[0], machine.size[2]) * 0.6, 32]} />
-          <meshBasicMaterial color="#fbbf24" transparent opacity={0.8} />
+        <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[2, 2.2, 32]} />
+          <meshBasicMaterial color="#fbbf24" />
         </mesh>
       )}
-
-      <Html position={[0, machine.size[1] + 1, 0]} center>
-        <div className="bg-black/80 text-white px-2 py-1 rounded text-xs whitespace-nowrap font-bold">
-          {displayName}
-        </div>
-      </Html>
     </group>
   );
 }
 
-function MixerMachine({ machine, isSelected, onSelect, onDrag, onDragStart, onDragEnd }: { 
-  machine: Machine; 
-  isSelected: boolean;
-  onSelect: () => void;
-  onDrag: (newPosition: [number, number, number]) => void;
-  onDragStart: () => void;
-  onDragEnd: () => void;
-}) {
-  const groupRef = useRef<THREE.Group>(null);
-  const { handlePointerDown, handlePointerUp, handlePointerMove } = useDraggable(
-    machine, isSelected, onSelect, onDrag, onDragStart, onDragEnd
-  );
-
-  const rotationY = ((machine.rotation || 0) * Math.PI) / 180;
-  const scale = machine.scale || 1;
-  const displayName = machine.customName || machine.nameAr;
-
+function WoodenPallet({ machine, isSelected }: { machine: Machine; isSelected: boolean }) {
   return (
-    <group 
-      ref={groupRef}
-      position={machine.position}
-      rotation={[0, rotationY, 0]}
-      scale={[scale, scale, scale]}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerMove={handlePointerMove}
-    >
-      <mesh position={[0, machine.size[1]/2 + 0.5, 0]} castShadow>
-        <cylinderGeometry args={[machine.size[0]/2, machine.size[0]/2 * 0.8, machine.size[1], 16]} />
-        <meshStandardMaterial 
-          color={machine.color} 
-          emissive={isSelected ? machine.color : '#000000'}
-          emissiveIntensity={isSelected ? 0.3 : 0}
-          roughness={0.3}
-          metalness={0.7}
-        />
-      </mesh>
-
-      <mesh position={[0, machine.size[1] + 1.2, 0]}>
-        <cylinderGeometry args={[0.2, 0.2, 1, 8]} />
-        <meshStandardMaterial color="#374151" metalness={0.9} />
-      </mesh>
-
-      <mesh position={[0, 0.3, 0]}>
-        <boxGeometry args={[machine.size[0] * 1.2, 0.5, machine.size[2] * 1.2]} />
-        <meshStandardMaterial color="#4b5563" />
-      </mesh>
-
-      {isSelected && (
-        <mesh position={[0, 0.1, 0]} rotation={[-Math.PI/2, 0, 0]}>
-          <ringGeometry args={[machine.size[0] * 0.7, machine.size[0] * 0.85, 32]} />
-          <meshBasicMaterial color="#fbbf24" transparent opacity={0.8} />
-        </mesh>
-      )}
-
-      <Html position={[0, machine.size[1] + 2, 0]} center>
-        <div className="bg-black/80 text-white px-2 py-1 rounded text-xs whitespace-nowrap font-bold">
-          {displayName}
-        </div>
-      </Html>
-    </group>
-  );
-}
-
-function GenericEquipment({ machine, isSelected, onSelect, onDrag, onDragStart, onDragEnd }: {
-  machine: Machine;
-  isSelected: boolean;
-  onSelect: () => void;
-  onDrag: (newPosition: [number, number, number]) => void;
-  onDragStart: () => void;
-  onDragEnd: () => void;
-}) {
-  const groupRef = useRef<THREE.Group>(null);
-  const { handlePointerDown, handlePointerUp, handlePointerMove } = useDraggable(
-    machine, isSelected, onSelect, onDrag, onDragStart, onDragEnd
-  );
-
-  const rotationY = ((machine.rotation || 0) * Math.PI) / 180;
-  const scale = machine.scale || 1;
-  const displayName = machine.customName || machine.nameAr;
-
-  const getEquipmentMesh = () => {
-    switch (machine.type) {
-      case 'compressor':
-        return (
-          <group>
-            <mesh position={[0, machine.size[1]/2, 0]} castShadow>
-              <cylinderGeometry args={[machine.size[0]/2, machine.size[0]/2, machine.size[1], 16]} />
-              <meshStandardMaterial color={machine.color} metalness={0.6} roughness={0.3} />
-            </mesh>
-            <mesh position={[machine.size[0]/2 + 0.2, machine.size[1]/2, 0]}>
-              <boxGeometry args={[0.3, 0.4, 0.3]} />
-              <meshStandardMaterial color="#374151" />
-            </mesh>
-          </group>
-        );
-      case 'transformer':
-        return (
-          <group>
-            <mesh position={[0, machine.size[1]/2, 0]} castShadow>
-              <boxGeometry args={machine.size} />
-              <meshStandardMaterial color={machine.color} metalness={0.5} roughness={0.4} />
-            </mesh>
-            <mesh position={[0, machine.size[1] + 0.2, 0]}>
-              <cylinderGeometry args={[0.15, 0.15, 0.4, 8]} />
-              <meshStandardMaterial color="#1f2937" />
-            </mesh>
-          </group>
-        );
-      case 'cylinder_rack':
-        return (
-          <group>
-            <mesh position={[0, 0.1, 0]} castShadow>
-              <boxGeometry args={[machine.size[0], 0.2, machine.size[2]]} />
-              <meshStandardMaterial color="#374151" />
-            </mesh>
-            {[-0.8, 0, 0.8].map((offset, i) => (
-              <mesh key={i} position={[offset, machine.size[1]/2 + 0.2, 0]}>
-                <boxGeometry args={[0.1, machine.size[1], 0.1]} />
-                <meshStandardMaterial color={machine.color} />
-              </mesh>
-            ))}
-            {[0.5, 1.2, 1.9].map((h, i) => (
-              <mesh key={`shelf-${i}`} position={[0, h, 0]}>
-                <boxGeometry args={[machine.size[0] - 0.2, 0.05, machine.size[2]]} />
-                <meshStandardMaterial color="#6b7280" />
-              </mesh>
-            ))}
-          </group>
-        );
-      case 'pallet':
-        return (
-          <group>
-            <mesh position={[0, machine.size[1]/2, 0]} castShadow>
-              <boxGeometry args={machine.size} />
-              <meshStandardMaterial color={machine.color} roughness={0.9} />
-            </mesh>
-            {[-0.4, 0, 0.4].map((offset, i) => (
-              <mesh key={i} position={[offset, 0.02, 0]}>
-                <boxGeometry args={[0.1, 0.04, machine.size[2]]} />
-                <meshStandardMaterial color="#78350f" />
-              </mesh>
-            ))}
-          </group>
-        );
-      default:
-        return (
-          <mesh position={[0, machine.size[1]/2, 0]} castShadow>
-            <boxGeometry args={machine.size} />
-            <meshStandardMaterial color={machine.color} />
-          </mesh>
-        );
-    }
-  };
-
-  return (
-    <group 
-      ref={groupRef}
-      position={machine.position}
-      rotation={[0, rotationY, 0]}
-      scale={[scale, scale, scale]}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerUp}
-    >
-      {getEquipmentMesh()}
-
-      {isSelected && (
-        <mesh position={[0, 0.1, 0]} rotation={[-Math.PI/2, 0, 0]}>
-          <ringGeometry args={[Math.max(...machine.size) * 0.6, Math.max(...machine.size) * 0.7, 32]} />
-          <meshBasicMaterial color="#fbbf24" transparent opacity={0.8} />
-        </mesh>
-      )}
-
-      <Html position={[0, machine.size[1] + 0.5, 0]} center>
-        <div className="bg-black/80 text-white px-2 py-1 rounded text-xs whitespace-nowrap font-bold">
-          {displayName}
-        </div>
-      </Html>
-    </group>
-  );
-}
-
-function Roll3D({ roll, position, onSelect }: {
-  roll: ActiveRoll;
-  position: [number, number, number];
-  onSelect: () => void;
-}) {
-  const weight = parseFloat(roll.weight_kg) || 10;
-  const radius = Math.min(0.3 + (weight / 100) * 0.3, 0.8);
-  const height = Math.min(0.4 + (weight / 50) * 0.2, 1);
-  const isPrinted = !!roll.printed_at;
-  const isFilm = roll.stage === 'film';
-  const isPrinting = roll.stage === 'printing';
-
-  return (
-    <group position={position} onClick={(e) => { e.stopPropagation(); onSelect(); }}>
-      <mesh castShadow rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[radius, radius, height, 32]} />
-        <meshStandardMaterial 
-          color={roll.roll_color} 
-          roughness={isFilm ? 0.6 : 0.3} 
-          metalness={isFilm ? 0.1 : 0.2}
-          transparent={isFilm}
-          opacity={isFilm ? 0.85 : 1}
-        />
-      </mesh>
-      
-      <mesh castShadow rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[radius * 0.25, radius * 0.25, height + 0.02, 16]} />
-        <meshStandardMaterial color="#4b5563" metalness={0.8} roughness={0.2} />
-      </mesh>
-
-      {isPrinted && (
-        <>
-          <mesh position={[0, 0, radius * 0.7]} rotation={[0, 0, 0]}>
-            <planeGeometry args={[radius * 1.2, radius * 0.8]} />
-            <meshStandardMaterial color="#ffffff" transparent opacity={0.9} side={2} />
-          </mesh>
-          <mesh position={[0, 0, radius * 0.71]} rotation={[0, 0, 0]}>
-            <planeGeometry args={[radius * 0.8, radius * 0.5]} />
-            <meshStandardMaterial color="#059669" emissive="#059669" emissiveIntensity={0.3} side={2} />
-          </mesh>
-          <mesh position={[0, radius + 0.15, 0]}>
-            <boxGeometry args={[0.15, 0.15, 0.15]} />
-            <meshStandardMaterial color="#22c55e" emissive="#22c55e" emissiveIntensity={0.5} />
-          </mesh>
-        </>
-      )}
-
-      {isFilm && !isPrinted && (
-        <mesh position={[0, radius + 0.1, 0]}>
-          <sphereGeometry args={[0.08, 8, 8]} />
-          <meshStandardMaterial color="#3b82f6" emissive="#3b82f6" emissiveIntensity={0.6} />
-        </mesh>
-      )}
-
-      <Html position={[0, radius + 0.35, 0]} center>
-        <div className="bg-black/80 text-white px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap cursor-pointer hover:bg-black/90 flex items-center gap-1">
-          {isPrinted && <span className="text-green-400">🖨️</span>}
-          {isFilm && <span className="text-blue-400">🎬</span>}
-          {roll.roll_number}
-        </div>
-      </Html>
-    </group>
-  );
-}
-
-function Pallet3D({ bundle, position, onSelect }: {
-  bundle: CuttingBundle;
-  position: [number, number, number];
-  onSelect: () => void;
-}) {
-  const palletWidth = 1.4;
-  const palletDepth = 1.0;
-  const palletHeight = 0.12;
-  const plankThickness = 0.04;
-  
-  const bundleRows = Math.min(Math.ceil(bundle.roll_count / 3), 4);
-  const bundleHeight = 0.25;
-  const totalStackHeight = bundleRows * bundleHeight;
-
-  return (
-    <group position={position} onClick={(e) => { e.stopPropagation(); onSelect(); }}>
-      <group>
-        {[-0.5, 0, 0.5].map((offset, i) => (
-          <mesh key={`slat-${i}`} position={[offset * palletWidth * 0.6, plankThickness / 2, 0]} castShadow>
-            <boxGeometry args={[palletWidth * 0.28, plankThickness, palletDepth]} />
-            <meshStandardMaterial color="#8B6914" roughness={0.9} />
-          </mesh>
-        ))}
-        <mesh position={[0, plankThickness + 0.03, -palletDepth * 0.35]} castShadow>
-          <boxGeometry args={[palletWidth, plankThickness, palletDepth * 0.15]} />
-          <meshStandardMaterial color="#A0782C" roughness={0.85} />
-        </mesh>
-        <mesh position={[0, plankThickness + 0.03, 0]} castShadow>
-          <boxGeometry args={[palletWidth, plankThickness, palletDepth * 0.15]} />
-          <meshStandardMaterial color="#A0782C" roughness={0.85} />
-        </mesh>
-        <mesh position={[0, plankThickness + 0.03, palletDepth * 0.35]} castShadow>
-          <boxGeometry args={[palletWidth, plankThickness, palletDepth * 0.15]} />
-          <meshStandardMaterial color="#A0782C" roughness={0.85} />
-        </mesh>
-      </group>
-
-      {Array.from({ length: bundleRows }).map((_, row) => {
-        const bundlesInRow = Math.min(bundle.roll_count - row * 3, 3);
-        return Array.from({ length: bundlesInRow }).map((_, col) => {
-          const xOffset = (col - (bundlesInRow - 1) / 2) * 0.42;
-          const yPos = palletHeight + 0.06 + row * bundleHeight + bundleHeight / 2;
-          return (
-            <group key={`bundle-${row}-${col}`} position={[xOffset, yPos, 0]}>
-              <mesh castShadow>
-                <boxGeometry args={[0.38, bundleHeight * 0.85, palletDepth * 0.7]} />
-                <meshStandardMaterial 
-                  color={bundle.roll_color} 
-                  roughness={0.5} 
-                  metalness={0.1}
-                />
-              </mesh>
-              <mesh position={[0, 0, palletDepth * 0.351]}>
-                <planeGeometry args={[0.36, bundleHeight * 0.7]} />
-                <meshStandardMaterial color="#ffffff" transparent opacity={0.3} side={2} />
-              </mesh>
-            </group>
-          );
-        });
-      })}
-
-      <mesh position={[0, palletHeight + totalStackHeight + 0.08, 0]} castShadow>
-        <boxGeometry args={[palletWidth * 0.95, 0.02, palletDepth * 0.9]} />
-        <meshStandardMaterial color="#d4d4d4" transparent opacity={0.5} />
-      </mesh>
-
-      {[-0.35, 0.35].map((zOff, i) => (
-        <mesh key={`strap-${i}`} position={[0, palletHeight + totalStackHeight / 2 + 0.06, zOff]}>
-          <boxGeometry args={[palletWidth * 1.02, totalStackHeight + 0.12, 0.03]} />
-          <meshStandardMaterial color="#2563eb" transparent opacity={0.6} />
+    <group rotation={[0, (machine.rotation || 0) * Math.PI / 180, 0]}>
+      {[ -0.6, 0, 0.6 ].map((x, i) => (
+        <mesh key={i} position={[x, 0.05, 0]} castShadow>
+          <boxGeometry args={[0.2, 0.1, 1.5]} />
+          <meshStandardMaterial color="#8b4513" />
         </mesh>
       ))}
-
-      <Html position={[0, palletHeight + totalStackHeight + 0.4, 0]} center>
-        <div className="bg-gradient-to-b from-green-700 to-green-900 text-white px-2 py-1.5 rounded-lg text-[10px] whitespace-nowrap cursor-pointer shadow-lg border border-green-500/50" dir="rtl">
-          <div className="font-bold text-[11px] flex items-center gap-1">
-            <span>📦</span>
-            <span>{bundle.production_order_number}</span>
-          </div>
-          <div className="text-green-200 text-[9px]">{bundle.customer_name}</div>
-          <div className="flex items-center justify-between gap-2 mt-0.5 text-[9px]">
-            <span className="bg-green-600/50 px-1 rounded">{bundle.roll_count} بندل</span>
-            <span className="font-bold">{bundle.total_weight_kg.toFixed(1)} كجم</span>
-          </div>
-          <div className="text-center text-[8px] text-yellow-300 mt-0.5">✅ جاهز للاستلام</div>
-        </div>
-      </Html>
+      {isSelected && (
+        <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[1.2, 1.4, 32]} />
+          <meshBasicMaterial color="#fbbf24" />
+        </mesh>
+      )}
     </group>
   );
 }
 
-function Scene({ machines, selectedMachine, onSelectMachine, onDragMachine, onDragStart, onDragEnd, hideRoof, activeRolls, cuttingBundles, onSelectRoll, onSelectBundle }: {
-  machines: Machine[];
-  selectedMachine: string | null;
-  onSelectMachine: (id: string | null) => void;
-  onDragMachine: (id: string, position: [number, number, number]) => void;
-  onDragStart: () => void;
-  onDragEnd: () => void;
-  hideRoof: boolean;
-  activeRolls: ActiveRoll[];
-  cuttingBundles: CuttingBundle[];
-  onSelectRoll: (roll: ActiveRoll) => void;
-  onSelectBundle: (bundle: CuttingBundle) => void;
-}) {
-  const filmPrintingRolls = useMemo(() => 
-    activeRolls.filter(r => r.stage === 'film' || r.stage === 'printing'),
-    [activeRolls]
-  );
-
-  const getRollPositionNearMachine = (roll: ActiveRoll, index: number, machineRollIndex: number): [number, number, number] => {
-    const machineId = roll.stage === 'film' ? roll.film_machine_id 
-      : roll.printing_machine_id;
-    
-    const linkedMachine = machines.find(m => m.linkedMachineId === machineId);
-    
-    if (linkedMachine) {
-      const col = machineRollIndex % 4;
-      const row = Math.floor(machineRollIndex / 4);
-      const offsetX = col * 0.9 - 1.35;
-      const offsetZ = row * 0.9 + (roll.stage === 'film' ? 3.5 : -3.5);
-      return [
-        linkedMachine.position[0] + offsetX,
-        0.3,
-        linkedMachine.position[2] + offsetZ
-      ];
-    }
-    
-    return [5 + (index % 10) * 1, 0.3, 20 + Math.floor(index / 10) * 1];
-  };
-
-  const getBundlePositionNearMachine = (bundle: CuttingBundle, bundleIndex: number): [number, number, number] => {
-    const machineId = bundle.cutting_machine_id;
-    const linkedMachine = machines.find(m => m.linkedMachineId === machineId);
-    
-    if (linkedMachine) {
-      const col = bundleIndex % 3;
-      const row = Math.floor(bundleIndex / 3);
-      return [
-        linkedMachine.position[0] + col * 2 - 2,
-        0,
-        linkedMachine.position[2] + row * 1.8 + 3
-      ];
-    }
-    
-    return [-5 + bundleIndex * 2, 0, 22];
-  };
-
-  const rollsByMachine = useMemo(() => {
-    const map = new Map<string, number>();
-    return filmPrintingRolls.map((roll, index) => {
-      const machineId = roll.stage === 'film' ? roll.film_machine_id : (roll.printing_machine_id || '');
-      const currentIndex = map.get(machineId) || 0;
-      map.set(machineId, currentIndex + 1);
-      return { roll, index, machineRollIndex: currentIndex };
-    });
-  }, [filmPrintingRolls]);
-
-  return (
-    <>
-      <ambientLight intensity={0.4} />
-      <directionalLight 
-        position={[10, 20, 10]} 
-        intensity={1} 
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-camera-far={100}
-        shadow-camera-left={-30}
-        shadow-camera-right={30}
-        shadow-camera-top={30}
-        shadow-camera-bottom={-30}
-      />
-      <pointLight position={[-5, 8, -10]} intensity={0.5} color="#fef3c7" />
-      <pointLight position={[5, 8, 10]} intensity={0.5} color="#fef3c7" />
-
-      <ProductionHall hideRoof={hideRoof} />
-
-      {machines.map((machine) => {
-        const isSelected = selectedMachine === machine.id;
-        const commonProps = {
-          machine,
-          isSelected,
-          onSelect: () => onSelectMachine(machine.id),
-          onDrag: (pos: [number, number, number]) => onDragMachine(machine.id, pos),
-          onDragStart,
-          onDragEnd,
-        };
-
-        switch (machine.type) {
-          case 'film':
-            return <FilmMachine key={machine.id} {...commonProps} />;
-          case 'printing':
-            return <PrintingMachine key={machine.id} {...commonProps} />;
-          case 'cutting':
-            return <CuttingMachine key={machine.id} {...commonProps} />;
-          case 'mixer':
-            return <MixerMachine key={machine.id} {...commonProps} />;
-          default:
-            return <GenericEquipment key={machine.id} {...commonProps} />;
-        }
-      })}
-
-      {rollsByMachine.map(({ roll, index, machineRollIndex }) => (
-        <Roll3D 
-          key={roll.id} 
-          roll={roll} 
-          position={getRollPositionNearMachine(roll, index, machineRollIndex)}
-          onSelect={() => onSelectRoll(roll)}
-        />
-      ))}
-
-      {cuttingBundles.map((bundle, index) => (
-        <Pallet3D
-          key={`bundle-${bundle.production_order_id}-${bundle.cutting_machine_id}`}
-          bundle={bundle}
-          position={getBundlePositionNearMachine(bundle, index)}
-          onSelect={() => onSelectBundle(bundle)}
-        />
-      ))}
-
-    </>
-  );
-}
-
-function CameraControls({ isDragging }: { isDragging: boolean }) {
-  return (
-    <OrbitControls 
-      enablePan={!isDragging}
-      enableZoom={!isDragging}
-      enableRotate={!isDragging}
-      minDistance={10}
-      maxDistance={80}
-      maxPolarAngle={Math.PI / 2.1}
-      target={[0, 0, 0]}
-    />
-  );
-}
-
+// --- المحرك الرئيسي ---
 export default function FactorySimulation3D() {
-  const [machines, setMachines] = useState<Machine[]>(initialMachines);
-  const [selectedMachine, setSelectedMachine] = useState<string | null>(null);
-  const [showMachineList, setShowMachineList] = useState(true);
-  const [showEquipmentPalette, setShowEquipmentPalette] = useState(false);
+  const [machines, setMachines] = useState<Machine[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'3d' | 'top'>('3d');
-  const [isDraggingMachine, setIsDraggingMachine] = useState(false);
-  const [hideRoof, setHideRoof] = useState(false);
-  const [selectedRoll, setSelectedRoll] = useState<ActiveRoll | null>(null);
-  const [selectedBundle, setSelectedBundle] = useState<CuttingBundle | null>(null);
-  const [demoMode, setDemoMode] = useState(false);
-  const [showMachineStats, setShowMachineStats] = useState(false);
-  const [selectedMachineForStats, setSelectedMachineForStats] = useState<string | null>(null);
-  const { t } = useTranslation();
 
-  // Time-lapse state
-  const [timelapseMode, setTimelapseMode] = useState(false);
-  const [timelapseStartDate, setTimelapseStartDate] = useState(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d.toISOString().split('T')[0];
-  });
-  const [timelapseEndDate, setTimelapseEndDate] = useState(() => {
-    return new Date().toISOString().split('T')[0];
-  });
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [currentEventIndex, setCurrentEventIndex] = useState(0);
-  const [timelapseRolls, setTimelapseRolls] = useState<Map<number, ActiveRoll>>(new Map());
-  const [showTimelapsePicker, setShowTimelapsePicker] = useState(false);
-  const playbackTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [eventLog, setEventLog] = useState<{text: string; color: string; time: string}[]>([]);
-
-  const { data: activeRolls = [], refetch: refetchRolls } = useQuery<ActiveRoll[]>({
+  const { data: activeRolls = [] } = useQuery<ActiveRoll[]>({
     queryKey: ['/api/factory-3d/active-rolls'],
-    refetchInterval: timelapseMode ? false : 10000,
+    refetchInterval: 5000,
   });
 
-  const { data: machineStats } = useQuery<MachineStats>({
-    queryKey: ['/api/factory-3d/machine-stats', selectedMachineForStats],
-    enabled: !!selectedMachineForStats,
-  });
-
-  const { data: realMachines = [] } = useQuery<any[]>({
-    queryKey: ['/api/machines'],
-  });
-
-  const { data: historyData } = useQuery<HistoryResponse>({
-    queryKey: ['/api/factory-3d/history', timelapseStartDate, timelapseEndDate],
-    queryFn: async () => {
-      const res = await fetch(`/api/factory-3d/history?startDate=${timelapseStartDate}T00:00:00&endDate=${timelapseEndDate}T23:59:59`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch history');
-      return res.json();
-    },
-    enabled: timelapseMode,
-  });
-
-  const historyEvents = useMemo(() => historyData?.events || [], [historyData]);
-
-  const currentTimelapseTime = useMemo(() => {
-    if (!historyEvents.length || currentEventIndex >= historyEvents.length) return null;
-    return new Date(historyEvents[currentEventIndex].timestamp);
-  }, [historyEvents, currentEventIndex]);
-
-  // Process a single event and update timelapseRolls
-  const processEvent = useCallback((event: HistoryEvent) => {
-    setTimelapseRolls(prev => {
-      const next = new Map(prev);
-      if (event.type === 'created' && event.roll) {
-        next.set(event.roll.id, {
-          id: event.roll.id,
-          roll_number: event.roll.roll_number,
-          stage: 'film' as const,
-          weight_kg: event.roll.weight_kg,
-          film_machine_id: event.roll.film_machine_id,
-          printing_machine_id: null,
-          cutting_machine_id: null,
-          printed_at: null,
-          cut_completed_at: null,
-          created_at: event.timestamp,
-          production_order_number: event.roll.production_order_number,
-          master_batch_id: null,
-          roll_color: event.roll.roll_color,
-          color_name: event.roll.color_name,
-          customer_name: event.roll.customer_name,
-        });
-        setEventLog(l => [...l.slice(-19), {
-          text: `🆕 ${event.roll!.roll_number} - ${event.roll!.customer_name}`,
-          color: event.roll!.roll_color,
-          time: new Date(event.timestamp).toLocaleTimeString('ar-SA')
-        }]);
-      } else if (event.type === 'film_completed' && event.rollId) {
-        setEventLog(l => [...l.slice(-19), {
-          text: `🎬 ${event.roll_number} اكتمل الفيلم`,
-          color: '#3b82f6',
-          time: new Date(event.timestamp).toLocaleTimeString('ar-SA')
-        }]);
-      } else if (event.type === 'printed' && event.rollId) {
-        const existing = next.get(event.rollId);
-        if (existing) {
-          next.set(event.rollId, {
-            ...existing,
-            stage: 'printing' as const,
-            printed_at: event.timestamp,
-            printing_machine_id: event.printing_machine_id || null,
-          });
-        }
-        setEventLog(l => [...l.slice(-19), {
-          text: `🖨️ ${event.roll_number} طباعة`,
-          color: '#22c55e',
-          time: new Date(event.timestamp).toLocaleTimeString('ar-SA')
-        }]);
-      } else if (event.type === 'cut' && event.rollId) {
-        next.delete(event.rollId);
-        setEventLog(l => [...l.slice(-19), {
-          text: `✂️ ${event.roll_number} قطع`,
-          color: '#f59e0b',
-          time: new Date(event.timestamp).toLocaleTimeString('ar-SA')
-        }]);
-      }
-      return next;
-    });
-  }, []);
-
-  // Playback timer
-  useEffect(() => {
-    if (isPlaying && historyEvents.length > 0) {
-      const baseInterval = 500;
-      const interval = baseInterval / playbackSpeed;
-
-      playbackTimerRef.current = setInterval(() => {
-        setCurrentEventIndex(prev => {
-          const next = prev + 1;
-          if (next >= historyEvents.length) {
-            setIsPlaying(false);
-            return prev;
-          }
-          processEvent(historyEvents[next]);
-          return next;
-        });
-      }, interval);
-
-      return () => {
-        if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
-      };
-    }
-    return () => {
-      if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
-    };
-  }, [isPlaying, playbackSpeed, historyEvents, processEvent]);
-
-  const startTimelapse = useCallback(() => {
-    setTimelapseMode(true);
-    setCurrentEventIndex(0);
-    setTimelapseRolls(new Map());
-    setEventLog([]);
-    setIsPlaying(false);
-    setShowTimelapsePicker(false);
-  }, []);
-
-  const exitTimelapse = useCallback(() => {
-    setTimelapseMode(false);
-    setIsPlaying(false);
-    setCurrentEventIndex(0);
-    setTimelapseRolls(new Map());
-    setEventLog([]);
-    if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
-  }, []);
-
-  const seekTo = useCallback((index: number) => {
-    setIsPlaying(false);
-    setTimelapseRolls(new Map());
-    setEventLog([]);
-    const newRolls = new Map<number, ActiveRoll>();
-    for (let i = 0; i <= index && i < historyEvents.length; i++) {
-      const event = historyEvents[i];
-      if (event.type === 'created' && event.roll) {
-        newRolls.set(event.roll.id, {
-          id: event.roll.id,
-          roll_number: event.roll.roll_number,
-          stage: 'film' as const,
-          weight_kg: event.roll.weight_kg,
-          film_machine_id: event.roll.film_machine_id,
-          printing_machine_id: null,
-          cutting_machine_id: null,
-          printed_at: null,
-          cut_completed_at: null,
-          created_at: event.timestamp,
-          production_order_number: event.roll.production_order_number,
-          master_batch_id: null,
-          roll_color: event.roll.roll_color,
-          color_name: event.roll.color_name,
-          customer_name: event.roll.customer_name,
-        });
-      } else if (event.type === 'printed' && event.rollId) {
-        const existing = newRolls.get(event.rollId);
-        if (existing) {
-          newRolls.set(event.rollId, {
-            ...existing,
-            stage: 'printing' as const,
-            printed_at: event.timestamp,
-            printing_machine_id: event.printing_machine_id || null,
-          });
-        }
-      } else if (event.type === 'cut' && event.rollId) {
-        newRolls.delete(event.rollId);
-      }
-    }
-    setTimelapseRolls(newRolls);
-    setCurrentEventIndex(index);
-  }, [historyEvents]);
-
-  const displayRolls = useMemo(() => {
-    if (timelapseMode) {
-      return Array.from(timelapseRolls.values());
-    }
-    if (demoMode) {
-      return [...activeRolls, ...demoRolls];
-    }
-    return activeRolls;
-  }, [timelapseMode, timelapseRolls, activeRolls, demoMode]);
-
-  const cuttingBundles = useMemo<CuttingBundle[]>(() => {
-    const cuttingRolls = displayRolls.filter(r => r.stage === 'cutting');
-    const bundleMap = new Map<string, CuttingBundle>();
-    
-    for (const roll of cuttingRolls) {
-      const key = `${roll.production_order_id || roll.production_order_number}-${roll.cutting_machine_id || 'unassigned'}`;
-      const existing = bundleMap.get(key);
-      const cutWeight = parseFloat(roll.cut_weight_total_kg || roll.weight_kg) || 0;
-      
-      if (existing) {
-        existing.total_weight_kg += cutWeight;
-        existing.roll_count += 1;
-        existing.rolls.push(roll);
-      } else {
-        bundleMap.set(key, {
-          production_order_id: roll.production_order_id || 0,
-          production_order_number: roll.production_order_number,
-          customer_name: roll.customer_name,
-          roll_color: roll.roll_color,
-          color_name: roll.color_name,
-          cutting_machine_id: roll.cutting_machine_id,
-          total_weight_kg: cutWeight,
-          roll_count: 1,
-          rolls: [roll],
-        });
-      }
-    }
-    
-    return Array.from(bundleMap.values());
-  }, [displayRolls]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('factoryLayout');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as Machine[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMachines(parsed);
-        }
-      } catch {
-        console.log('Failed to load saved layout');
-      }
-    }
-  }, []);
-
-  const handleSelectMachine = useCallback((id: string | null) => {
-    setSelectedMachine(id);
-  }, []);
-
-  const handleDragMachine = useCallback((id: string, position: [number, number, number]) => {
-    setMachines(prev => prev.map(m => 
-      m.id === id ? { ...m, position } : m
-    ));
-  }, []);
-
-  const handleDragStart = useCallback(() => {
-    setIsDraggingMachine(true);
-  }, []);
-
-  const handleDragEnd = useCallback(() => {
-    setIsDraggingMachine(false);
-  }, []);
-
-  const updateMachine = useCallback((id: string, updates: Partial<Machine>) => {
-    setMachines(prev => prev.map(m => 
-      m.id === id ? { ...m, ...updates } : m
-    ));
-  }, []);
-
-  const getSelectedMachine = () => machines.find(m => m.id === selectedMachine);
-
-  const deleteMachine = () => {
-    if (selectedMachine) {
-      setMachines(prev => prev.filter(m => m.id !== selectedMachine));
-      setSelectedMachine(null);
-    }
-  };
-
-  const addEquipment = (template: Omit<Machine, 'id' | 'position'>) => {
-    const newId = `${template.type}-${Date.now()}`;
+  const addMachine = (type: Machine['type']) => {
+    const names = { film: 'ماكينة فيلم', printing: 'ماكينة طباعة', cutting: 'ماكينة تقطيع', mixer: 'خلاط مواد', pallet: 'بالة خشبية' };
     const newMachine: Machine = {
-      ...template,
-      id: newId,
+      id: `${type}-${Date.now()}`,
+      nameAr: names[type],
+      type,
+      color: type === 'mixer' ? '#dc2626' : '#2563eb',
       position: [0, 0, 0],
+      size: [2, 2, 2],
     };
-    setMachines(prev => [...prev, newMachine]);
-    setSelectedMachine(newId);
-    setShowEquipmentPalette(false);
+    setMachines([...machines, newMachine]);
   };
 
-  const resetPositions = () => {
-    setMachines(initialMachines);
-    setSelectedMachine(null);
-    localStorage.removeItem('factoryLayout');
+  const handleDrag = (id: string, pos: [number, number, number]) => {
+    setMachines(prev => prev.map(m => m.id === id ? { ...m, position: pos } : m));
   };
-
-  const saveLayout = () => {
-    localStorage.setItem('factoryLayout', JSON.stringify(machines));
-    alert(t('factory3d.layoutSaved'));
-  };
-
-  const selectedMachineData = machines.find(m => m.id === selectedMachine);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="h-screen flex flex-col bg-gray-900 overflow-hidden font-sans" dir="rtl">
       <Header />
-      <div className="flex">
+      <div className="flex-1 flex relative">
         <Sidebar />
-        <MobileShell />
-        <main className="flex-1 lg:mr-64">
-      <div className="h-[calc(100vh-4rem)] flex flex-col">
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Factory className="h-8 w-8" />
-            <div>
-              <h1 className="text-2xl font-bold">{t('factory3d.simulationTitle')}</h1>
-              <p className="text-blue-100 text-sm">{t('factory3d.description')}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={resetPositions}>
-              <RotateCcw className="h-4 w-4 ml-2" />
-              إعادة ضبط
-            </Button>
-            <Button variant="secondary" size="sm" onClick={saveLayout}>
-              <Save className="h-4 w-4 ml-2" />
-              حفظ
-            </Button>
-            <Button 
-              variant={viewMode === '3d' ? 'default' : 'secondary'} 
-              size="sm" 
-              onClick={() => setViewMode('3d')}
-            >
-              <Eye className="h-4 w-4 ml-2" />
-              3D
-            </Button>
-            <Button 
-              variant={viewMode === 'top' ? 'default' : 'secondary'} 
-              size="sm" 
-              onClick={() => setViewMode('top')}
-            >
-              <Layers className="h-4 w-4 ml-2" />
-              من الأعلى
-            </Button>
-            <Button 
-              variant={hideRoof ? 'default' : 'secondary'} 
-              size="sm" 
-              onClick={() => setHideRoof(!hideRoof)}
-            >
-              <Home className="h-4 w-4 ml-2" />
-              {hideRoof ? t('factory3d.showRoof') : t('factory3d.hideRoof')}
-            </Button>
-            {timelapseMode ? (
-              <Button variant="destructive" size="sm" onClick={exitTimelapse}>
-                <X className="h-4 w-4 ml-2" />
-                {t('factory3d.exitTimelapse')}
-              </Button>
-            ) : (
-              <Button variant="secondary" size="sm" onClick={() => setShowTimelapsePicker(true)}>
-                <History className="h-4 w-4 ml-2" />
-                {t('factory3d.timelapse')}
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <div className="flex-1 flex relative">
-          <div className="flex-1 bg-slate-900">
-            <Canvas shadows>
-              <Suspense fallback={null}>
-                <PerspectiveCamera 
-                  makeDefault 
-                  position={viewMode === '3d' ? [25, 20, 25] : [0, 40, 0]}
-                  fov={50}
-                />
-                <Scene 
-                  machines={machines}
-                  selectedMachine={selectedMachine}
-                  onSelectMachine={handleSelectMachine}
-                  onDragMachine={handleDragMachine}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                  hideRoof={hideRoof}
-                  activeRolls={displayRolls}
-                  cuttingBundles={cuttingBundles}
-                  onSelectRoll={setSelectedRoll}
-                  onSelectBundle={setSelectedBundle}
-                />
-                <CameraControls isDragging={isDraggingMachine} />
-                <Environment preset="warehouse" />
-              </Suspense>
-            </Canvas>
+        <main className="flex-1 relative bg-slate-900 lg:mr-64">
+          <div className="absolute top-4 right-4 z-20 flex flex-col gap-2 w-52">
+             <Card className="bg-black/60 backdrop-blur border-white/10 text-white shadow-2xl">
+                <CardContent className="p-3 flex flex-col gap-2">
+                   <p className="text-xs font-bold text-gray-400 mb-1">إضافة معدات</p>
+                   <div className="grid grid-cols-2 gap-2">
+                      <Button size="sm" variant="outline" onClick={() => addMachine('film')} className="text-[10px] h-8 bg-white/5 border-white/10"><Plus size={12}/> فيلم</Button>
+                      <Button size="sm" variant="outline" onClick={() => addMachine('mixer')} className="text-[10px] h-8 bg-white/5 border-white/10"><Plus size={12}/> خلاط</Button>
+                      <Button size="sm" variant="outline" onClick={() => addMachine('pallet')} className="text-[10px] h-8 bg-white/5 border-white/10"><Plus size={12}/> بالة</Button>
+                   </div>
+                   {selectedId && <Button size="sm" variant="destructive" onClick={() => { setMachines(machines.filter(m => m.id !== selectedId)); setSelectedId(null); }} className="mt-2 text-[10px] h-8 transition-all"><Trash2 size={12}/> حذف المحددة</Button>}
+                </CardContent>
+             </Card>
+             <Button size="sm" variant="secondary" onClick={() => setViewMode(viewMode === '3d' ? 'top' : '3d')} className="shadow-lg">
+                {viewMode === '3d' ? <Layers size={14} className="ml-2"/> : <Eye size={14} className="ml-2"/>}
+                {viewMode === '3d' ? "منظور علوي" : "منظور ثلاثي"}
+             </Button>
           </div>
 
-          <div className={`absolute left-0 top-0 bottom-0 bg-white dark:bg-gray-800 shadow-lg transition-all duration-300 ${showMachineList ? 'w-72' : 'w-0'}`}>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="absolute -right-8 top-4 bg-white dark:bg-gray-800 shadow rounded-r-lg"
-              onClick={() => setShowMachineList(!showMachineList)}
-            >
-              {showMachineList ? <ChevronLeft /> : <ChevronRight />}
-            </Button>
+          <Canvas shadows>
+            <Suspense fallback={null}>
+              <PerspectiveCamera makeDefault position={viewMode === '3d' ? [20, 20, 20] : [0, 50, 0]} />
+              <OrbitControls enableRotate={!selectedId} />
+              <ambientLight intensity={0.6} />
+              <Environment preset="city" />
 
-            {showMachineList && (
-              <div className="p-4 h-full overflow-y-auto">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                  <Factory className="h-5 w-5" />
-                  قائمة المكائن
-                </h3>
+              <group>
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+                  <planeGeometry args={[HALL_WIDTH, HALL_LENGTH]} />
+                  <meshStandardMaterial color="#f1f5f9" />
+                </mesh>
+                <gridHelper args={[HALL_LENGTH, 50, "#cbd5e1", "#e2e8f0"]} position={[0, 0.01, 0]} />
 
-                <div className="space-y-2">
-                  {machines.map((machine) => (
-                    <Card 
-                      key={machine.id}
-                      className={`cursor-pointer transition-all ${selectedMachine === machine.id ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
-                      onClick={() => setSelectedMachine(machine.id)}
-                    >
-                      <CardContent className="p-3">
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="w-4 h-4 rounded"
-                            style={{ backgroundColor: machine.color }}
-                          />
-                          <div className="flex-1">
-                            <div className="font-medium text-sm">{machine.customName || machine.nameAr}</div>
-                            <div className="text-xs text-gray-500">{machine.customName ? machine.nameAr : machine.name}</div>
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            {machine.type === 'film' ? t('factory3d.film') : 
-                             machine.type === 'printing' ? t('factory3d.printing') : 
-                             machine.type === 'mixer' ? t('factory3d.mixer') : t('factory3d.cutting')}
-                          </Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                {machines.map((m) => (
+                  <DraggableGroup key={m.id} machine={m} isSelected={selectedId === m.id} onSelect={() => setSelectedId(m.id)} onDrag={handleDrag} />
+                ))}
 
-                <Button 
-                  className="w-full mt-4" 
-                  variant="outline"
-                  onClick={() => setShowEquipmentPalette(true)}
-                >
-                  <Plus className="h-4 w-4 ml-2" />
-                  {t('factory3d.addEquipment')}
-                </Button>
-
-                {selectedMachineData && (
-                  <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-bold">{t('factory3d.machineDetails')}</h4>
-                      <Button 
-                        size="sm" 
-                        variant="destructive"
-                        onClick={deleteMachine}
-                      >
-                        <Trash2 className="h-4 w-4 ml-1" />
-                        {t('factory3d.deleteMachine')}
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('factory3d.machineName')}</label>
-                        <input
-                          type="text"
-                          className="w-full mt-1 px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
-                          placeholder={selectedMachineData.nameAr}
-                          value={selectedMachineData.customName || ''}
-                          onChange={(e) => updateMachine(selectedMachineData.id, { customName: e.target.value })}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('factory3d.color')}</label>
-                        <div className="flex items-center gap-2 mt-1">
-                          <input
-                            type="color"
-                            className="w-8 h-8 rounded cursor-pointer border-0"
-                            value={selectedMachineData.color}
-                            onChange={(e) => updateMachine(selectedMachineData.id, { color: e.target.value })}
-                          />
-                          <span className="text-xs text-gray-500">{selectedMachineData.color}</span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                          الدوران: {selectedMachineData.rotation || 0}°
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="360"
-                          step="15"
-                          className="w-full mt-1"
-                          value={selectedMachineData.rotation || 0}
-                          onChange={(e) => updateMachine(selectedMachineData.id, { rotation: Number(e.target.value) })}
-                        />
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>0°</span>
-                          <span>180°</span>
-                          <span>360°</span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                          الحجم: {((selectedMachineData.scale || 1) * 100).toFixed(0)}%
-                        </label>
-                        <input
-                          type="range"
-                          min="0.5"
-                          max="2"
-                          step="0.1"
-                          className="w-full mt-1"
-                          value={selectedMachineData.scale || 1}
-                          onChange={(e) => updateMachine(selectedMachineData.id, { scale: Number(e.target.value) })}
-                        />
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>50%</span>
-                          <span>100%</span>
-                          <span>200%</span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('factory3d.linkedMachine')}</label>
-                        <select
-                          className="w-full mt-1 px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
-                          value={selectedMachineData.linkedMachineId || ''}
-                          onChange={(e) => updateMachine(selectedMachineData.id, { linkedMachineId: e.target.value || undefined })}
-                        >
-                          <option value="">{t('factory3d.selectMachine')}</option>
-                          {realMachines.map((m: any) => (
-                            <option key={m.id} value={m.id}>
-                              {m.name_ar || m.name} ({m.id})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {selectedMachineData.linkedMachineId && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full"
-                          onClick={() => {
-                            setSelectedMachineForStats(selectedMachineData.linkedMachineId!);
-                            setShowMachineStats(true);
-                          }}
-                        >
-                          <Activity className="h-4 w-4 ml-2" />
-                          {t('factory3d.viewStats')}
-                        </Button>
-                      )}
-
-                      <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
-                        <div className="text-xs text-gray-500 space-y-1">
-                          <p><strong>{t('factory3d.type')}:</strong> {selectedMachineData.nameAr}</p>
-                          <p><strong>{t('factory3d.position')}:</strong> X: {selectedMachineData.position[0].toFixed(1)}, Z: {selectedMachineData.position[2].toFixed(1)}</p>
-                          {selectedMachineData.linkedMachineId && (
-                            <p className="text-green-600"><strong>{t('factory3d.linked')}:</strong> {selectedMachineData.linkedMachineId}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <h4 className="font-bold mb-2 text-blue-800 dark:text-blue-200">تعليمات</h4>
-                  <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-                    <li>• اضغط على ماكينة لتحديدها</li>
-                    <li>• اسحب الماكينة لتحريكها</li>
-                    <li>• استخدم الماوس للتدوير والتكبير</li>
-                    <li>• زر الحفظ لحفظ التخطيط</li>
-                  </ul>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {showEquipmentPalette && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-lg">{t('factory3d.equipmentPalette')}</h3>
-                  <Button 
-                    size="icon" 
-                    variant="ghost"
-                    onClick={() => setShowEquipmentPalette(false)}
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {equipmentTemplates.map((template, index) => (
-                    <Card 
-                      key={index}
-                      className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                      onClick={() => addEquipment(template)}
-                    >
-                      <CardContent className="p-3 flex items-center gap-3">
-                        <div 
-                          className="w-8 h-8 rounded"
-                          style={{ backgroundColor: template.color }}
-                        />
-                        <div>
-                          <div className="font-medium text-sm">{template.nameAr}</div>
-                          <div className="text-xs text-gray-500">{template.name}</div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-            <Button size="icon" variant="secondary" onClick={() => setViewMode('3d')}>
-              <Home className="h-4 w-4" />
-            </Button>
-            <Button size="icon" variant="secondary">
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-            <Button size="icon" variant="secondary">
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {timelapseMode ? (
-            <>
-              {/* Time-lapse playback controls */}
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-black/60 text-white p-4">
-                {historyEvents.length === 0 && (
-                  <div className="text-center py-2 mb-2 text-yellow-300 text-sm">
-                    <Clock className="h-4 w-4 inline ml-1" />
-                    لا توجد أحداث في هذه الفترة - جرب تغيير التاريخ
-                  </div>
-                )}
-                {/* Current time display */}
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <History className="h-4 w-4 text-purple-400" />
-                    <span className="text-purple-300 font-medium text-sm">{t('factory3d.timelapse')}</span>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold">
-                      {currentTimelapseTime ? currentTimelapseTime.toLocaleString('ar-SA', { 
-                        year: 'numeric', month: 'short', day: 'numeric',
-                        hour: '2-digit', minute: '2-digit', second: '2-digit'
-                      }) : '--:--:--'}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm">
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      <Package className="h-3 w-3" />
-                      {timelapseRolls.size} {t('factory3d.roll')}
-                    </Badge>
-                    <Badge variant="outline" className="text-white border-white/30">
-                      {currentEventIndex + 1} / {historyEvents.length} {t('factory3d.events')}
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Progress slider */}
-                <div className="mb-3">
-                  <Slider
-                    value={[currentEventIndex]}
-                    min={0}
-                    max={Math.max(historyEvents.length - 1, 0)}
-                    step={1}
-                    onValueChange={(v) => seekTo(v[0])}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                    <span>{historyEvents[0] ? new Date(historyEvents[0].timestamp).toLocaleString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                    <span>{historyEvents.length > 0 ? new Date(historyEvents[historyEvents.length - 1].timestamp).toLocaleString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                  </div>
-                </div>
-
-                {/* Playback buttons */}
-                <div className="flex items-center justify-center gap-3">
-                  <Button size="icon" variant="ghost" className="text-white h-8 w-8" onClick={() => seekTo(0)}>
-                    <SkipBack className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="icon" 
-                    className="bg-purple-600 hover:bg-purple-700 h-10 w-10 rounded-full"
-                    onClick={() => setIsPlaying(!isPlaying)}
-                  >
-                    {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-                  </Button>
-                  <Button size="icon" variant="ghost" className="text-white h-8 w-8" onClick={() => seekTo(historyEvents.length - 1)}>
-                    <SkipForward className="h-4 w-4" />
-                  </Button>
-
-                  <div className="h-6 w-px bg-white/20 mx-2" />
-
-                  <div className="flex items-center gap-1">
-                    <FastForward className="h-3 w-3 text-gray-400" />
-                    {[0.5, 1, 2, 5, 10].map(speed => (
-                      <Button 
-                        key={speed}
-                        size="sm" 
-                        variant={playbackSpeed === speed ? 'default' : 'ghost'}
-                        className={`h-7 px-2 text-xs ${playbackSpeed === speed ? 'bg-purple-600' : 'text-white'}`}
-                        onClick={() => setPlaybackSpeed(speed)}
-                      >
-                        {speed}x
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Event log panel */}
-              {eventLog.length > 0 && (
-                <div className="absolute top-4 right-4 w-56 bg-black/70 rounded-lg p-3 text-white">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Activity className="h-3 w-3 text-purple-400" />
-                    <span className="text-xs font-medium text-purple-300">{t('factory3d.events')}</span>
-                  </div>
-                  <ScrollArea className="h-48">
-                    <div className="space-y-1">
-                      {eventLog.slice().reverse().map((log, i) => (
-                        <div key={i} className="flex items-center gap-2 text-[10px]">
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: log.color }} />
-                          <span className="text-gray-400">{log.time}</span>
-                          <span className="truncate">{log.text}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 backdrop-blur text-white px-4 py-2 rounded-lg text-sm flex items-center gap-3 flex-wrap justify-center">
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="flex items-center gap-1 bg-blue-600/80 text-white">
-                  <Activity className="h-3 w-3" />
-                  {t('factory3d.film')}: {displayRolls.filter(r => r.stage === 'film').length}
-                </Badge>
-                <Badge variant="secondary" className="flex items-center gap-1 bg-green-600/80 text-white">
-                  <Printer className="h-3 w-3" />
-                  {t('factory3d.printing')}: {displayRolls.filter(r => r.stage === 'printing').length}
-                </Badge>
-                <Badge variant="secondary" className="flex items-center gap-1 bg-orange-600/80 text-white">
-                  <Scissors className="h-3 w-3" />
-                  {t('factory3d.cutting')}: {cuttingBundles.length} {t('factory3d.bundle')} ({displayRolls.filter(r => r.stage === 'cutting').length} {t('factory3d.roll')})
-                </Badge>
-              </div>
-              <div className="w-px h-5 bg-white/30" />
-              <Button 
-                size="sm" 
-                variant={demoMode ? "default" : "ghost"} 
-                className={`text-xs h-7 ${demoMode ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'text-white hover:text-white/80'}`}
-                onClick={() => setDemoMode(!demoMode)}
-              >
-                <Eye className="h-3 w-3 ml-1" />
-                {demoMode ? t('factory3d.demoModeActive') : t('factory3d.demoMode')}
-              </Button>
-              <Button size="sm" variant="ghost" className="text-white hover:text-white/80 h-7" onClick={() => refetchRolls()}>
-                <RefreshCw className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-
-        <Dialog open={!!selectedRoll} onOpenChange={() => setSelectedRoll(null)}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                {t('factory3d.rollDetails')}
-              </DialogTitle>
-            </DialogHeader>
-            {selectedRoll && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-12 h-12 rounded-full"
-                    style={{ backgroundColor: selectedRoll.roll_color }}
-                  />
-                  <div>
-                    <div className="font-bold text-lg">{selectedRoll.roll_number}</div>
-                    <div className="text-sm text-gray-500">{selectedRoll.color_name}</div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded">
-                    <div className="text-gray-500">{t('factory3d.productionOrder')}</div>
-                    <div className="font-medium">{selectedRoll.production_order_number}</div>
-                  </div>
-                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded">
-                    <div className="text-gray-500">{t('factory3d.weight')}</div>
-                    <div className="font-medium">{parseFloat(selectedRoll.weight_kg).toFixed(2)} {t('factory3d.kg')}</div>
-                  </div>
-                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded">
-                    <div className="text-gray-500">{t('factory3d.customer')}</div>
-                    <div className="font-medium">{selectedRoll.customer_name}</div>
-                  </div>
-                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded">
-                    <div className="text-gray-500">{t('factory3d.stage')}</div>
-                    <div className="font-medium flex items-center gap-1">
-                      {selectedRoll.stage === 'film' && <><Activity className="h-4 w-4 text-blue-500" /> {t('factory3d.film')}</>}
-                      {selectedRoll.stage === 'printing' && <><Printer className="h-4 w-4 text-green-500" /> {t('factory3d.printing')}</>}
-                      {selectedRoll.stage === 'cutting' && <><Scissors className="h-4 w-4 text-orange-500" /> {t('factory3d.cutting')}</>}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-xs text-gray-500 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-3 w-3" />
-                    {t('factory3d.created')}: {new Date(selectedRoll.created_at).toLocaleString('ar-SA')}
-                  </div>
-                  {selectedRoll.printed_at && (
-                    <div className="flex items-center gap-2 text-green-600">
-                      <Printer className="h-3 w-3" />
-                      {t('factory3d.printedAt')}: {new Date(selectedRoll.printed_at).toLocaleString('ar-SA')}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={!!selectedBundle} onOpenChange={() => setSelectedBundle(null)}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Scissors className="h-5 w-5 text-orange-500" />
-                {t('factory3d.bundleDetails')}
-              </DialogTitle>
-            </DialogHeader>
-            {selectedBundle && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-12 h-12 rounded-lg flex items-center justify-center bg-orange-100 dark:bg-orange-900"
-                  >
-                    <Package className="h-6 w-6 text-orange-600" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-lg">{selectedBundle.production_order_number}</div>
-                    <div className="text-sm text-gray-500">{selectedBundle.customer_name}</div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded">
-                    <div className="text-gray-500">{t('factory3d.rollCount')}</div>
-                    <div className="font-medium text-lg">{selectedBundle.roll_count}</div>
-                  </div>
-                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded">
-                    <div className="text-gray-500">{t('factory3d.totalWeight')}</div>
-                    <div className="font-medium text-lg">{selectedBundle.total_weight_kg.toFixed(2)} {t('factory3d.kg')}</div>
-                  </div>
-                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded">
-                    <div className="text-gray-500">{t('factory3d.color')}</div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: selectedBundle.roll_color }} />
-                      <span className="font-medium">{selectedBundle.color_name}</span>
-                    </div>
-                  </div>
-                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded">
-                    <div className="text-gray-500">{t('factory3d.cuttingMachine')}</div>
-                    <div className="font-medium">{selectedBundle.cutting_machine_id || t('factory3d.unspecified')}</div>
-                  </div>
-                </div>
-
-                <div className="border-t pt-3">
-                  <div className="text-sm text-gray-500 mb-2">{t('factory3d.rollsInBundle')}</div>
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {selectedBundle.rolls.map(roll => (
-                      <div key={roll.id} className="flex justify-between text-sm bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                        <span className="font-medium">{roll.roll_number}</span>
-                        <span className="text-gray-500">{parseFloat(roll.cut_weight_total_kg || roll.weight_kg).toFixed(2)} {t('factory3d.kg')}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showMachineStats} onOpenChange={setShowMachineStats}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                {t('factory3d.machineStats')}
-              </DialogTitle>
-            </DialogHeader>
-            {machineStats && (
-              <div className="space-y-4">
-                <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
-                  <h4 className="font-bold mb-2">{machineStats.machine?.name_ar || machineStats.machine?.name}</h4>
-                  <Badge variant={machineStats.machine?.status === 'active' ? 'default' : 'destructive'}>
-                    {machineStats.machine?.status === 'active' ? 'تعمل' : 'متوقفة'}
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded">
-                    <div className="text-2xl font-bold text-blue-600">{machineStats.todayStats?.rolls_count || 0}</div>
-                    <div className="text-xs text-gray-500">{t('factory3d.totalRolls')}</div>
-                  </div>
-                  <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded">
-                    <div className="text-2xl font-bold text-green-600">{parseFloat(machineStats.todayStats?.total_weight_kg || '0').toFixed(1)}</div>
-                    <div className="text-xs text-gray-500">{t('factory3d.kg')} {t('factory3d.todayProduction')}</div>
-                  </div>
-                  <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded">
-                    <div className="text-2xl font-bold text-orange-600">{machineStats.todayStats?.completed_rolls || 0}</div>
-                    <div className="text-xs text-gray-500">{t('factory3d.completedRolls')}</div>
-                  </div>
-                </div>
-
-                <div>
-                  <h5 className="font-medium mb-2">{t('factory3d.recentRolls')}</h5>
-                  <ScrollArea className="h-48">
-                    <div className="space-y-2">
-                      {machineStats.recentRolls?.map((roll: any) => (
-                        <div key={roll.id} className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                          <div 
-                            className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: roll.roll_color }}
-                          />
-                          <div className="flex-1 text-sm">
-                            <div className="font-medium">{roll.roll_number}</div>
-                            <div className="text-xs text-gray-500">{roll.production_order_number}</div>
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            {parseFloat(roll.weight_kg).toFixed(1)} {t('factory3d.kg')}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showTimelapsePicker} onOpenChange={setShowTimelapsePicker}>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <History className="h-5 w-5 text-purple-600" />
-                {t('factory3d.timelapse')}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-gray-500">
-                اختر الفترة الزمنية لمشاهدة تاريخ الإنتاج بالحركة البطيئة
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">
-                    <Calendar className="h-3 w-3 inline ml-1" />
-                    من تاريخ
-                  </label>
-                  <input
-                    type="date"
-                    value={timelapseStartDate}
-                    onChange={(e) => setTimelapseStartDate(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md text-sm bg-white dark:bg-gray-800 dark:border-gray-600"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">
-                    <Calendar className="h-3 w-3 inline ml-1" />
-                    إلى تاريخ
-                  </label>
-                  <input
-                    type="date"
-                    value={timelapseEndDate}
-                    onChange={(e) => setTimelapseEndDate(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md text-sm bg-white dark:bg-gray-800 dark:border-gray-600"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => {
-                    const d = new Date();
-                    d.setHours(0, 0, 0, 0);
-                    setTimelapseStartDate(d.toISOString().split('T')[0]);
-                    setTimelapseEndDate(d.toISOString().split('T')[0]);
-                  }}
-                >
-                  {t('factory3d.today')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => {
-                    const d = new Date();
-                    d.setDate(d.getDate() - 1);
-                    setTimelapseStartDate(d.toISOString().split('T')[0]);
-                    setTimelapseEndDate(d.toISOString().split('T')[0]);
-                  }}
-                >
-                  أمس
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => {
-                    const end = new Date();
-                    const start = new Date();
-                    start.setDate(start.getDate() - 7);
-                    setTimelapseStartDate(start.toISOString().split('T')[0]);
-                    setTimelapseEndDate(end.toISOString().split('T')[0]);
-                  }}
-                >
-                  {t('factory3d.thisWeek')}
-                </Button>
-              </div>
-
-              <Button className="w-full bg-purple-600 hover:bg-purple-700" onClick={startTimelapse}>
-                <Play className="h-4 w-4 ml-2" />
-                {t('factory3d.loadHistory')}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
+                {activeRolls.map((roll, idx) => {
+                  const m = machines.find(mac => mac.id === roll.film_machine_id);
+                  return (
+                    <group key={roll.id} position={m ? [m.position[0] + (idx % 2) * 1.5, 0.4, m.position[2] + 2.5] : [10, 0.4, idx * 1.5]}>
+                      <mesh castShadow rotation={[Math.PI / 2, 0, 0]}>
+                        <cylinderGeometry args={[0.4, 0.4, 0.8, 32]} />
+                        <meshStandardMaterial color={roll.roll_color} roughness={0.3} />
+                      </mesh>
+                    </group>
+                  );
+                })}
+                <ContactShadows opacity={0.4} scale={40} blur={2.5} far={10} />
+              </group>
+            </Suspense>
+          </Canvas>
         </main>
       </div>
     </div>
+  );
+}
+
+function DraggableGroup({ machine, isSelected, onSelect, onDrag }: any) {
+  const { handlePointerDown, handlePointerUp, handlePointerMove } = useDraggable(machine.id, isSelected, onDrag);
+
+  return (
+    <group 
+      position={machine.position} 
+      onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerMove={handlePointerMove}
+    >
+      {machine.type === 'film' && <ProfessionalFilmMachine machine={machine} isSelected={isSelected} />}
+      {machine.type === 'mixer' && <ProfessionalMixer machine={machine} isSelected={isSelected} />}
+      {machine.type === 'pallet' && <WoodenPallet machine={machine} isSelected={isSelected} />}
+      <Html position={[0, 2.5, 0]} center>
+        <div className="bg-black/80 text-white px-2 py-0.5 rounded text-[8px] font-bold border border-white/20 shadow-xl pointer-events-none">
+          {machine.customName || machine.nameAr}
+        </div>
+      </Html>
+    </group>
   );
 }
