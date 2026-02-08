@@ -116,16 +116,11 @@ export default function Orders() {
   });
 
   // Fetch customer products
-  const { data: customerProducts = [] } = useQuery({
+  const { data: customerProductsResponse } = useQuery<{ data: any[]; total: number }>({
     queryKey: ["/api/customer-products"],
-    queryFn: async () => {
-      const response = await fetch("/api/customer-products");
-      if (!response.ok) throw new Error("فشل في جلب منتجات العملاء");
-      const result = await response.json();
-      const data = result.data || result;
-      return Array.isArray(data) ? data : [];
-    },
+    staleTime: 0,
   });
+  const customerProducts = customerProductsResponse?.data || [];
 
   // Fetch users
   const { data: users = [] } = useQuery({
