@@ -18,7 +18,8 @@ import { Input } from '../components/ui/input';
 import { 
   Eye, Layers, Trash2, RotateCw, Factory, Box, Printer, Scissors, 
   Blend, Package, Move, Maximize2, Building2, Palette,
-  ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Ruler, Save, Pencil, Check
+  ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Ruler, Save, Pencil, Check,
+  Users, X, ChevronDown, ChevronUp, Circle
 } from 'lucide-react';
 
 const HALL_WIDTH = 20;
@@ -36,6 +37,7 @@ const COLOR_PRESETS = [
 
 interface Machine {
   id: string;
+  dbId?: string;
   nameAr: string;
   type: 'film' | 'printing' | 'cutting' | 'mixer' | 'pallet';
   color: string;
@@ -44,24 +46,122 @@ interface Machine {
   customName?: string;
   rotation?: number;
   scale: [number, number, number];
+  sectionId?: string;
+  screwType?: string;
+  capacitySmall?: string;
+  capacityMedium?: string;
+  capacityLarge?: string;
 }
 
 interface ActiveRoll {
   id: number;
   roll_number: string;
-  stage: 'film' | 'printing' | 'cutting';
+  stage: string;
   roll_color: string;
   weight_kg: string;
   film_machine_id: string;
+  printing_machine_id: string;
+  cutting_machine_id: string;
+  production_order_number: string;
+  color_name: string;
+  customer_name: string;
 }
 
-const MACHINE_CONFIGS: Record<Machine['type'], { nameAr: string; color: string; icon: typeof Factory }> = {
+interface DbMachine {
+  id: string;
+  name: string;
+  name_ar: string;
+  type: string;
+  section_id: string;
+  status: string;
+  capacity_small_kg_per_hour: string;
+  capacity_medium_kg_per_hour: string;
+  capacity_large_kg_per_hour: string;
+  screw_type: string;
+}
+
+interface ProductionUser {
+  id: number;
+  display_name: string;
+  display_name_ar: string;
+  full_name: string;
+  role_id: number;
+  section_id: number;
+  role_name: string;
+  role_name_ar: string;
+  attendance_status: string | null;
+  check_in_time: string | null;
+  break_start_time: string | null;
+  break_end_time: string | null;
+  lunch_start_time: string | null;
+  lunch_end_time: string | null;
+}
+
+interface ProductionOrder {
+  id: number;
+  production_order_number: string;
+  quantity_kg: string;
+  produced_quantity_kg: string;
+  status: string;
+  film_completed: boolean;
+  printing_completed: boolean;
+  cutting_completed: boolean;
+  created_at: string;
+  production_start_time: string;
+  production_end_time: string;
+  order_number: string;
+  customer_name: string;
+  customer_name_ar: string;
+  product_name: string;
+  product_name_ar: string;
+  color_hex: string;
+  color_name_ar: string;
+  rolls_count: string;
+  total_rolls_weight: string;
+}
+
+const MACHINE_CONFIGS: Record<string, { nameAr: string; color: string; icon: typeof Factory }> = {
   film: { nameAr: 'ماكينة فيلم', color: '#2563eb', icon: Factory },
+  extruder: { nameAr: 'ماكينة فيلم', color: '#2563eb', icon: Factory },
   printing: { nameAr: 'ماكينة طباعة', color: '#7c3aed', icon: Printer },
+  printer: { nameAr: 'ماكينة طباعة', color: '#7c3aed', icon: Printer },
   cutting: { nameAr: 'ماكينة تقطيع', color: '#059669', icon: Scissors },
+  cutter: { nameAr: 'ماكينة تقطيع', color: '#059669', icon: Scissors },
   mixer: { nameAr: 'خلاط مواد', color: '#dc2626', icon: Blend },
   pallet: { nameAr: 'بالة خشبية', color: '#92400e', icon: Package },
 };
+
+function mapDbTypeToLocal(type: string): Machine['type'] {
+  const lower = type.toLowerCase();
+  if (lower === 'extruder' || lower === 'film') return 'film';
+  if (lower === 'printer' || lower === 'printing') return 'printing';
+  if (lower === 'cutter' || lower === 'cutting') return 'cutting';
+  if (lower === 'mixer') return 'mixer';
+  return 'film';
+}
+
+function getAttendanceInfo(user: ProductionUser): { color: string; label: string; bgClass: string } {
+  const status = user.attendance_status;
+  if (!status || status === 'غائب') return { color: '#ef4444', label: 'غائب', bgClass: 'bg-red-500' };
+  if (status === 'استراحة غداء' || status === 'استراحة') return { color: '#f97316', label: 'استراحة', bgClass: 'bg-orange-500' };
+  if (status === 'حاضر') {
+    if (user.break_start_time && !user.break_end_time) return { color: '#f97316', label: 'استراحة', bgClass: 'bg-orange-500' };
+    if (user.lunch_start_time && !user.lunch_end_time) return { color: '#f97316', label: 'استراحة غداء', bgClass: 'bg-orange-500' };
+    return { color: '#22c55e', label: 'حاضر', bgClass: 'bg-green-500' };
+  }
+  if (status === 'مغادر') return { color: '#ef4444', label: 'مغادر', bgClass: 'bg-red-500' };
+  return { color: '#6b7280', label: status, bgClass: 'bg-gray-500' };
+}
+
+function getRoleDepartment(roleId: number): string {
+  switch (roleId) {
+    case 2: return 'إدارة الإنتاج';
+    case 3: return 'الفيلم';
+    case 4: return 'الطباعة';
+    case 6: return 'التقطيع';
+    default: return 'إنتاج';
+  }
+}
 
 function useDraggable(
   id: string,
@@ -88,7 +188,6 @@ function useDraggable(
   const handlePointerMove = (e: ThreeEvent<PointerEvent>) => {
     if (!isDragging) return;
     e.stopPropagation();
-
     const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2(
@@ -285,13 +384,11 @@ function WoodenPallet({ machine, isSelected }: { machine: Machine; isSelected: b
 
 function HallStructure({ showStructure }: { showStructure: boolean }) {
   if (!showStructure) return null;
-  
   const wallThickness = 0.2;
   const wallColor = "#94a3b8";
   const wallOpacity = 0.35;
   const roofColor = "#64748b";
   const roofOpacity = 0.2;
-
   return (
     <group>
       <mesh position={[HALL_WIDTH / 2, WALL_HEIGHT / 2, 0]}>
@@ -306,7 +403,6 @@ function HallStructure({ showStructure }: { showStructure: boolean }) {
         <boxGeometry args={[HALL_WIDTH, WALL_HEIGHT, wallThickness]} />
         <meshStandardMaterial color={wallColor} transparent opacity={wallOpacity} side={THREE.DoubleSide} />
       </mesh>
-
       <mesh position={[-(HALL_WIDTH / 2 - (HALL_WIDTH - GATE_WIDTH) / 4), WALL_HEIGHT / 2, -HALL_LENGTH / 2]}>
         <boxGeometry args={[(HALL_WIDTH - GATE_WIDTH) / 2, WALL_HEIGHT, wallThickness]} />
         <meshStandardMaterial color={wallColor} transparent opacity={wallOpacity} side={THREE.DoubleSide} />
@@ -319,7 +415,6 @@ function HallStructure({ showStructure }: { showStructure: boolean }) {
         <boxGeometry args={[GATE_WIDTH, WALL_HEIGHT - GATE_HEIGHT, wallThickness]} />
         <meshStandardMaterial color={wallColor} transparent opacity={wallOpacity} side={THREE.DoubleSide} />
       </mesh>
-
       <mesh position={[-GATE_WIDTH / 2, GATE_HEIGHT / 2, -HALL_LENGTH / 2]}>
         <boxGeometry args={[0.15, GATE_HEIGHT, 0.15]} />
         <meshStandardMaterial color="#f59e0b" metalness={0.6} />
@@ -332,14 +427,12 @@ function HallStructure({ showStructure }: { showStructure: boolean }) {
         <boxGeometry args={[GATE_WIDTH + 0.3, 0.2, 0.2]} />
         <meshStandardMaterial color="#f59e0b" metalness={0.6} />
       </mesh>
-
       <Html position={[0, GATE_HEIGHT + 0.8, -HALL_LENGTH / 2]} center>
         <div className="bg-amber-500/90 text-black px-3 py-1 rounded text-[10px] font-bold shadow-lg pointer-events-none whitespace-nowrap">
           البوابة الرئيسية
         </div>
       </Html>
-
-      <mesh position={[0, WALL_HEIGHT + 0.5, 0]} rotation={[0, 0, 0]}>
+      <mesh position={[0, WALL_HEIGHT + 0.5, 0]}>
         <boxGeometry args={[HALL_WIDTH + 1, 0.15, HALL_LENGTH + 1]} />
         <meshStandardMaterial color={roofColor} transparent opacity={roofOpacity} side={THREE.DoubleSide} />
       </mesh>
@@ -355,7 +448,6 @@ function HallStructure({ showStructure }: { showStructure: boolean }) {
           <meshStandardMaterial color="#475569" transparent opacity={0.3} />
         </mesh>
       ))}
-
       {[-HALL_WIDTH / 2, HALL_WIDTH / 2].map((x) => (
         [0, 1, 2, 3].map((i) => (
           <group key={`pillar-${x}-${i}`}>
@@ -383,9 +475,34 @@ function FloorMarkings() {
   );
 }
 
-function DraggableGroup({ machine, isSelected, onSelect, onDrag }: any) {
+function RollMesh({ roll, position }: { roll: ActiveRoll; position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      <mesh castShadow rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.4, 0.4, 0.8, 32]} />
+        <meshStandardMaterial color={roll.roll_color || '#808080'} roughness={0.3} metalness={0.2} />
+      </mesh>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.15, 0.15, 0.85, 16]} />
+        <meshStandardMaterial color="#6b7280" metalness={0.8} />
+      </mesh>
+      <Html position={[0, 0.8, 0]} center>
+        <div className="bg-black/80 text-white px-1.5 py-0.5 rounded text-[7px] font-mono pointer-events-none whitespace-nowrap border border-white/10">
+          {roll.roll_number} • {parseFloat(roll.weight_kg).toFixed(1)}kg
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+function DraggableGroup({ machine, isSelected, onSelect, onDrag, rolls }: { machine: Machine; isSelected: boolean; onSelect: () => void; onDrag: (id: string, pos: [number, number, number]) => void; rolls: ActiveRoll[] }) {
   const { handlePointerDown, handlePointerUp, handlePointerMove } = useDraggable(machine.id, isSelected, onDrag);
   
+  const machineRolls = rolls.filter(r => {
+    const dbId = machine.dbId || machine.id;
+    return r.film_machine_id === dbId || r.printing_machine_id === dbId || r.cutting_machine_id === dbId;
+  });
+
   return (
     <group 
       position={machine.position} 
@@ -402,9 +519,249 @@ function DraggableGroup({ machine, isSelected, onSelect, onDrag }: any) {
       <Html position={[0, machine.type === 'film' ? 6 * machine.scale[1] : 3.5 * machine.scale[1], 0]} center>
         <div className="bg-black/85 text-white px-2.5 py-1 rounded-md text-[9px] font-bold border border-white/20 shadow-xl pointer-events-none whitespace-nowrap backdrop-blur-sm">
           {machine.customName || machine.nameAr}
+          {machineRolls.length > 0 && (
+            <span className="mr-1.5 bg-emerald-500/80 text-white px-1 rounded text-[7px]">{machineRolls.length}</span>
+          )}
         </div>
       </Html>
+
+      {machineRolls.slice(0, 6).map((roll, idx) => {
+        const col = idx % 3;
+        const row = Math.floor(idx / 3);
+        return (
+          <RollMesh 
+            key={roll.id} 
+            roll={roll} 
+            position={[(col - 1) * 1.2, 0.4, 3 + row * 1.4]} 
+          />
+        );
+      })}
+      {machineRolls.length > 6 && (
+        <Html position={[0, 1.2, 3 + 2 * 1.4]} center>
+          <div className="bg-amber-500/90 text-black px-1.5 py-0.5 rounded text-[8px] font-bold pointer-events-none whitespace-nowrap">
+            +{machineRolls.length - 6} رول
+          </div>
+        </Html>
+      )}
     </group>
+  );
+}
+
+function MachineDetailPanel({ machine, onClose }: { machine: Machine; onClose: () => void }) {
+  const dbId = machine.dbId || machine.id;
+  
+  const { data: orders = [], isLoading } = useQuery<ProductionOrder[]>({
+    queryKey: [`/api/factory-3d/machine-orders/${dbId}`],
+    enabled: !!dbId,
+  });
+
+  const { data: stats } = useQuery<any>({
+    queryKey: [`/api/factory-3d/machine-stats/${dbId}`],
+    enabled: !!dbId,
+  });
+
+  const statusMap: Record<string, { label: string; cls: string }> = {
+    pending: { label: 'قيد الانتظار', cls: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' },
+    in_progress: { label: 'قيد التنفيذ', cls: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+    completed: { label: 'مكتمل', cls: 'bg-green-500/20 text-green-400 border-green-500/30' },
+    cancelled: { label: 'ملغي', cls: 'bg-red-500/20 text-red-400 border-red-500/30' },
+  };
+
+  return (
+    <Card className="bg-slate-900/95 backdrop-blur-xl border-slate-700/50 text-white shadow-2xl w-72 max-h-[70vh] overflow-hidden flex flex-col">
+      <CardContent className="p-3 flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: machine.color }} />
+            <span className="text-sm font-bold text-slate-100">{machine.customName || machine.nameAr}</span>
+          </div>
+          <Button size="icon" variant="ghost" onClick={onClose} className="w-6 h-6 text-slate-400 hover:text-white">
+            <X size={14} />
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="bg-slate-800/60 rounded-md p-2 border border-slate-700/30">
+            <div className="text-[8px] text-slate-500">المعرف</div>
+            <div className="text-[11px] font-mono text-slate-300">{dbId}</div>
+          </div>
+          <div className="bg-slate-800/60 rounded-md p-2 border border-slate-700/30">
+            <div className="text-[8px] text-slate-500">النوع</div>
+            <div className="text-[11px] text-slate-300">{MACHINE_CONFIGS[machine.type]?.nameAr || machine.type}</div>
+          </div>
+          {machine.screwType && (
+            <div className="bg-slate-800/60 rounded-md p-2 border border-slate-700/30">
+              <div className="text-[8px] text-slate-500">نوع البرغي</div>
+              <div className="text-[11px] text-slate-300">{machine.screwType}</div>
+            </div>
+          )}
+          {machine.sectionId && (
+            <div className="bg-slate-800/60 rounded-md p-2 border border-slate-700/30">
+              <div className="text-[8px] text-slate-500">القسم</div>
+              <div className="text-[11px] text-slate-300">{machine.sectionId}</div>
+            </div>
+          )}
+        </div>
+
+        {stats?.todayStats && (
+          <div className="mb-3">
+            <div className="text-[9px] font-bold text-slate-400 mb-1.5">إحصائيات اليوم</div>
+            <div className="grid grid-cols-3 gap-1.5">
+              <div className="bg-blue-500/10 rounded p-1.5 text-center border border-blue-500/20">
+                <div className="text-[14px] font-bold text-blue-400">{stats.todayStats.rolls_count || 0}</div>
+                <div className="text-[7px] text-blue-300/60">رول</div>
+              </div>
+              <div className="bg-emerald-500/10 rounded p-1.5 text-center border border-emerald-500/20">
+                <div className="text-[14px] font-bold text-emerald-400">{parseFloat(stats.todayStats.total_weight_kg || 0).toFixed(0)}</div>
+                <div className="text-[7px] text-emerald-300/60">كجم</div>
+              </div>
+              <div className="bg-purple-500/10 rounded p-1.5 text-center border border-purple-500/20">
+                <div className="text-[14px] font-bold text-purple-400">{stats.todayStats.completed_rolls || 0}</div>
+                <div className="text-[7px] text-purple-300/60">مكتمل</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
+          <div className="text-[9px] font-bold text-slate-400 mb-1.5">آخر 5 أوامر إنتاج</div>
+          {isLoading ? (
+            <div className="text-[10px] text-slate-500 text-center py-4">جاري التحميل...</div>
+          ) : orders.length === 0 ? (
+            <div className="text-[10px] text-slate-500 text-center py-4">لا توجد أوامر إنتاج</div>
+          ) : (
+            <div className="space-y-2">
+              {orders.map((order) => {
+                const st = statusMap[order.status] || { label: order.status, cls: 'bg-gray-500/20 text-gray-400 border-gray-500/30' };
+                return (
+                  <div key={order.id} className="bg-slate-800/50 rounded-lg p-2 border border-slate-700/30">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold text-slate-200 font-mono">{order.production_order_number}</span>
+                      <Badge className={`text-[7px] h-4 px-1.5 border ${st.cls}`}>{st.label}</Badge>
+                    </div>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: order.color_hex }} />
+                      <span className="text-[9px] text-slate-400">{order.customer_name_ar || order.customer_name}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[8px] text-slate-500">
+                      <span>{order.product_name_ar || order.product_name}</span>
+                      <span className="font-mono">{parseFloat(order.quantity_kg).toFixed(0)} كجم</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 text-[8px]">
+                      <span className="text-slate-500">{order.rolls_count} رول</span>
+                      <span className="text-slate-600">•</span>
+                      <span className="text-slate-500">{parseFloat(order.total_rolls_weight || '0').toFixed(0)} كجم منتج</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      {order.film_completed && <Badge className="text-[6px] h-3 px-1 bg-blue-500/20 text-blue-400 border-blue-500/30">فيلم ✓</Badge>}
+                      {order.printing_completed && <Badge className="text-[6px] h-3 px-1 bg-purple-500/20 text-purple-400 border-purple-500/30">طباعة ✓</Badge>}
+                      {order.cutting_completed && <Badge className="text-[6px] h-3 px-1 bg-green-500/20 text-green-400 border-green-500/30">تقطيع ✓</Badge>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProductionStaffPanel({ users }: { users: ProductionUser[] }) {
+  const [expanded, setExpanded] = useState(true);
+  const [selectedDept, setSelectedDept] = useState<number | null>(null);
+
+  const departments = [
+    { roleId: 2, label: 'إدارة الإنتاج', color: '#f59e0b' },
+    { roleId: 3, label: 'الفيلم', color: '#2563eb' },
+    { roleId: 4, label: 'الطباعة', color: '#7c3aed' },
+    { roleId: 6, label: 'التقطيع', color: '#059669' },
+  ];
+
+  const filteredUsers = selectedDept ? users.filter(u => u.role_id === selectedDept) : users;
+  const presentCount = users.filter(u => {
+    const info = getAttendanceInfo(u);
+    return info.label === 'حاضر';
+  }).length;
+  const breakCount = users.filter(u => {
+    const info = getAttendanceInfo(u);
+    return info.label === 'استراحة' || info.label === 'استراحة غداء';
+  }).length;
+
+  return (
+    <Card className="bg-slate-900/95 backdrop-blur-xl border-slate-700/50 text-white shadow-2xl">
+      <CardContent className="p-3">
+        <button onClick={() => setExpanded(!expanded)} className="flex items-center justify-between w-full mb-2">
+          <div className="flex items-center gap-2">
+            <Users size={13} className="text-cyan-400" />
+            <span className="text-[11px] font-bold text-slate-300">طاقم الإنتاج</span>
+            <span className="text-[9px] text-slate-500">({users.length})</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <Circle size={6} className="text-green-500 fill-green-500" />
+              <span className="text-[8px] text-green-400">{presentCount}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Circle size={6} className="text-orange-500 fill-orange-500" />
+              <span className="text-[8px] text-orange-400">{breakCount}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Circle size={6} className="text-red-500 fill-red-500" />
+              <span className="text-[8px] text-red-400">{users.length - presentCount - breakCount}</span>
+            </div>
+            {expanded ? <ChevronUp size={12} className="text-slate-500" /> : <ChevronDown size={12} className="text-slate-500" />}
+          </div>
+        </button>
+
+        {expanded && (
+          <>
+            <div className="flex gap-1 mb-2 flex-wrap">
+              <button
+                onClick={() => setSelectedDept(null)}
+                className={`px-2 py-0.5 rounded text-[8px] font-medium transition-all ${!selectedDept ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800/60 text-slate-400 border border-slate-700/30 hover:bg-slate-700/60'}`}
+              >
+                الكل
+              </button>
+              {departments.map(dept => {
+                const count = users.filter(u => u.role_id === dept.roleId).length;
+                return (
+                  <button
+                    key={dept.roleId}
+                    onClick={() => setSelectedDept(selectedDept === dept.roleId ? null : dept.roleId)}
+                    className={`px-2 py-0.5 rounded text-[8px] font-medium transition-all ${selectedDept === dept.roleId ? 'text-white border' : 'bg-slate-800/60 text-slate-400 border border-slate-700/30 hover:bg-slate-700/60'}`}
+                    style={selectedDept === dept.roleId ? { backgroundColor: dept.color + '33', borderColor: dept.color + '50', color: dept.color } : {}}
+                  >
+                    {dept.label} ({count})
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="max-h-48 overflow-y-auto scrollbar-thin space-y-1">
+              {filteredUsers.map(user => {
+                const info = getAttendanceInfo(user);
+                return (
+                  <div key={user.id} className="flex items-center justify-between px-2 py-1 bg-slate-800/40 rounded border border-slate-700/20">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${info.bgClass}`} />
+                      <span className="text-[9px] text-slate-300 truncate">{user.display_name_ar || user.display_name}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[7px] text-slate-500">{getRoleDepartment(user.role_id)}</span>
+                      <Badge className={`text-[6px] h-3.5 px-1 border ${info.label === 'حاضر' ? 'bg-green-500/20 text-green-400 border-green-500/30' : info.label === 'غائب' || info.label === 'مغادر' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-orange-500/20 text-orange-400 border-orange-500/30'}`}>
+                        {info.label}
+                      </Badge>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -418,6 +775,8 @@ export default function FactorySimulation3D() {
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showDetailPanel, setShowDetailPanel] = useState(false);
+  const [dbMachinesLoaded, setDbMachinesLoaded] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -426,16 +785,97 @@ export default function FactorySimulation3D() {
     refetchInterval: 5000,
   });
 
-  const { data: savedLayout, isLoading: layoutLoading } = useQuery<any>({
+  const { data: savedLayout } = useQuery<any>({
     queryKey: ['/api/factory-3d/layout'],
   });
 
+  const { data: dbMachines = [] } = useQuery<DbMachine[]>({
+    queryKey: ['/api/factory-3d/machines'],
+  });
+
+  const { data: productionUsers = [] } = useQuery<ProductionUser[]>({
+    queryKey: ['/api/factory-3d/production-users'],
+    refetchInterval: 30000,
+  });
+
   useEffect(() => {
-    if (savedLayout?.layout_data && Array.isArray(savedLayout.layout_data)) {
-      setMachines(savedLayout.layout_data);
+    if (dbMachinesLoaded) return;
+
+    if (savedLayout?.layout_data && Array.isArray(savedLayout.layout_data) && savedLayout.layout_data.length > 0) {
+      const layoutMachines = savedLayout.layout_data as Machine[];
+      if (dbMachines.length > 0) {
+        const layoutIds = new Set(layoutMachines.map(m => m.dbId || m.id));
+        const newDbMachines = dbMachines
+          .filter(db => !layoutIds.has(db.id))
+          .map((db, idx): Machine => {
+            const machineType = mapDbTypeToLocal(db.type);
+            const config = MACHINE_CONFIGS[machineType] || MACHINE_CONFIGS.film;
+            return {
+              id: `db-${db.id}`,
+              dbId: db.id,
+              nameAr: db.name_ar || db.name,
+              type: machineType,
+              color: config.color,
+              position: [Math.random() * 12 - 6, 0, -20 + idx * 4],
+              size: [2, 2, 2],
+              scale: [1, 1, 1],
+              sectionId: db.section_id,
+              screwType: db.screw_type,
+              capacitySmall: db.capacity_small_kg_per_hour,
+              capacityMedium: db.capacity_medium_kg_per_hour,
+              capacityLarge: db.capacity_large_kg_per_hour,
+            };
+          });
+        setMachines([...layoutMachines, ...newDbMachines]);
+      } else {
+        setMachines(layoutMachines);
+      }
       setHasUnsavedChanges(false);
+      setDbMachinesLoaded(true);
+    } else if (dbMachines.length > 0) {
+      const sectionGroups: Record<string, DbMachine[]> = {};
+      dbMachines.forEach(db => {
+        const key = db.section_id || 'other';
+        if (!sectionGroups[key]) sectionGroups[key] = [];
+        sectionGroups[key].push(db);
+      });
+
+      const sectionZones: Record<string, { startX: number; startZ: number }> = {
+        SEC03: { startX: -7, startZ: -18 },
+        SEC04: { startX: -7, startZ: 0 },
+        SEC05: { startX: -7, startZ: 12 },
+      };
+
+      const generatedMachines: Machine[] = [];
+      Object.entries(sectionGroups).forEach(([sectionId, sectionMachines]) => {
+        const zone = sectionZones[sectionId] || { startX: 0, startZ: 0 };
+        sectionMachines.forEach((db, idx) => {
+          const machineType = mapDbTypeToLocal(db.type);
+          const config = MACHINE_CONFIGS[machineType] || MACHINE_CONFIGS.film;
+          const col = idx % 3;
+          const row = Math.floor(idx / 3);
+          generatedMachines.push({
+            id: `db-${db.id}`,
+            dbId: db.id,
+            nameAr: db.name_ar || db.name,
+            type: machineType,
+            color: config.color,
+            position: [zone.startX + col * 5, 0, zone.startZ + row * 5],
+            size: [2, 2, 2],
+            scale: [1, 1, 1],
+            sectionId: db.section_id,
+            screwType: db.screw_type,
+            capacitySmall: db.capacity_small_kg_per_hour,
+            capacityMedium: db.capacity_medium_kg_per_hour,
+            capacityLarge: db.capacity_large_kg_per_hour,
+          });
+        });
+      });
+      setMachines(generatedMachines);
+      setHasUnsavedChanges(true);
+      setDbMachinesLoaded(true);
     }
-  }, [savedLayout]);
+  }, [savedLayout, dbMachines, dbMachinesLoaded]);
 
   const saveLayoutMutation = useMutation({
     mutationFn: async (data: Machine[]) => {
@@ -457,6 +897,9 @@ export default function FactorySimulation3D() {
     setEditingName(false);
     setShowScalePanel(false);
     setShowColorPanel(false);
+    if (selectedId) {
+      setShowDetailPanel(true);
+    }
   }, [selectedId]);
 
   const updateMachines = useCallback((updater: Machine[] | ((prev: Machine[]) => Machine[])) => {
@@ -478,48 +921,33 @@ export default function FactorySimulation3D() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!selectedId) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      
       switch (e.key) {
-        case 'ArrowUp':
-          e.preventDefault();
-          moveMachine(0, -MOVE_STEP);
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          moveMachine(0, MOVE_STEP);
-          break;
-        case 'ArrowLeft':
-          e.preventDefault();
-          moveMachine(-MOVE_STEP, 0);
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          moveMachine(MOVE_STEP, 0);
-          break;
-        case 'Delete':
-        case 'Backspace':
+        case 'ArrowUp': e.preventDefault(); moveMachine(0, -MOVE_STEP); break;
+        case 'ArrowDown': e.preventDefault(); moveMachine(0, MOVE_STEP); break;
+        case 'ArrowLeft': e.preventDefault(); moveMachine(-MOVE_STEP, 0); break;
+        case 'ArrowRight': e.preventDefault(); moveMachine(MOVE_STEP, 0); break;
+        case 'Delete': case 'Backspace':
           e.preventDefault();
           updateMachines(prev => prev.filter(m => m.id !== selectedId));
           setSelectedId(null);
           break;
-        case 'r':
-        case 'R':
+        case 'r': case 'R':
           e.preventDefault();
           updateMachines(prev => prev.map(m => m.id === selectedId ? { ...m, rotation: ((m.rotation || 0) + 45) % 360 } : m));
           break;
         case 'Escape':
           e.preventDefault();
           setSelectedId(null);
+          setShowDetailPanel(false);
           break;
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedId, moveMachine, updateMachines]);
 
   const addMachine = (type: Machine['type']) => {
-    const config = MACHINE_CONFIGS[type];
+    const config = MACHINE_CONFIGS[type] || MACHINE_CONFIGS.film;
     const newMachine: Machine = {
       id: `${type}-${Date.now()}`,
       nameAr: config.nameAr,
@@ -593,7 +1021,8 @@ export default function FactorySimulation3D() {
                   <span className="text-xs font-bold text-slate-300">إضافة معدات</span>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {(Object.entries(MACHINE_CONFIGS) as [Machine['type'], typeof MACHINE_CONFIGS[Machine['type']]][]).map(([type, config]) => {
+                  {(['film', 'printing', 'cutting', 'mixer', 'pallet'] as Machine['type'][]).map((type) => {
+                    const config = MACHINE_CONFIGS[type];
                     const Icon = config.icon;
                     return (
                       <button 
@@ -662,42 +1091,21 @@ export default function FactorySimulation3D() {
                           <Label className="text-[9px] text-slate-400">العرض (X)</Label>
                           <span className="text-[9px] text-slate-500">{selectedMachine.scale[0].toFixed(1)}x</span>
                         </div>
-                        <Slider
-                          value={[selectedMachine.scale[0]]}
-                          min={0.3}
-                          max={3}
-                          step={0.1}
-                          onValueChange={([v]) => updateScale(0, v)}
-                          className="h-4"
-                        />
+                        <Slider value={[selectedMachine.scale[0]]} min={0.3} max={3} step={0.1} onValueChange={([v]) => updateScale(0, v)} className="h-4" />
                       </div>
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <Label className="text-[9px] text-slate-400">الارتفاع (Y)</Label>
                           <span className="text-[9px] text-slate-500">{selectedMachine.scale[1].toFixed(1)}x</span>
                         </div>
-                        <Slider
-                          value={[selectedMachine.scale[1]]}
-                          min={0.3}
-                          max={3}
-                          step={0.1}
-                          onValueChange={([v]) => updateScale(1, v)}
-                          className="h-4"
-                        />
+                        <Slider value={[selectedMachine.scale[1]]} min={0.3} max={3} step={0.1} onValueChange={([v]) => updateScale(1, v)} className="h-4" />
                       </div>
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <Label className="text-[9px] text-slate-400">الطول (Z)</Label>
                           <span className="text-[9px] text-slate-500">{selectedMachine.scale[2].toFixed(1)}x</span>
                         </div>
-                        <Slider
-                          value={[selectedMachine.scale[2]]}
-                          min={0.3}
-                          max={3}
-                          step={0.1}
-                          onValueChange={([v]) => updateScale(2, v)}
-                          className="h-4"
-                        />
+                        <Slider value={[selectedMachine.scale[2]]} min={0.3} max={3} step={0.1} onValueChange={([v]) => updateScale(2, v)} className="h-4" />
                       </div>
                       <Button size="sm" variant="ghost" onClick={() => {
                         if (!selectedId) return;
@@ -751,7 +1159,20 @@ export default function FactorySimulation3D() {
                 </CardContent>
               </Card>
             )}
+
+            {productionUsers.length > 0 && (
+              <ProductionStaffPanel users={productionUsers} />
+            )}
           </div>
+
+          {showDetailPanel && selectedMachine && (
+            <div className="absolute top-3 left-3 z-20 lg:left-auto lg:right-[240px]">
+              <MachineDetailPanel 
+                machine={selectedMachine} 
+                onClose={() => setShowDetailPanel(false)} 
+              />
+            </div>
+          )}
 
           <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2">
             {hasUnsavedChanges && (
@@ -768,12 +1189,17 @@ export default function FactorySimulation3D() {
             <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-lg px-3 py-2 flex items-center gap-3 shadow-xl">
               <div className="flex items-center gap-2 text-[10px] text-slate-400">
                 <Factory size={12} className="text-blue-400" />
-                <span>{machines.length} معدة</span>
+                <span>{machines.length} ماكينة</span>
               </div>
               <div className="w-px h-4 bg-slate-700" />
               <div className="flex items-center gap-2 text-[10px] text-slate-400">
                 <Box size={12} className="text-amber-400" />
                 <span>{activeRolls.length} رول نشط</span>
+              </div>
+              <div className="w-px h-4 bg-slate-700" />
+              <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                <Users size={12} className="text-cyan-400" />
+                <span>{productionUsers.filter(u => getAttendanceInfo(u).label === 'حاضر').length}/{productionUsers.length}</span>
               </div>
             </div>
           </div>
@@ -783,8 +1209,7 @@ export default function FactorySimulation3D() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button 
-                    size="icon" 
-                    variant="secondary" 
+                    size="icon" variant="secondary" 
                     onClick={() => setShowStructure(!showStructure)} 
                     className={`w-9 h-9 backdrop-blur-xl border shadow-xl ${showStructure ? 'bg-amber-600/80 border-amber-500/50 hover:bg-amber-600' : 'bg-slate-900/90 border-slate-700/50 hover:bg-slate-800'}`}
                   >
@@ -798,8 +1223,7 @@ export default function FactorySimulation3D() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button 
-                    size="icon" 
-                    variant="secondary" 
+                    size="icon" variant="secondary" 
                     onClick={() => setViewMode(viewMode === '3d' ? 'top' : '3d')} 
                     className="w-9 h-9 bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 hover:bg-slate-800 shadow-xl"
                   >
@@ -813,17 +1237,14 @@ export default function FactorySimulation3D() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button 
-                    size="icon" 
-                    variant="secondary"
-                    onClick={() => setSelectedId(null)}
+                    size="icon" variant="secondary"
+                    onClick={() => { setSelectedId(null); setShowDetailPanel(false); }}
                     className="w-9 h-9 bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 hover:bg-slate-800 shadow-xl"
                   >
                     <Maximize2 size={14} className="text-slate-300" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="right" className="text-xs">
-                  إلغاء التحديد
-                </TooltipContent>
+                <TooltipContent side="right" className="text-xs">إلغاء التحديد</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
@@ -861,7 +1282,7 @@ export default function FactorySimulation3D() {
             </div>
           )}
 
-          <Canvas shadows className="!bg-transparent" onPointerMissed={() => setSelectedId(null)}>
+          <Canvas shadows className="!bg-transparent" onPointerMissed={() => { setSelectedId(null); setShowDetailPanel(false); }}>
             <Suspense fallback={null}>
               <PerspectiveCamera 
                 makeDefault 
@@ -883,7 +1304,7 @@ export default function FactorySimulation3D() {
               <Environment preset="city" />
 
               <group>
-                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow onClick={(e) => { e.stopPropagation(); setSelectedId(null); }}>
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow onClick={(e) => { e.stopPropagation(); setSelectedId(null); setShowDetailPanel(false); }}>
                   <planeGeometry args={[HALL_WIDTH, HALL_LENGTH]} />
                   <meshStandardMaterial color="#e8edf3" roughness={0.8} />
                 </mesh>
@@ -899,25 +1320,10 @@ export default function FactorySimulation3D() {
                     machine={m} 
                     isSelected={selectedId === m.id} 
                     onSelect={() => setSelectedId(m.id)} 
-                    onDrag={handleDrag} 
+                    onDrag={handleDrag}
+                    rolls={activeRolls}
                   />
                 ))}
-
-                {activeRolls.map((roll, idx) => {
-                  const m = machines.find(mac => mac.id === roll.film_machine_id);
-                  return (
-                    <group key={roll.id} position={m ? [m.position[0] + (idx % 3) * 1.2 - 1.2, 0.4, m.position[2] + 3] : [8, 0.4, -20 + idx * 1.5]}>
-                      <mesh castShadow rotation={[Math.PI / 2, 0, 0]}>
-                        <cylinderGeometry args={[0.4, 0.4, 0.8, 32]} />
-                        <meshStandardMaterial color={roll.roll_color} roughness={0.3} metalness={0.2} />
-                      </mesh>
-                      <mesh rotation={[Math.PI / 2, 0, 0]}>
-                        <cylinderGeometry args={[0.15, 0.15, 0.85, 16]} />
-                        <meshStandardMaterial color="#6b7280" metalness={0.8} />
-                      </mesh>
-                    </group>
-                  );
-                })}
                 
                 <ContactShadows opacity={0.35} scale={60} blur={2} far={15} position={[0, 0, 0]} />
               </group>

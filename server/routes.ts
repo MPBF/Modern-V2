@@ -9819,6 +9819,109 @@ Do not include quotes or explanations.`;
     }
   });
 
+  // Get all active machines from database for 3D factory
+  app.get("/api/factory-3d/machines", requireAuth, async (req, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT id, name, name_ar, type, section_id, status,
+               capacity_small_kg_per_hour, capacity_medium_kg_per_hour, capacity_large_kg_per_hour,
+               screw_type
+        FROM machines 
+        WHERE status = 'active'
+        ORDER BY section_id, id
+      `);
+      res.json(result.rows);
+    } catch (error) {
+      console.error("Error fetching active machines for 3D:", error);
+      res.status(500).json({ message: "خطأ في جلب المكائن النشطة" });
+    }
+  });
+
+  // Get last 5 production orders for a specific machine
+  app.get("/api/factory-3d/machine-orders/:machineId", requireAuth, async (req, res) => {
+    try {
+      const machineId = req.params.machineId;
+      const result = await db.execute(sql`
+        SELECT 
+          po.id,
+          po.production_order_number,
+          po.quantity_kg,
+          po.produced_quantity_kg,
+          po.status,
+          po.film_completed,
+          po.printing_completed,
+          po.cutting_completed,
+          po.created_at,
+          po.production_start_time,
+          po.production_end_time,
+          o.order_number,
+          c.name as customer_name,
+          c.name_ar as customer_name_ar,
+          cp.product_name,
+          cp.product_name_ar,
+          cp.master_batch_id,
+          COALESCE(mbc.color_hex, '#808080') as color_hex,
+          COALESCE(mbc.name_ar, '') as color_name_ar,
+          (SELECT COUNT(*) FROM rolls r WHERE r.production_order_id = po.id) as rolls_count,
+          (SELECT COALESCE(SUM(r.weight_kg::numeric), 0) FROM rolls r WHERE r.production_order_id = po.id) as total_rolls_weight
+        FROM production_orders po
+        JOIN orders o ON po.order_id = o.id
+        JOIN customers c ON o.customer_id = c.id
+        JOIN customer_products cp ON po.customer_product_id = cp.id
+        LEFT JOIN master_batch_colors mbc ON cp.master_batch_id = mbc.id
+        WHERE po.assigned_machine_id = ${machineId}
+           OR po.id IN (
+             SELECT DISTINCT r.production_order_id FROM rolls r 
+             WHERE r.film_machine_id = ${machineId} 
+                OR r.printing_machine_id = ${machineId} 
+                OR r.cutting_machine_id = ${machineId}
+           )
+        ORDER BY po.created_at DESC
+        LIMIT 5
+      `);
+      res.json(result.rows);
+    } catch (error) {
+      console.error("Error fetching machine orders for 3D:", error);
+      res.status(500).json({ message: "خطأ في جلب أوامر الإنتاج" });
+    }
+  });
+
+  // Get production users with today's attendance status
+  app.get("/api/factory-3d/production-users", requireAuth, async (req, res) => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const result = await db.execute(sql`
+        SELECT 
+          u.id,
+          u.display_name,
+          u.display_name_ar,
+          u.full_name,
+          u.role_id,
+          u.section_id,
+          r.name as role_name,
+          r.name_ar as role_name_ar,
+          a.status as attendance_status,
+          a.check_in_time,
+          a.break_start_time,
+          a.break_end_time,
+          a.lunch_start_time,
+          a.lunch_end_time
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        LEFT JOIN attendance a ON a.user_id = u.id AND a.check_in_time >= ${today}
+        WHERE u.role_id IN (2, 3, 4, 6) 
+          AND u.status = 'active'
+        ORDER BY u.role_id, u.id
+      `);
+      res.json(result.rows);
+    } catch (error) {
+      console.error("Error fetching production users for 3D:", error);
+      res.status(500).json({ message: "خطأ في جلب بيانات الموظفين" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
