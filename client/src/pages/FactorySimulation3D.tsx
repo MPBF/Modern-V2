@@ -771,7 +771,7 @@ export default function FactorySimulation3D() {
             </div>
           )}
 
-          <Canvas shadows className="!bg-transparent">
+          <Canvas shadows className="!bg-transparent" onPointerMissed={() => setSelectedId(null)}>
             <Suspense fallback={null}>
               <PerspectiveCamera 
                 makeDefault 
@@ -779,7 +779,7 @@ export default function FactorySimulation3D() {
                 fov={viewMode === '3d' ? 50 : 35}
               />
               <OrbitControls 
-                enableRotate={viewMode === '3d' && !selectedId} 
+                enableRotate={viewMode === '3d'}
                 enablePan={true}
                 maxPolarAngle={viewMode === 'top' ? 0 : Math.PI / 2.1}
                 minDistance={5}
@@ -792,7 +792,7 @@ export default function FactorySimulation3D() {
               <Environment preset="city" />
 
               <group>
-                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow onClick={(e) => { e.stopPropagation(); setSelectedId(null); }}>
                   <planeGeometry args={[HALL_WIDTH, HALL_LENGTH]} />
                   <meshStandardMaterial color="#e8edf3" roughness={0.8} />
                 </mesh>
