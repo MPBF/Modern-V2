@@ -3566,3 +3566,13 @@ export const inventoryCountItemsRelations = relations(inventory_count_items, ({ 
     references: [locations.id],
   }),
 }));
+
+export const factory_layouts = pgTable("factory_layouts", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).default("default"),
+  layout_data: jsonb("layout_data").notNull(),
+  updated_at: timestamp("updated_at").defaultNow(),
+  updated_by: integer("updated_by"),
+});
+
+export type FactoryLayout = typeof factory_layouts.$inferSelect;
