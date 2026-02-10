@@ -69,6 +69,8 @@ import {
   generateOperatorReportNumber,
 } from "../../../shared/id-generator";
 import ConsumablePartsTab from "../components/maintenance/ConsumablePartsTab";
+import { userHasPermission } from "../utils/roleUtils";
+import type { PermissionKey } from "../../../shared/permissions";
 
 // Schema definitions for forms
 const maintenanceActionSchema = z.object({
@@ -114,9 +116,21 @@ const maintenanceRequestSchema = z.object({
   assigned_to: z.string().optional(),
 });
 
+const maintenanceTabPermissions: { tab: string; permissions: PermissionKey[] }[] = [
+  { tab: 'requests', permissions: ['view_maintenance_requests', 'view_maintenance', 'manage_maintenance'] },
+  { tab: 'actions', permissions: ['manage_maintenance_actions', 'manage_maintenance'] },
+  { tab: 'reports', permissions: ['view_maintenance_reports', 'view_maintenance', 'manage_maintenance'] },
+  { tab: 'negligence', permissions: ['manage_negligence', 'manage_maintenance'] },
+  { tab: 'spare-parts', permissions: ['manage_spare_parts', 'manage_maintenance'] },
+  { tab: 'consumable-parts', permissions: ['manage_consumable_parts', 'manage_maintenance'] },
+];
+
 export default function Maintenance() {
   const { t } = useTranslation();
-  const [currentTab, setCurrentTab] = useState("requests");
+  const { user } = useAuth();
+  const [currentTab, setCurrentTab] = useState(
+    maintenanceTabPermissions.find(tp => userHasPermission(user, tp.permissions))?.tab || 'requests'
+  );
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
     null,
   );
@@ -125,7 +139,6 @@ export default function Maintenance() {
   const [isActionViewDialogOpen, setIsActionViewDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   // Fetch all data
   const { data: maintenanceRequests, isLoading: loadingRequests } = useQuery({
@@ -380,40 +393,52 @@ export default function Maintenance() {
             onValueChange={setCurrentTab}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-6 mb-6">
-              <TabsTrigger value="requests" className="flex items-center gap-2">
-                <Wrench className="h-4 w-4" />
-                طلبات الصيانة
-              </TabsTrigger>
-              <TabsTrigger value="actions" className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4" />
-                إجراءات الصيانة
-              </TabsTrigger>
-              <TabsTrigger value="reports" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                بلاغات الصيانة
-              </TabsTrigger>
-              <TabsTrigger
-                value="negligence"
-                className="flex items-center gap-2"
-              >
-                <AlertCircle className="h-4 w-4" />
-                بلاغات إهمال المشغلين
-              </TabsTrigger>
-              <TabsTrigger
-                value="spare-parts"
-                className="flex items-center gap-2"
-              >
-                <Users className="h-4 w-4" />
-                قطع الغيار
-              </TabsTrigger>
-              <TabsTrigger
-                value="consumable-parts"
-                className="flex items-center gap-2"
-              >
-                <Wrench className="h-4 w-4" />
-                قطع غيار استهلاكية
-              </TabsTrigger>
+            <TabsList className="flex flex-wrap gap-1 h-auto mb-6">
+              {userHasPermission(user, ['view_maintenance_requests', 'view_maintenance', 'manage_maintenance']) && (
+                <TabsTrigger value="requests" className="flex items-center gap-2">
+                  <Wrench className="h-4 w-4" />
+                  طلبات الصيانة
+                </TabsTrigger>
+              )}
+              {userHasPermission(user, ['manage_maintenance_actions', 'manage_maintenance']) && (
+                <TabsTrigger value="actions" className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  إجراءات الصيانة
+                </TabsTrigger>
+              )}
+              {userHasPermission(user, ['view_maintenance_reports', 'view_maintenance', 'manage_maintenance']) && (
+                <TabsTrigger value="reports" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  بلاغات الصيانة
+                </TabsTrigger>
+              )}
+              {userHasPermission(user, ['manage_negligence', 'manage_maintenance']) && (
+                <TabsTrigger
+                  value="negligence"
+                  className="flex items-center gap-2"
+                >
+                  <AlertCircle className="h-4 w-4" />
+                  بلاغات إهمال المشغلين
+                </TabsTrigger>
+              )}
+              {userHasPermission(user, ['manage_spare_parts', 'manage_maintenance']) && (
+                <TabsTrigger
+                  value="spare-parts"
+                  className="flex items-center gap-2"
+                >
+                  <Users className="h-4 w-4" />
+                  قطع الغيار
+                </TabsTrigger>
+              )}
+              {userHasPermission(user, ['manage_consumable_parts', 'manage_maintenance']) && (
+                <TabsTrigger
+                  value="consumable-parts"
+                  className="flex items-center gap-2"
+                >
+                  <Wrench className="h-4 w-4" />
+                  قطع غيار استهلاكية
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {/* Maintenance Requests Tab */}

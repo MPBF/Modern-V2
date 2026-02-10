@@ -55,6 +55,20 @@ export function hasEditPermissions(user: AuthUser | null): boolean {
     'manage_mixing',
     'manage_whatsapp',
     'manage_ai_agent',
+    'manage_factory_simulation',
+    'manage_maintenance_actions',
+    'manage_negligence',
+    'manage_spare_parts',
+    'manage_consumable_parts',
+    'manage_quality_settings',
+    'manage_customers',
+    'manage_items',
+    'manage_machines',
+    'manage_sections',
+    'manage_categories',
+    'manage_master_batch',
+    'manage_warehouse_vouchers',
+    'manage_production_hall',
   ];
   
   return hasPermission(user.permissions, managementPermissions, false);
@@ -139,6 +153,20 @@ export function isManager(user: AuthUser | null): boolean {
     'manage_mixing',
     'manage_whatsapp',
     'manage_ai_agent',
+    'manage_factory_simulation',
+    'manage_maintenance_actions',
+    'manage_negligence',
+    'manage_spare_parts',
+    'manage_consumable_parts',
+    'manage_quality_settings',
+    'manage_customers',
+    'manage_items',
+    'manage_machines',
+    'manage_sections',
+    'manage_categories',
+    'manage_master_batch',
+    'manage_warehouse_vouchers',
+    'manage_production_hall',
   ];
   
   return hasPermission(user.permissions, managerPermissions, false);

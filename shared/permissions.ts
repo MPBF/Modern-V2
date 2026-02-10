@@ -53,6 +53,32 @@ export type PermissionKey =
   | 'manage_leaves'
   | 'view_training'
   | 'manage_training'
+  | 'view_factory_simulation'
+  | 'manage_factory_simulation'
+  | 'create_quality_inspections'
+  | 'view_quality_reports'
+  | 'manage_quality_settings'
+  | 'view_maintenance_requests'
+  | 'create_maintenance_requests'
+  | 'manage_maintenance_actions'
+  | 'view_maintenance_reports'
+  | 'manage_negligence'
+  | 'manage_spare_parts'
+  | 'manage_consumable_parts'
+  | 'view_financial_reports'
+  | 'view_hr_reports'
+  | 'view_quality_control_reports'
+  | 'view_maintenance_stats_reports'
+  | 'manage_customers'
+  | 'manage_items'
+  | 'manage_machines'
+  | 'manage_sections'
+  | 'manage_categories'
+  | 'manage_master_batch'
+  | 'view_warehouse_vouchers'
+  | 'manage_warehouse_vouchers'
+  | 'view_warehouse_reports'
+  | 'manage_production_hall'
   | 'admin'; // Super admin permission
 
 export interface Permission {
@@ -156,6 +182,55 @@ export const PERMISSIONS: Permission[] = [
     category: 'الصيانة',
     description: 'Create and manage maintenance requests'
   },
+  { 
+    id: 'view_maintenance_requests', 
+    name: 'View Maintenance Requests', 
+    name_ar: 'عرض طلبات الصيانة', 
+    category: 'الصيانة',
+    description: 'View maintenance request list'
+  },
+  { 
+    id: 'create_maintenance_requests', 
+    name: 'Create Maintenance Requests', 
+    name_ar: 'إنشاء طلبات الصيانة', 
+    category: 'الصيانة',
+    description: 'Submit new maintenance requests'
+  },
+  { 
+    id: 'manage_maintenance_actions', 
+    name: 'Manage Maintenance Actions', 
+    name_ar: 'إدارة إجراءات الصيانة', 
+    category: 'الصيانة',
+    description: 'Manage corrective and preventive maintenance actions'
+  },
+  { 
+    id: 'view_maintenance_reports', 
+    name: 'View Maintenance Reports', 
+    name_ar: 'عرض تقارير الصيانة', 
+    category: 'الصيانة',
+    description: 'View maintenance statistics and reports'
+  },
+  { 
+    id: 'manage_negligence', 
+    name: 'Manage Negligence Records', 
+    name_ar: 'إدارة سجلات الإهمال', 
+    category: 'الصيانة',
+    description: 'Record and manage operator negligence reports'
+  },
+  { 
+    id: 'manage_spare_parts', 
+    name: 'Manage Spare Parts', 
+    name_ar: 'إدارة قطع الغيار', 
+    category: 'الصيانة',
+    description: 'Manage spare parts inventory and requests'
+  },
+  { 
+    id: 'manage_consumable_parts', 
+    name: 'Manage Consumable Parts', 
+    name_ar: 'إدارة المواد الاستهلاكية', 
+    category: 'الصيانة',
+    description: 'Manage consumable parts and supplies'
+  },
   
   // Quality
   { 
@@ -171,6 +246,27 @@ export const PERMISSIONS: Permission[] = [
     name_ar: 'إدارة الجودة', 
     category: 'الجودة',
     description: 'Manage quality control and reports'
+  },
+  { 
+    id: 'create_quality_inspections', 
+    name: 'Create Quality Inspections', 
+    name_ar: 'إنشاء فحوصات الجودة', 
+    category: 'الجودة',
+    description: 'Create new quality inspection records'
+  },
+  { 
+    id: 'view_quality_reports', 
+    name: 'View Quality Reports', 
+    name_ar: 'عرض تقارير الجودة', 
+    category: 'الجودة',
+    description: 'View quality statistics and analysis reports'
+  },
+  { 
+    id: 'manage_quality_settings', 
+    name: 'Manage Quality Settings', 
+    name_ar: 'إدارة إعدادات الجودة', 
+    category: 'الجودة',
+    description: 'Manage quality control parameters and thresholds'
   },
   
   // Inventory & Warehouse
@@ -201,6 +297,34 @@ export const PERMISSIONS: Permission[] = [
     name_ar: 'إدارة المستودع', 
     category: 'المخزون',
     description: 'Manage warehouse operations'
+  },
+  { 
+    id: 'view_warehouse_vouchers', 
+    name: 'View Warehouse Vouchers', 
+    name_ar: 'عرض سندات المستودع', 
+    category: 'المخزون',
+    description: 'View warehouse entry and exit vouchers'
+  },
+  { 
+    id: 'manage_warehouse_vouchers', 
+    name: 'Manage Warehouse Vouchers', 
+    name_ar: 'إدارة سندات المستودع', 
+    category: 'المخزون',
+    description: 'Create and manage warehouse vouchers'
+  },
+  { 
+    id: 'view_warehouse_reports', 
+    name: 'View Warehouse Reports', 
+    name_ar: 'عرض تقارير المستودع', 
+    category: 'المخزون',
+    description: 'View warehouse statistics and reports'
+  },
+  { 
+    id: 'manage_production_hall', 
+    name: 'Manage Production Hall', 
+    name_ar: 'إدارة صالة الإنتاج', 
+    category: 'المخزون',
+    description: 'Manage production hall inventory and receipts'
   },
   
   // Users
@@ -292,6 +416,34 @@ export const PERMISSIONS: Permission[] = [
     category: 'التقارير',
     description: 'View real-time production monitoring'
   },
+  { 
+    id: 'view_financial_reports', 
+    name: 'View Financial Reports', 
+    name_ar: 'عرض التقارير المالية', 
+    category: 'التقارير',
+    description: 'View financial and cost analysis reports'
+  },
+  { 
+    id: 'view_hr_reports', 
+    name: 'View HR Reports', 
+    name_ar: 'عرض تقارير الموارد البشرية', 
+    category: 'التقارير',
+    description: 'View human resources statistics and reports'
+  },
+  { 
+    id: 'view_quality_control_reports', 
+    name: 'View Quality Control Reports', 
+    name_ar: 'عرض تقارير مراقبة الجودة', 
+    category: 'التقارير',
+    description: 'View quality control statistics in reports page'
+  },
+  { 
+    id: 'view_maintenance_stats_reports', 
+    name: 'View Maintenance Statistics Reports', 
+    name_ar: 'عرض تقارير إحصائيات الصيانة', 
+    category: 'التقارير',
+    description: 'View maintenance statistics in reports page'
+  },
   
   // Alerts & Monitoring
   { 
@@ -337,6 +489,50 @@ export const PERMISSIONS: Permission[] = [
     name_ar: 'إدارة الأدوار', 
     category: 'النظام',
     description: 'Create and modify user roles'
+  },
+  
+  // Definitions (sub-permissions)
+  { 
+    id: 'manage_customers', 
+    name: 'Manage Customers', 
+    name_ar: 'إدارة العملاء', 
+    category: 'التعريفات',
+    description: 'Create, edit, and manage customer records'
+  },
+  { 
+    id: 'manage_items', 
+    name: 'Manage Items', 
+    name_ar: 'إدارة الأصناف', 
+    category: 'التعريفات',
+    description: 'Create, edit, and manage item definitions'
+  },
+  { 
+    id: 'manage_machines', 
+    name: 'Manage Machines', 
+    name_ar: 'إدارة الماكينات', 
+    category: 'التعريفات',
+    description: 'Create, edit, and manage machine definitions'
+  },
+  { 
+    id: 'manage_sections', 
+    name: 'Manage Sections', 
+    name_ar: 'إدارة الأقسام', 
+    category: 'التعريفات',
+    description: 'Create, edit, and manage department sections'
+  },
+  { 
+    id: 'manage_categories', 
+    name: 'Manage Categories', 
+    name_ar: 'إدارة الفئات', 
+    category: 'التعريفات',
+    description: 'Create, edit, and manage item categories'
+  },
+  { 
+    id: 'manage_master_batch', 
+    name: 'Manage Master Batch Colors', 
+    name_ar: 'إدارة ألوان الماستر باتش', 
+    category: 'التعريفات',
+    description: 'Create, edit, and manage master batch color definitions'
   },
   
   // WhatsApp Integration
@@ -423,6 +619,22 @@ export const PERMISSIONS: Permission[] = [
     description: 'Manage AI agent settings and knowledge base'
   },
   
+  // Factory Simulation
+  { 
+    id: 'view_factory_simulation', 
+    name: 'View Factory Simulation', 
+    name_ar: 'عرض محاكاة المصنع', 
+    category: 'محاكاة المصنع',
+    description: 'View factory simulation and 3D layout'
+  },
+  { 
+    id: 'manage_factory_simulation', 
+    name: 'Manage Factory Simulation', 
+    name_ar: 'إدارة محاكاة المصنع', 
+    category: 'محاكاة المصنع',
+    description: 'Edit and configure factory simulation layout'
+  },
+  
   // Admin
   { 
     id: 'admin', 
@@ -477,7 +689,7 @@ export const ROUTE_PERMISSIONS: Record<string, PermissionKey[]> = {
   '/material-mixing': ['view_mixing', 'manage_mixing', 'view_production'],
   
   // Factory simulation
-  '/factory-simulation': ['view_production', 'manage_production', 'admin'],
+  '/factory-simulation': ['view_factory_simulation', 'manage_factory_simulation', 'view_production', 'manage_production', 'admin'],
   
   // WhatsApp integration
   '/meta-whatsapp-setup': ['manage_whatsapp', 'admin'],
@@ -560,6 +772,8 @@ export const PERMISSION_CATEGORIES = [
   'الموارد البشرية',
   'التقارير',
   'المراقبة',
+  'التعريفات',
+  'محاكاة المصنع',
   'التكامل',
   'الوكيل الذكي',
   'النظام'

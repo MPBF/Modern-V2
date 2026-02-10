@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "../hooks/use-auth";
+import { userHasPermission } from "../utils/roleUtils";
+import type { PermissionKey } from "../../../shared/permissions";
 import PageLayout from "../components/layout/PageLayout";
 import {
   Card,
@@ -62,10 +65,21 @@ import {
   MetricsGrid,
 } from "../components/charts";
 
+const reportsTabPermissions: { tab: string; permissions: PermissionKey[] }[] = [
+  { tab: 'production', permissions: ['view_production_reports', 'view_reports'] },
+  { tab: 'quality', permissions: ['view_quality_control_reports', 'view_quality', 'view_reports'] },
+  { tab: 'maintenance', permissions: ['view_maintenance_stats_reports', 'view_maintenance', 'view_reports'] },
+  { tab: 'hr', permissions: ['view_hr_reports', 'view_hr', 'view_reports'] },
+  { tab: 'financial', permissions: ['view_financial_reports', 'view_reports'] },
+];
+
 export default function Reports() {
+  const { user } = useAuth();
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
   const [selectedPeriod, setSelectedPeriod] = useState("month");
-  const [reportType, setReportType] = useState("production");
+  const [reportType, setReportType] = useState(
+    reportsTabPermissions.find(tp => userHasPermission(user, tp.permissions))?.tab || 'production'
+  );
 
   // Get date range for API calls
   const getDateRange = () => {
@@ -377,21 +391,25 @@ export default function Reports() {
 
           {/* Report Content */}
           <Tabs value={reportType} onValueChange={setReportType}>
-            <TabsList className="grid w-full grid-cols-5">
-              {reportTypes.map((type) => (
-                <TabsTrigger
-                  key={type.value}
-                  value={type.value}
-                  className="text-xs"
-                >
-                  <div className="flex items-center gap-1">
-                    {type.icon}
-                    <span className="hidden sm:inline">
-                      {type.label.split(" ")[1]}
-                    </span>
-                  </div>
-                </TabsTrigger>
-              ))}
+            <TabsList className="flex flex-wrap gap-1 h-auto">
+              {reportTypes.map((type) => {
+                const tabPerm = reportsTabPermissions.find(t => t.tab === type.value);
+                if (tabPerm && !userHasPermission(user, tabPerm.permissions)) return null;
+                return (
+                  <TabsTrigger
+                    key={type.value}
+                    value={type.value}
+                    className="text-xs"
+                  >
+                    <div className="flex items-center gap-1">
+                      {type.icon}
+                      <span className="hidden sm:inline">
+                        {type.label.split(" ")[1]}
+                      </span>
+                    </div>
+                  </TabsTrigger>
+                );
+              })}
             </TabsList>
 
             {/* Production Reports */}
