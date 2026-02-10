@@ -45,11 +45,16 @@ export function hasEditPermissions(user: AuthUser | null): boolean {
     'manage_maintenance',
     'manage_quality',
     'manage_inventory',
+    'manage_warehouse',
     'manage_users',
     'manage_hr',
     'manage_settings',
     'manage_definitions',
-    'manage_roles'
+    'manage_roles',
+    'manage_alerts',
+    'manage_mixing',
+    'manage_whatsapp',
+    'manage_ai_agent',
   ];
   
   return hasPermission(user.permissions, managementPermissions, false);
@@ -127,8 +132,13 @@ export function isManager(user: AuthUser | null): boolean {
     'manage_maintenance',
     'manage_quality',
     'manage_inventory',
+    'manage_warehouse',
     'manage_users',
-    'manage_hr'
+    'manage_hr',
+    'manage_alerts',
+    'manage_mixing',
+    'manage_whatsapp',
+    'manage_ai_agent',
   ];
   
   return hasPermission(user.permissions, managerPermissions, false);

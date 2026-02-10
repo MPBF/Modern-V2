@@ -70,6 +70,7 @@ import WhatsAppWebhooksTab from "../components/settings/WhatsAppWebhooksTab";
 import NotificationEventSettingsTab from "../components/settings/NotificationEventSettingsTab";
 import LocationMapPicker from "../components/LocationMapPicker";
 import { Plus, Eye, EyeOff } from "lucide-react";
+import { canAccessSettingsTab } from "../utils/roleUtils";
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -1010,40 +1011,59 @@ export default function Settings() {
 
   return (
     <PageLayout title={t('settings.title')} description={t('settings.description')}>
-      <Tabs defaultValue="roles" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 md:grid-cols-7">
+      <Tabs defaultValue={
+        ['roles', 'notifications', 'system', 'database', 'location', 'notification-center', 'whatsapp-webhooks', 'notification-events']
+          .find(tab => canAccessSettingsTab(user, tab)) || 'roles'
+      } className="space-y-6">
+            <TabsList className="flex flex-wrap gap-1 h-auto">
+              {canAccessSettingsTab(user, 'roles') && (
               <TabsTrigger value="roles" className="flex items-center gap-2">
                 <Shield className="w-4 h-4" />
                 {t('settings.tabs.roles')}
               </TabsTrigger>
+              )}
+              {canAccessSettingsTab(user, 'notifications') && (
               <TabsTrigger value="notifications" className="flex items-center gap-2">
                 <Bell className="w-4 h-4" />
                 {t('settings.tabs.notifications')}
               </TabsTrigger>
+              )}
+              {canAccessSettingsTab(user, 'system') && (
               <TabsTrigger value="system" className="flex items-center gap-2">
                 <SettingsIcon className="w-4 h-4" />
                 {t('settings.tabs.system')}
               </TabsTrigger>
+              )}
+              {canAccessSettingsTab(user, 'database') && (
               <TabsTrigger value="database" className="flex items-center gap-2">
                 <Database className="w-4 h-4" />
                 {t('settings.tabs.database')}
               </TabsTrigger>
+              )}
+              {canAccessSettingsTab(user, 'location') && (
               <TabsTrigger value="location" className="flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
                 {t('settings.tabs.location')}
               </TabsTrigger>
+              )}
+              {canAccessSettingsTab(user, 'notification-center') && (
               <TabsTrigger value="notification-center" className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" />
                 {t('settings.tabs.notificationCenter')}
               </TabsTrigger>
+              )}
+              {canAccessSettingsTab(user, 'whatsapp-webhooks') && (
               <TabsTrigger value="whatsapp-webhooks" className="flex items-center gap-2">
                 <Webhook className="w-4 h-4" />
                 {t('settings.tabs.whatsappWebhooks')}
               </TabsTrigger>
+              )}
+              {canAccessSettingsTab(user, 'notification-events') && (
               <TabsTrigger value="notification-events" className="flex items-center gap-2">
                 <Bell className="w-4 h-4" />
                 أحداث الإشعارات
               </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="roles" className="space-y-6">

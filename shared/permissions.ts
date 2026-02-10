@@ -497,11 +497,15 @@ export const ROUTE_PERMISSIONS: Record<string, PermissionKey[]> = {
 
 // Settings tabs permissions
 export const SETTINGS_TAB_PERMISSIONS: Record<string, PermissionKey[]> = {
-  'general': ['manage_settings', 'admin'],
+  'roles': ['manage_roles', 'admin'],
+  'notifications': ['manage_settings', 'admin'],
   'system': ['manage_settings', 'admin'],
   'database': ['admin'],
-  'roles': ['manage_roles', 'admin'],
-  'user': [], // All users can access their own settings
+  'location': ['manage_settings', 'admin'],
+  'notification-center': ['manage_settings', 'admin'],
+  'whatsapp-webhooks': ['manage_whatsapp', 'admin'],
+  'notification-events': ['manage_settings', 'admin'],
+  'user': [],
 };
 
 // Helper function to check if user has permission
