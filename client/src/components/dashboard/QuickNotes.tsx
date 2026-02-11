@@ -91,7 +91,7 @@ export default function QuickNotes() {
   // Fetch quick notes for current user
   const { data: notes = [], isLoading } = useQuery<QuickNote[]>({
     queryKey: ["/api/quick-notes"],
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: false,
   });
 
   // Fetch users for assignment

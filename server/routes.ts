@@ -372,14 +372,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Return sanitized user data with role information
       const userData = {
-        id: user.id || null,
-        username: user.username || "",
-        display_name: user.display_name || "",
-        display_name_ar: user.display_name_ar || "",
-        role_id: user.role_id || null,
+        id: user.id ?? null,
+        username: user.username ?? "",
+        display_name: user.display_name ?? "",
+        display_name_ar: user.display_name_ar ?? "",
+        role_id: user.role_id ?? null,
         role_name: roleName,
         role_name_ar: roleNameAr,
-        section_id: user.section_id || null,
+        section_id: user.section_id ?? null,
         permissions: permissions,
       };
 
@@ -3398,6 +3398,10 @@ Do not include quotes or explanations.`;
         manual_entry,
       } = req.body;
 
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "يجب تسجيل الدخول لإجراء حركة مخزنية" });
+      }
+
       if (!barcode || !transaction_type || !quantity) {
         return res
           .status(400)
@@ -3421,7 +3425,7 @@ Do not include quotes or explanations.`;
         manual_entry: manual_entry || false,
         transaction_reason: transaction_reason || "",
         notes: notes || "",
-        performed_by: req.session.userId || 1,
+        performed_by: req.session.userId,
       };
 
       const transaction =
@@ -4834,12 +4838,14 @@ Do not include quotes or explanations.`;
         });
       }
 
-      const userId = req.session?.userId || 1;
+      if (!req.session?.userId) {
+        return res.status(401).json({ message: "يجب تسجيل الدخول" });
+      }
       const queueEntry = await storage.assignToMachineQueue(
         productionOrderId, 
         machineId, 
         position,
-        userId
+        req.session.userId
       );
       
       res.json({ 
@@ -4932,10 +4938,12 @@ Do not include quotes or explanations.`;
         });
       }
       
-      const userId = req.session?.userId || 1;
+      if (!req.session?.userId) {
+        return res.status(401).json({ message: "يجب تسجيل الدخول" });
+      }
       const result = await storage.smartDistributeOrders(algorithm, {
         ...params,
-        userId
+        userId: req.session.userId
       });
       
       res.json({
@@ -7082,8 +7090,10 @@ Do not include quotes or explanations.`;
   app.put("/api/system-settings/:key", async (req, res) => {
     try {
       const { setting_value } = req.body;
-      const userId = req.session.userId || 1; // Default to admin if not logged in
-      const updated = await storage.updateSystemSetting(req.params.key, setting_value, userId);
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "يجب تسجيل الدخول لتحديث الإعدادات" });
+      }
+      const updated = await storage.updateSystemSetting(req.params.key, setting_value, req.session.userId);
       res.json(updated);
     } catch (error) {
       console.error("Error updating system setting:", error);
