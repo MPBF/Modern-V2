@@ -67,6 +67,7 @@ function ToolsContent(): JSX.Element {
   const [sharedBagWeightG, setSharedBagWeightG] = useState<number>(0);
   const [sharedBagDims, setSharedBagDims] = useState<{ widthCm: number; lengthCm: number } | null>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
+  const bagWeightPrintRef = useRef<(() => void) | null>(null);
 
   useEffect(() => { 
     try { window.localStorage.setItem(STORAGE_KEY, active); } catch {} 
@@ -145,7 +146,13 @@ function ToolsContent(): JSX.Element {
             <h2 className="text-lg font-bold">{activeTab ? t(activeTab.labelKey) : ""}</h2>
             <p className="text-sm text-muted-foreground">{activeTab ? t(activeTab.descriptionKey) : ""}</p>
           </div>
-          <Button variant="outline" size="sm" className="mr-auto" onClick={() => window.print()}>
+          <Button variant="outline" size="sm" className="mr-auto" onClick={() => {
+            if (active === "bag-weight" && bagWeightPrintRef.current) {
+              bagWeightPrintRef.current();
+            } else {
+              window.print();
+            }
+          }}>
             <Printer className="h-4 w-4 ml-2" />
             {t("common.print")}
           </Button>
@@ -159,6 +166,7 @@ function ToolsContent(): JSX.Element {
             <BagWeightCalculator
               onBagWeight={(g) => setSharedBagWeightG(g)}
               onDims={(d) => setSharedBagDims(d)}
+              onPrintRef={(fn) => { bagWeightPrintRef.current = fn; }}
             />
           )}
           {active === "colors" && <ColorTools />}
@@ -373,10 +381,11 @@ function BagTypeSvg({ type, className, label }: { type: BagType; className?: str
 
 interface BagWeightCalculatorProps {
   onBagWeight?: (gramsPerBag: number) => void;
+  onPrintRef?: (fn: () => void) => void;
   onDims?: (d: { widthCm: number; lengthCm: number }) => void;
 }
 
-function BagWeightCalculator({ onBagWeight, onDims }: BagWeightCalculatorProps): JSX.Element {
+function BagWeightCalculator({ onBagWeight, onDims, onPrintRef }: BagWeightCalculatorProps): JSX.Element {
   const { t } = useTranslation();
   const [bagType, setBagType] = useState<BagType>("flat");
   const [widthCm, setWidthCm] = useState<number>(30);
@@ -423,11 +432,6 @@ function BagWeightCalculator({ onBagWeight, onDims }: BagWeightCalculatorProps):
     else setSelectedIds(new Set(history.map(r => r.id)));
   };
 
-  const handlePrintSelected = () => {
-    if (selectedIds.size === 0) return;
-    window.print();
-  };
-
   const selectedRecords = history.filter(r => selectedIds.has(r.id));
   const getBagTypeLabel = (type: BagType) => {
     switch (type) {
@@ -436,6 +440,91 @@ function BagWeightCalculator({ onBagWeight, onDims }: BagWeightCalculatorProps):
       case "table-cover": return t("tools.bagWeight.tableCover");
     }
   };
+
+  const directPrint = (records: BagWeightRecord[]) => {
+    if (records.length === 0) return;
+    const isAr = document.documentElement.dir === "rtl";
+    const dir = isAr ? "rtl" : "ltr";
+    const rows = records.map(r => `
+      <tr>
+        <td>${getBagTypeLabel(r.bagType)}</td>
+        <td>${r.widthCm} × ${r.lengthCm}</td>
+        <td>${r.thicknessMicron} μm</td>
+        <td>${r.layers}</td>
+        <td>${r.density}</td>
+        ${r.bagType === "side-gusset" ? `<td>${r.sideGussetCm}</td>` : `<td>-</td>`}
+        <td style="font-weight:bold;color:#1a365d">${fmtFixed(r.gramsPerBag, 3)}</td>
+        <td>${fmtFixed(r.bagsPerKg, 1)}</td>
+        <td>${fmtFixed(r.areaM2, 4)}</td>
+        <td style="font-size:11px;color:#888">${r.createdAt || ""}</td>
+      </tr>
+    `).join("");
+
+    const html = `<!DOCTYPE html>
+<html dir="${dir}" lang="${isAr ? "ar" : "en"}">
+<head>
+<meta charset="UTF-8">
+<title>${t("tools.bagWeight.printTitle")}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',Tahoma,sans-serif;padding:20mm 15mm;background:#fff;color:#333;direction:${dir}}
+  h1{text-align:center;font-size:22px;color:#1a365d;margin-bottom:6px}
+  .subtitle{text-align:center;font-size:13px;color:#666;margin-bottom:20px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{background:#1a365d;color:#fff;padding:8px 6px;border:1px solid #ccc;white-space:nowrap}
+  td{padding:7px 6px;border:1px solid #ddd;text-align:center}
+  tbody tr:nth-child(even){background:#f5f7fa}
+  .footer{margin-top:20px;text-align:center;font-size:10px;color:#aaa}
+  @media print{@page{size:A4 landscape;margin:10mm}}
+</style>
+</head>
+<body>
+  <h1>${t("tools.bagWeight.printTitle")}</h1>
+  <p class="subtitle">${new Date().toLocaleDateString(isAr ? "ar-SA" : "en-US", { year:"numeric", month:"long", day:"numeric" })} — ${records.length > 1 ? records.length + " " + (isAr ? "سجل" : "records") : ""}</p>
+  <table>
+    <thead>
+      <tr>
+        <th>${t("tools.bagWeight.type")}</th>
+        <th>${t("tools.bagWeight.dimensions")}</th>
+        <th>${t("tools.bagWeight.thickness")}</th>
+        <th>${t("tools.bagWeight.layers")}</th>
+        <th>${t("tools.bagWeight.density")}</th>
+        <th>${isAr ? "الحاشية" : "Gusset"}</th>
+        <th>${t("tools.bagWeight.weightPerBag")}</th>
+        <th>${t("tools.bagWeight.bagsPerKg")}</th>
+        <th>${t("tools.bagWeight.area")}</th>
+        <th>${isAr ? "التاريخ" : "Date"}</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="footer">${isAr ? "مصنع الأكياس البلاستيكية — نظام إدارة الإنتاج" : "Plastic Bag Factory — Production Management System"}</div>
+</body>
+</html>`;
+    const w = window.open("", "_blank", "width=900,height=600");
+    if (!w) return;
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    w.print();
+  };
+
+  const handlePrintSelected = () => {
+    if (selectedIds.size === 0) return;
+    directPrint(selectedRecords);
+  };
+
+  const handlePrintCurrent = () => {
+    const currentRecord: BagWeightRecord = {
+      id: "current",
+      createdAt: new Date().toLocaleString(document.documentElement.dir === "rtl" ? "ar-SA" : "en-US"),
+      bagType, widthCm, lengthCm, sideGussetCm, thicknessMicron, layers, density,
+      gramsPerBag: result.gramsPerBag, bagsPerKg: result.bagsPerKg, areaM2: result.areaM2,
+    };
+    directPrint([currentRecord]);
+  };
+
+  useEffect(() => { onPrintRef?.(handlePrintCurrent); });
 
   return (
     <div className="space-y-6">
@@ -561,42 +650,6 @@ function BagWeightCalculator({ onBagWeight, onDims }: BagWeightCalculatorProps):
         </Card>
       )}
 
-      {/* Print Template */}
-      <div className="hidden print:block">
-        <div className="p-8">
-          <h1 className="text-2xl font-bold text-center mb-6">{t("tools.bagWeight.printTitle")}</h1>
-          <div className="grid gap-4">
-            {selectedRecords.map((record) => (
-              <div key={record.id} className="border-2 border-gray-300 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <h2 className="text-lg font-bold">{getBagTypeLabel(record.bagType)}</h2>
-                  <span className="text-sm text-gray-500">{record.createdAt}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div><strong>{t("tools.bagWeight.dimensions")}:</strong> {record.widthCm} × {record.lengthCm} {t("tools.common.cm")}</div>
-                  <div><strong>{t("tools.bagWeight.thickness")}:</strong> {record.thicknessMicron} {t("tools.common.micron")}</div>
-                  <div><strong>{t("tools.bagWeight.layers")}:</strong> {record.layers}</div>
-                </div>
-                <Separator className="my-3" />
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-2 bg-gray-100 rounded">
-                    <p className="text-xs text-gray-600">{t("tools.bagWeight.weightPerBag")}</p>
-                    <p className="text-xl font-bold">{fmtFixed(record.gramsPerBag, 3)} {t("tools.common.gram")}</p>
-                  </div>
-                  <div className="text-center p-2 bg-gray-100 rounded">
-                    <p className="text-xs text-gray-600">{t("tools.bagWeight.bagsPerKg")}</p>
-                    <p className="text-xl font-bold">{fmtFixed(record.bagsPerKg, 1)}</p>
-                  </div>
-                  <div className="text-center p-2 bg-gray-100 rounded">
-                    <p className="text-xs text-gray-600">{t("tools.bagWeight.area")}</p>
-                    <p className="text-xl font-bold">{fmtFixed(record.areaM2, 4)} {t("tools.common.sqm")}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
