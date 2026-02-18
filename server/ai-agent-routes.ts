@@ -18,6 +18,7 @@ import { generateQuotePdfWithAdobe, isAdobePdfAvailable } from "./adobe-pdf-serv
 import ArabicReshaper from "arabic-reshaper";
 // @ts-ignore
 import bidiFactory from "bidi-js";
+const bidi = bidiFactory();
 
 const PDF_DIR = "/tmp/quote-pdfs";
 if (!fs.existsSync(PDF_DIR)) {
@@ -72,9 +73,6 @@ async function uploadPdfToStorage(pdfBuffer: Buffer, documentNumber: string): Pr
   }
 }
 
-// دالة مساعدة لمعالجة النص العربي للعرض الصحيح في PDF
-const bidi = bidiFactory();
-
 function processArabicText(text: string): string {
   if (!text) return "";
   
@@ -83,27 +81,8 @@ function processArabicText(text: string): string {
   
   try {
     const reshaped = ArabicReshaper.convertArabic(text);
-    
     const embeddingLevels = bidi.getEmbeddingLevels(reshaped, 'rtl');
-    const reorderSegments = bidi.getReorderSegments(reshaped, embeddingLevels);
-    
-    const chars = Array.from(reshaped);
-    reorderSegments.forEach(([start, end]: [number, number]) => {
-      const segment = chars.slice(start, end + 1).reverse();
-      chars.splice(start, end - start + 1, ...segment);
-    });
-    
-    const mirrored = bidi.getMirroredCharactersMap(reshaped, embeddingLevels);
-    if (mirrored) {
-      Object.keys(mirrored).forEach((index: string) => {
-        const idx = parseInt(index);
-        if (idx < chars.length) {
-          chars[idx] = mirrored[idx];
-        }
-      });
-    }
-    
-    return chars.join('');
+    return bidi.getReorderedString(reshaped, embeddingLevels);
   } catch (e) {
     console.error("Arabic text processing error:", e);
     return text;
