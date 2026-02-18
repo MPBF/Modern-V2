@@ -128,7 +128,7 @@ async function generateQuotePdfBuffer(quoteId: number): Promise<Buffer> {
   
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
-    const doc = new PDFDocument({ size: "A4", margin: 25, bufferPages: true });
+    const doc = new PDFDocument({ size: "A4", margin: 30, bufferPages: true });
     
     const fontPath = path.join(__dirname, 'fonts', 'Amiri-Regular.ttf');
     const logoPath = path.join(__dirname, 'fonts', 'factory-logo.png');
@@ -143,224 +143,178 @@ async function generateQuotePdfBuffer(quoteId: number): Promise<Buffer> {
     doc.on('error', (err) => reject(err));
     
     const pageWidth = 595;
-    const pageHeight = 842;
-    const margin = 25;
-    const contentWidth = pageWidth - margin * 2;
-    const leftMargin = margin;
-    const rightEdge = pageWidth - margin;
+    const contentWidth = pageWidth - 60;
+    const leftMargin = 30;
+    const rightEdge = pageWidth - 30;
     
-    const itemCount = items.length;
-    const hasNotes = !!quote.notes;
-    const headerHeight = 75;
-    const titleHeight = 35;
-    const customerHeight = 45;
-    const tableHeaderHeight = 18;
-    const totalsHeight = 55;
-    const notesHeight = hasNotes ? 30 : 0;
-    const footerHeight = 35;
-    const spacing = 25;
-    
-    const availableForRows = pageHeight - margin * 2 - headerHeight - titleHeight - customerHeight - tableHeaderHeight - totalsHeight - notesHeight - footerHeight - spacing;
-    const baseRowHeight = 16;
-    const minRowHeight = 11;
-    const maxRows = Math.floor(availableForRows / minRowHeight);
-    const displayItems = items.slice(0, maxRows);
-    const hiddenCount = items.length - displayItems.length;
-    let rowHeight = Math.max(minRowHeight, Math.min(baseRowHeight, Math.floor(availableForRows / Math.max(displayItems.length, 1))));
-    const fontSize = rowHeight <= 12 ? 6.5 : rowHeight <= 14 ? 7 : 7.5;
-    
-    // === HEADER with Logo ===
-    let headerY = margin;
     if (hasLogo) {
       try {
-        doc.image(logoPath, leftMargin, headerY, { width: 55, height: 55 });
+        doc.image(logoPath, leftMargin, 30, { width: 50, height: 50 });
       } catch (e) {
         console.error("Logo load error:", e);
       }
     }
     
-    const textStartX = hasLogo ? leftMargin + 62 : leftMargin;
-    const textWidth = hasLogo ? contentWidth - 62 : contentWidth;
+    const textStartX = hasLogo ? leftMargin + 58 : leftMargin;
+    const textWidth = hasLogo ? contentWidth - 58 : contentWidth;
     
-    doc.font('Helvetica-Bold').fontSize(13).fillColor("#1e40af").text("Modern Plastic Bags Factory", textStartX, headerY + 2, { width: textWidth, align: "center" });
+    doc.fontSize(18).fillColor("#2563eb").text("Modern Plastic Bags Factory", textStartX, 32, { width: textWidth, align: "center" });
     if (hasArabicFont) {
-      doc.font('Arabic').fontSize(11).fillColor("#1e40af").text(processArabicText("مصنع الأكياس البلاستيكية الحديثة"), textStartX, headerY + 18, { width: textWidth, align: "center" });
+      doc.font('Arabic').fontSize(12).fillColor("#666").text(processArabicText("مصنع الأكياس البلاستيكية الحديثة"), textStartX, 52, { width: textWidth, align: "center" });
       doc.font('Helvetica');
     }
-    doc.font('Helvetica').fontSize(6.5).fillColor("#64748b")
-      .text("Industrial Area, Phase 2  |  P.O. Box 12345, Riyadh, Saudi Arabia", textStartX, headerY + 35, { width: textWidth, align: "center" })
-      .text("Tel: +966 11 XXX XXXX  |  Fax: +966 11 XXX XXXX  |  www.modplastic.com", textStartX, headerY + 44, { width: textWidth, align: "center" });
+    doc.fontSize(7).fillColor("#999").text("Industrial Area, Phase 2 | P.O. Box 12345, Riyadh, Saudi Arabia", textStartX, 66, { width: textWidth, align: "center" });
+    doc.text("Tel: +966 11 XXX XXXX | Fax: +966 11 XXX XXXX | www.modplastic.com", textStartX, 75, { width: textWidth, align: "center" });
+    doc.y = 88;
+    doc.moveDown(0.3);
     
-    doc.y = headerY + 58;
-    doc.strokeColor("#1e40af").lineWidth(1.5).moveTo(leftMargin, doc.y).lineTo(rightEdge, doc.y).stroke();
+    doc.strokeColor("#2563eb").lineWidth(1.5).moveTo(leftMargin, doc.y).lineTo(rightEdge, doc.y).stroke();
+    doc.moveDown(0.5);
+    
+    doc.fontSize(16).fillColor("#2563eb").text("PRICE QUOTATION / " + (hasArabicFont ? processArabicText("عرض سعر") : ""), { align: "center" });
     doc.moveDown(0.2);
-    doc.strokeColor("#93c5fd").lineWidth(0.5).moveTo(leftMargin, doc.y).lineTo(rightEdge, doc.y).stroke();
-    doc.moveDown(0.4);
+    doc.fontSize(11).fillColor("#333").text(`Document: ${quote.document_number}  |  Date: ${formatDate(quote.quote_date)}`, { align: "center" });
+    doc.moveDown(0.5);
     
-    // === TITLE ===
-    doc.font('Helvetica-Bold').fontSize(14).fillColor("#1e40af").text("PRICE QUOTATION", { align: "center" });
-    if (hasArabicFont) {
-      doc.font('Arabic').fontSize(10).fillColor("#475569").text(processArabicText("عرض سعر"), { align: "center" });
-      doc.font('Helvetica');
-    }
-    doc.moveDown(0.2);
-    
-    // === Document Info + Customer - side by side ===
-    const infoY = doc.y;
-    const halfWidth = contentWidth / 2 - 5;
-    
-    doc.rect(leftMargin, infoY, halfWidth, 40).fillColor("#f0f9ff").fill();
-    doc.rect(leftMargin, infoY, halfWidth, 40).strokeColor("#bfdbfe").lineWidth(0.5).stroke();
-    doc.font('Helvetica-Bold').fontSize(7).fillColor("#1e40af").text("Document No:", leftMargin + 6, infoY + 5);
-    doc.font('Helvetica').fontSize(8).fillColor("#1e293b").text(quote.document_number, leftMargin + 6, infoY + 15);
-    doc.font('Helvetica-Bold').fontSize(7).fillColor("#1e40af").text("Date:", leftMargin + halfWidth / 2, infoY + 5);
-    doc.font('Helvetica').fontSize(8).fillColor("#1e293b").text(formatDate(quote.quote_date), leftMargin + halfWidth / 2, infoY + 15);
-    if (quote.created_by_name) {
-      doc.font('Helvetica-Bold').fontSize(6.5).fillColor("#1e40af").text("Prepared by:", leftMargin + 6, infoY + 28);
-      const prepName = quote.created_by_name || "";
-      const hasArabicPrep = /[\u0600-\u06FF]/.test(prepName);
-      if (hasArabicFont && hasArabicPrep) {
-        doc.font('Arabic').fontSize(7).fillColor("#1e293b").text(processArabicText(prepName), leftMargin + 55, infoY + 28);
-        doc.font('Helvetica');
-      } else {
-        doc.font('Helvetica').fontSize(7).fillColor("#1e293b").text(prepName, leftMargin + 55, infoY + 28);
-      }
-    }
-    
-    const custX = leftMargin + halfWidth + 10;
-    doc.rect(custX, infoY, halfWidth, 40).fillColor("#f0f9ff").fill();
-    doc.rect(custX, infoY, halfWidth, 40).strokeColor("#bfdbfe").lineWidth(0.5).stroke();
-    doc.font('Helvetica-Bold').fontSize(7).fillColor("#1e40af").text("Customer:", custX + 6, infoY + 5);
+    const customerBoxY = doc.y;
+    doc.rect(leftMargin, customerBoxY, contentWidth, 50).fillColor("#f8fafc").fill();
+    doc.fillColor("#333");
+    const customerY = customerBoxY + 8;
+    doc.fontSize(10).text("Customer Information", leftMargin + 10, customerY, { underline: true });
     
     const customerName = quote.customer_name || "";
     const hasArabicName = /[\u0600-\u06FF]/.test(customerName);
     if (hasArabicFont && hasArabicName) {
-      doc.font('Arabic').fontSize(8).fillColor("#1e293b").text(processArabicText(customerName), custX + 6, infoY + 15, { width: halfWidth - 12 });
+      doc.font('Helvetica').fontSize(9).text("Customer: ", leftMargin + 10, customerY + 16, { continued: true });
+      doc.font('Arabic').text(processArabicText(customerName));
       doc.font('Helvetica');
     } else {
-      doc.font('Helvetica').fontSize(8).fillColor("#1e293b").text(customerName, custX + 6, infoY + 15, { width: halfWidth - 12 });
+      doc.fontSize(9).text(`Customer: ${customerName}`, leftMargin + 10, customerY + 16);
     }
-    doc.font('Helvetica-Bold').fontSize(6.5).fillColor("#1e40af").text("Tax No:", custX + 6, infoY + 28);
-    doc.font('Helvetica').fontSize(7).fillColor("#1e293b").text(quote.tax_number || "N/A", custX + 38, infoY + 28);
+    doc.text(`Tax Number: ${quote.tax_number || "N/A"}`, leftMargin + 10, customerY + 30);
+    doc.y = customerBoxY + 55;
     
-    doc.y = infoY + 45;
-    
-    // === ITEMS TABLE ===
     const tableTop = doc.y;
-    const colWidths = [22, contentWidth - 22 - 45 - 50 - 70 - 75, 45, 50, 70, 75];
-    const headers = ["#", "Item Description", "Unit", "Qty", "Unit Price", "Total (SAR)"];
+    const colWidths = [25, 180, 50, 55, 70, 75];
+    const headers = ["#", "Item Name", "Unit", "Qty", "Unit Price", "Total"];
+    const rowHeight = 18;
     
-    doc.rect(leftMargin, tableTop, contentWidth, tableHeaderHeight).fillColor("#1e40af").fill();
-    doc.font('Helvetica-Bold').fillColor("#fff").fontSize(7);
-    let xPos = leftMargin;
+    doc.rect(leftMargin, tableTop, contentWidth, 20).fillColor("#2563eb").fill();
+    doc.font('Helvetica').fillColor("#fff").fontSize(8);
+    let xPos = leftMargin + 3;
     headers.forEach((header, i) => {
-      doc.text(header, xPos + 2, tableTop + 5, { width: colWidths[i] - 4, align: "center" });
+      doc.text(header, xPos, tableTop + 6, { width: colWidths[i], align: "center" });
       xPos += colWidths[i];
     });
     
-    let rowY = tableTop + tableHeaderHeight;
+    let rowY = tableTop + 20;
     
-    displayItems.forEach((item, index) => {
+    const maxRowsPerPage = Math.floor((780 - rowY) / rowHeight) - 8;
+    const itemsPerPage = Math.min(items.length, maxRowsPerPage);
+    
+    items.slice(0, itemsPerPage).forEach((item, index) => {
       const isEven = index % 2 === 0;
-      doc.rect(leftMargin, rowY, contentWidth, rowHeight).fillColor(isEven ? "#f8fafc" : "#ffffff").fill();
-      doc.rect(leftMargin, rowY, contentWidth, rowHeight).strokeColor("#e2e8f0").lineWidth(0.3).stroke();
+      if (isEven) {
+        doc.rect(leftMargin, rowY, contentWidth, rowHeight).fillColor("#f8fafc").fill();
+      }
       
-      const textY = rowY + (rowHeight - fontSize) / 2;
-      doc.fillColor("#334155").fontSize(fontSize);
-      xPos = leftMargin;
-      
-      doc.font('Helvetica').text(String(item.line_number), xPos + 2, textY, { width: colWidths[0] - 4, align: "center" });
+      doc.fillColor("#333").fontSize(8);
+      xPos = leftMargin + 3;
+      doc.font('Helvetica').text(String(item.line_number), xPos, rowY + 5, { width: colWidths[0], align: "center" });
       xPos += colWidths[0];
       
       const itemName = item.item_name || "";
       const hasArabicItem = /[\u0600-\u06FF]/.test(itemName);
       if (hasArabicFont && hasArabicItem) {
-        doc.font('Arabic').text(processArabicText(itemName.substring(0, 50)), xPos + 2, textY - 1, { width: colWidths[1] - 4, align: "center" });
+        doc.font('Arabic').text(processArabicText(itemName.substring(0, 40)), xPos, rowY + 3, { width: colWidths[1], align: "center" });
         doc.font('Helvetica');
       } else {
-        doc.text(itemName.substring(0, 50), xPos + 2, textY, { width: colWidths[1] - 4, align: "center" });
+        doc.text(itemName.substring(0, 40), xPos, rowY + 5, { width: colWidths[1], align: "center" });
       }
       xPos += colWidths[1];
       
       const unitText = item.unit || "";
       const hasArabicUnit = /[\u0600-\u06FF]/.test(unitText);
       if (hasArabicFont && hasArabicUnit) {
-        doc.font('Arabic').text(processArabicText(unitText), xPos + 2, textY - 1, { width: colWidths[2] - 4, align: "center" });
+        doc.font('Arabic').text(processArabicText(unitText), xPos, rowY + 3, { width: colWidths[2], align: "center" });
         doc.font('Helvetica');
       } else {
-        doc.font('Helvetica').text(unitText, xPos + 2, textY, { width: colWidths[2] - 4, align: "center" });
+        doc.text(unitText, xPos, rowY + 5, { width: colWidths[2], align: "center" });
       }
       xPos += colWidths[2];
       
       doc.font('Helvetica');
-      doc.text(formatCurrency(item.quantity), xPos + 2, textY, { width: colWidths[3] - 4, align: "center" });
+      doc.text(formatCurrency(item.quantity), xPos, rowY + 5, { width: colWidths[3], align: "center" });
       xPos += colWidths[3];
-      doc.text(formatCurrency(item.unit_price), xPos + 2, textY, { width: colWidths[4] - 4, align: "center" });
+      doc.text(`${formatCurrency(item.unit_price)}`, xPos, rowY + 5, { width: colWidths[4], align: "center" });
       xPos += colWidths[4];
-      doc.font('Helvetica-Bold').text(formatCurrency(item.line_total), xPos + 2, textY, { width: colWidths[5] - 4, align: "center" });
+      doc.text(`${formatCurrency(item.line_total)}`, xPos, rowY + 5, { width: colWidths[5], align: "center" });
       
       rowY += rowHeight;
     });
     
-    doc.strokeColor("#1e40af").lineWidth(1).moveTo(leftMargin, rowY).lineTo(rightEdge, rowY).stroke();
-    
-    if (hiddenCount > 0) {
-      doc.font('Helvetica').fillColor("#b45309").fontSize(6.5).text(`+ ${hiddenCount} more items (see full list attached)`, leftMargin, rowY + 2, { width: contentWidth, align: "center" });
-      doc.y = rowY + 12;
-    } else {
-      doc.y = rowY + 5;
+    if (items.length > itemsPerPage) {
+      doc.fontSize(7).fillColor("#666").text(`... و ${items.length - itemsPerPage} عناصر إضافية`, leftMargin, rowY + 2);
+      rowY += 15;
     }
     
-    // === TOTALS BOX - right aligned ===
-    const totalsBoxWidth = 220;
-    const totalsBoxX = rightEdge - totalsBoxWidth;
+    doc.strokeColor("#e2e8f0").lineWidth(0.5).moveTo(leftMargin, rowY).lineTo(rightEdge, rowY).stroke();
+    doc.y = rowY + 10;
+    
     const totalsBoxY = doc.y;
+    doc.rect(leftMargin, totalsBoxY, 200, 60).fillColor("#f8fafc").fill();
+    const totalsY = totalsBoxY + 8;
+    doc.font('Helvetica').fillColor("#333").fontSize(9);
+    doc.text("Subtotal:", leftMargin + 10, totalsY);
+    doc.text(`${formatCurrency(quote.total_before_tax)} SAR`, leftMargin + 100, totalsY, { align: "right", width: 90 });
+    doc.text("VAT (15%):", leftMargin + 10, totalsY + 15);
+    doc.text(`${formatCurrency(quote.tax_amount)} SAR`, leftMargin + 100, totalsY + 15, { align: "right", width: 90 });
+    doc.strokeColor("#e2e8f0").moveTo(leftMargin + 10, totalsY + 30).lineTo(leftMargin + 190, totalsY + 30).stroke();
+    doc.fontSize(11).fillColor("#2563eb").text("Total:", leftMargin + 10, totalsY + 38);
+    doc.text(`${formatCurrency(quote.total_with_tax)} SAR`, leftMargin + 100, totalsY + 38, { align: "right", width: 90 });
     
-    doc.rect(totalsBoxX, totalsBoxY, totalsBoxWidth, 48).fillColor("#f0f9ff").fill();
-    doc.rect(totalsBoxX, totalsBoxY, totalsBoxWidth, 48).strokeColor("#bfdbfe").lineWidth(0.5).stroke();
+    doc.y = totalsBoxY + 65;
     
-    doc.font('Helvetica').fillColor("#475569").fontSize(7.5);
-    doc.text("Subtotal:", totalsBoxX + 8, totalsBoxY + 5, { width: 90 });
-    doc.text(`${formatCurrency(quote.total_before_tax)} SAR`, totalsBoxX + 100, totalsBoxY + 5, { width: 112, align: "right" });
-    
-    doc.text("VAT (15%):", totalsBoxX + 8, totalsBoxY + 17, { width: 90 });
-    doc.text(`${formatCurrency(quote.tax_amount)} SAR`, totalsBoxX + 100, totalsBoxY + 17, { width: 112, align: "right" });
-    
-    doc.strokeColor("#93c5fd").lineWidth(0.5).moveTo(totalsBoxX + 8, totalsBoxY + 29).lineTo(totalsBoxX + totalsBoxWidth - 8, totalsBoxY + 29).stroke();
-    
-    doc.font('Helvetica-Bold').fontSize(9).fillColor("#1e40af");
-    doc.text("Total:", totalsBoxX + 8, totalsBoxY + 34, { width: 90 });
-    doc.text(`${formatCurrency(quote.total_with_tax)} SAR`, totalsBoxX + 100, totalsBoxY + 34, { width: 112, align: "right" });
-    
-    doc.y = totalsBoxY + 53;
-    
-    // === NOTES ===
     if (quote.notes) {
       const notesY = doc.y;
-      const notesText = (quote.notes || "").substring(0, 250);
-      doc.rect(leftMargin, notesY, contentWidth, 25).fillColor("#fffbeb").fill();
-      doc.rect(leftMargin, notesY, contentWidth, 25).strokeColor("#fcd34d").lineWidth(0.5).stroke();
-      doc.font('Helvetica-Bold').fillColor("#92400e").fontSize(6.5).text("Notes:", leftMargin + 6, notesY + 3);
+      const notesHeight = 40;
+      doc.rect(leftMargin, notesY, contentWidth, notesHeight).fillColor("#fffbeb").fill();
+      doc.strokeColor("#fcd34d").lineWidth(0.5).rect(leftMargin, notesY, contentWidth, notesHeight).stroke();
+      doc.font('Helvetica').fillColor("#b45309").fontSize(8).text("Notes:", leftMargin + 8, notesY + 6);
+      
+      const notesText = (quote.notes || "").substring(0, 200);
       const hasArabicNotes = /[\u0600-\u06FF]/.test(notesText);
       if (hasArabicFont && hasArabicNotes) {
-        doc.font('Arabic').fillColor("#78350f").fontSize(6.5).text(processArabicText(notesText), leftMargin + 6, notesY + 12, { width: contentWidth - 12, align: "right" });
+        doc.font('Arabic').fillColor("#78350f").fontSize(8).text(processArabicText(notesText), leftMargin + 8, notesY + 18, { width: contentWidth - 16, align: "right" });
         doc.font('Helvetica');
       } else {
-        doc.font('Helvetica').fillColor("#78350f").fontSize(6.5).text(notesText, leftMargin + 6, notesY + 12, { width: contentWidth - 12 });
+        doc.fillColor("#78350f").fontSize(8).text(notesText, leftMargin + 8, notesY + 18, { width: contentWidth - 16 });
       }
-      doc.y = notesY + 28;
+      doc.y = notesY + notesHeight + 5;
     }
     
-    // === FOOTER ===
+    doc.moveDown(0.5);
+    doc.strokeColor("#e2e8f0").lineWidth(0.5).moveTo(leftMargin, doc.y).lineTo(rightEdge, doc.y).stroke();
     doc.moveDown(0.3);
-    doc.strokeColor("#cbd5e1").lineWidth(0.5).moveTo(leftMargin, doc.y).lineTo(rightEdge, doc.y).stroke();
-    doc.moveDown(0.2);
-    doc.font('Helvetica').fillColor("#94a3b8").fontSize(6).text("This quotation is valid for 15 days from the issue date.", { align: "center" });
+    doc.font('Helvetica').fillColor("#666").fontSize(7).text("This quotation is valid for 15 days from the issue date.", { align: "center" });
     if (hasArabicFont) {
-      doc.font('Arabic').fontSize(6).text(processArabicText("هذا العرض صالح لمدة 15 يوم من تاريخ الإصدار"), { align: "center" });
+      doc.font('Arabic').fontSize(7).text(processArabicText("هذا العرض صالح لمدة 15 يوم من تاريخ الإصدار"), { align: "center" });
       doc.font('Helvetica');
     }
-    doc.font('Helvetica').fillColor("#94a3b8").fontSize(5.5).text("www.modplastic.com", { align: "center" });
+    
+    if (quote.created_by_name) {
+      doc.moveDown(0.3);
+      const preparedByName = quote.created_by_name || "";
+      const hasArabicPreparer = /[\u0600-\u06FF]/.test(preparedByName);
+      doc.fontSize(7);
+      if (hasArabicFont && hasArabicPreparer) {
+        doc.font('Helvetica').text("Prepared by: ", { align: "center", continued: true });
+        doc.font('Arabic').text(processArabicText(preparedByName) + (quote.created_by_phone ? ` - ${quote.created_by_phone}` : ""));
+        doc.font('Helvetica');
+      } else {
+        doc.text(`Prepared by: ${preparedByName}${quote.created_by_phone ? ` - ${quote.created_by_phone}` : ""}`, { align: "center" });
+      }
+    }
     
     doc.end();
   });
