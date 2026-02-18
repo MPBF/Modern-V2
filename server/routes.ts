@@ -573,7 +573,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Send test message
-  app.post("/api/notifications/test", async (req, res) => {
+  app.post("/api/notifications/test", requireAuth, async (req, res) => {
     try {
       const { phone_number } = req.body;
 
@@ -1387,7 +1387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     requireAdmin,
     async (req, res) => {
       try {
-        const id = parseInt(req.params.id);
+        const id = parseRouteParam(req.params.id, "ID");
         
         // If customer_product_id or quantity_kg is being updated, recalculate overrun_percentage
         if (req.body.customer_product_id || req.body.quantity_kg) {
@@ -1438,7 +1438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     requireAdmin,
     async (req, res) => {
       try {
-        const id = parseInt(req.params.id);
+        const id = parseRouteParam(req.params.id, "ID");
         await storage.deleteProductionOrder(id);
         res.json({ message: "تم حذف أمر الإنتاج بنجاح" });
       } catch (error) {
@@ -1713,7 +1713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/rolls/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteParam(req.params.id, "ID");
       const { stage, weight_kg, waste_kg, cut_weight_total_kg, printing_machine_id } = req.body;
 
       // Prepare safe updates object
@@ -1783,7 +1783,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mark roll as printed
   app.post("/api/rolls/:id/mark-printed", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const rollId = parseInt(req.params.id);
+      const rollId = parseRouteParam(req.params.id, "Roll ID");
       const user = req.user;
       
       if (!user) {
@@ -1810,7 +1810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get printing progress for a production order
   app.get("/api/production-orders/:id/printing-progress", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const productionOrderId = parseInt(req.params.id);
+      const productionOrderId = parseRouteParam(req.params.id, "Production Order ID");
       
       // Get production order stats
       const stats = await storage.getProductionOrderStats(productionOrderId);
@@ -2447,7 +2447,6 @@ Do not include quotes or explanations.`;
   // Customers routes
   app.post("/api/customers", requireAuth, async (req, res) => {
     try {
-      console.log("Received customer data:", req.body);
       const validatedData = insertCustomerSchema.parse(req.body);
       
       // Convert empty strings to null for fields with length constraints
@@ -2459,7 +2458,6 @@ Do not include quotes or explanations.`;
         plate_drawer_code: validatedData.plate_drawer_code || null,
       };
       
-      console.log("Validated customer data:", cleanedData);
       const customer = await storage.createCustomer(cleanedData);
       res.json(customer);
     } catch (error) {
@@ -2751,7 +2749,6 @@ Do not include quotes or explanations.`;
 
   app.post("/api/categories", requireAuth, async (req, res) => {
     try {
-      console.log("Received category data:", req.body);
 
       // Generate sequential ID if not provided with enhanced null safety
       let categoryId = req.body?.id;
@@ -2792,9 +2789,7 @@ Do not include quotes or explanations.`;
         code: !req.body?.code || req.body.code === "" ? null : req.body.code,
       };
 
-      console.log("Processed category data:", processedData);
       const category = await storage.createCategory(processedData);
-      console.log("Created category:", category);
       res.json(category);
     } catch (error) {
       console.error("Category creation error:", error);
@@ -2808,7 +2803,6 @@ Do not include quotes or explanations.`;
   app.put("/api/categories/:id", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
-      console.log("Updating category:", id, req.body);
 
       const processedData = {
         ...req.body,
@@ -3041,7 +3035,6 @@ Do not include quotes or explanations.`;
 
   app.post("/api/maintenance-requests", requireAuth, async (req, res) => {
     try {
-      console.log("Creating maintenance request with data:", req.body);
       
       // Process the data to convert string values to appropriate types
       const processedData = { ...req.body };
@@ -3063,7 +3056,6 @@ Do not include quotes or explanations.`;
       
       const validatedData = insertMaintenanceRequestSchema.parse(processedData);
       const request = await storage.createMaintenanceRequest(validatedData);
-      console.log("Created maintenance request:", request);
       res.json(request);
     } catch (error) {
       console.error("Error creating maintenance request:", error);
@@ -3087,7 +3079,7 @@ Do not include quotes or explanations.`;
 
   app.get("/api/maintenance-actions/request/:requestId", async (req, res) => {
     try {
-      const requestId = parseInt(req.params.requestId);
+      const requestId = parseRouteParam(req.params.requestId, "Request ID");
       const actions = await storage.getMaintenanceActionsByRequestId(requestId);
       res.json(actions);
     } catch (error) {
@@ -3098,11 +3090,8 @@ Do not include quotes or explanations.`;
 
   app.post("/api/maintenance-actions", requireAuth, async (req, res) => {
     try {
-      console.log("Creating maintenance action with data:", req.body);
       const data = insertMaintenanceActionSchema.parse(req.body);
-      console.log("Parsed action data:", data);
       const action = await storage.createMaintenanceAction(data);
-      console.log("Created maintenance action:", action);
       res.json(action);
     } catch (error) {
       console.error("Error creating maintenance action:", error);
@@ -3115,7 +3104,7 @@ Do not include quotes or explanations.`;
 
   app.put("/api/maintenance-actions/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteParam(req.params.id, "ID");
       const action = await storage.updateMaintenanceAction(id, req.body);
       res.json(action);
     } catch (error) {
@@ -3126,7 +3115,7 @@ Do not include quotes or explanations.`;
 
   app.delete("/api/maintenance-actions/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteParam(req.params.id, "ID");
       await storage.deleteMaintenanceAction(id);
       res.json({ message: "تم حذف إجراء الصيانة بنجاح" });
     } catch (error) {
@@ -3162,7 +3151,7 @@ Do not include quotes or explanations.`;
 
   app.put("/api/maintenance-reports/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteParam(req.params.id, "ID");
       const report = await storage.updateMaintenanceReport(id, req.body);
       res.json(report);
     } catch (error) {
@@ -3171,9 +3160,9 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/maintenance-reports/:id", async (req, res) => {
+  app.delete("/api/maintenance-reports/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteParam(req.params.id, "ID");
       await storage.deleteMaintenanceReport(id);
       res.json({ message: "تم حذف بلاغ الصيانة بنجاح" });
     } catch (error) {
@@ -3198,7 +3187,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/operator-negligence-reports", async (req, res) => {
+  app.post("/api/operator-negligence-reports", requireAuth, async (req, res) => {
     try {
       const data = insertOperatorNegligenceReportSchema.parse(req.body);
       const report = await storage.createOperatorNegligenceReport(data);
@@ -3209,9 +3198,9 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/operator-negligence-reports/:id", async (req, res) => {
+  app.put("/api/operator-negligence-reports/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteParam(req.params.id, "ID");
       const report = await storage.updateOperatorNegligenceReport(id, req.body);
       res.json(report);
     } catch (error) {
@@ -3220,9 +3209,9 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/operator-negligence-reports/:id", async (req, res) => {
+  app.delete("/api/operator-negligence-reports/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteParam(req.params.id, "ID");
       await storage.deleteOperatorNegligenceReport(id);
       res.json({ message: "تم حذف بلاغ إهمال المشغل بنجاح" });
     } catch (error) {
@@ -3242,7 +3231,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/spare-parts", async (req, res) => {
+  app.post("/api/spare-parts", requireAuth, async (req, res) => {
     try {
       const sparePart = await storage.createSparePart(req.body);
       res.json(sparePart);
@@ -3252,9 +3241,9 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/spare-parts/:id", async (req, res) => {
+  app.put("/api/spare-parts/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteParam(req.params.id, "ID");
       const sparePart = await storage.updateSparePart(id, req.body);
       res.json(sparePart);
     } catch (error) {
@@ -3263,9 +3252,9 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/spare-parts/:id", async (req, res) => {
+  app.delete("/api/spare-parts/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteParam(req.params.id, "ID");
       await storage.deleteSparePart(id);
       res.json({ message: "تم حذف قطعة الغيار بنجاح" });
     } catch (error) {
@@ -3285,7 +3274,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/consumable-parts", async (req, res) => {
+  app.post("/api/consumable-parts", requireAuth, async (req, res) => {
     try {
       const consumablePart = await storage.createConsumablePart(req.body);
       res.json(consumablePart);
@@ -3295,9 +3284,9 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/consumable-parts/:id", async (req, res) => {
+  app.put("/api/consumable-parts/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteParam(req.params.id, "ID");
       const consumablePart = await storage.updateConsumablePart(id, req.body);
       res.json(consumablePart);
     } catch (error) {
@@ -3306,9 +3295,9 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/consumable-parts/:id", async (req, res) => {
+  app.delete("/api/consumable-parts/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteParam(req.params.id, "ID");
       await storage.deleteConsumablePart(id);
       res.json({ message: "تم حذف قطعة الغيار الاستهلاكية بنجاح" });
     } catch (error) {
@@ -3334,7 +3323,7 @@ Do not include quotes or explanations.`;
     "/api/consumable-parts-transactions/part/:partId",
     async (req, res) => {
       try {
-        const partId = parseInt(req.params.partId);
+        const partId = parseRouteParam(req.params.partId, "Part ID");
         const transactions =
           await storage.getConsumablePartTransactionsByPartId(partId);
         res.json(transactions);
@@ -3350,7 +3339,7 @@ Do not include quotes or explanations.`;
     },
   );
 
-  app.post("/api/consumable-parts-transactions", async (req, res) => {
+  app.post("/api/consumable-parts-transactions", requireAuth, async (req, res) => {
     try {
       const transaction = await storage.createConsumablePartTransaction(
         req.body,
@@ -3365,7 +3354,7 @@ Do not include quotes or explanations.`;
   });
 
   // Barcode scanning endpoint for consumable parts
-  app.post("/api/consumable-parts/scan-barcode", async (req, res) => {
+  app.post("/api/consumable-parts/scan-barcode", requireAuth, async (req, res) => {
     try {
       const { barcode } = req.body;
       if (!barcode) {
@@ -3387,7 +3376,7 @@ Do not include quotes or explanations.`;
   });
 
   // Process barcode transaction (in/out)
-  app.post("/api/consumable-parts/barcode-transaction", async (req, res) => {
+  app.post("/api/consumable-parts/barcode-transaction", requireAuth, async (req, res) => {
     try {
       const {
         barcode,
@@ -3479,7 +3468,6 @@ Do not include quotes or explanations.`;
 
   app.post("/api/machines", requireAuth, async (req, res) => {
     try {
-      console.log("Received machine data:", req.body);
 
       // Generate sequential ID if not provided with enhanced null safety
       let machineId = req.body?.id;
@@ -3525,9 +3513,7 @@ Do not include quotes or explanations.`;
         }
       }
 
-      console.log("Processed machine data:", processedData);
       const machine = await storage.createMachine(processedData);
-      console.log("Created machine:", machine);
 
       res.status(201).json({
         data: machine,
@@ -3551,10 +3537,9 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/machines/:id", async (req, res) => {
+  app.put("/api/machines/:id", requireAuth, async (req, res) => {
     try {
       const id = req.params.id; // Now using string ID
-      console.log("Updating machine:", id, req.body);
       
       // Clean up empty capacity fields - convert empty strings to null
       const cleanedData = {
@@ -3584,7 +3569,6 @@ Do not include quotes or explanations.`;
   // Users routes
   app.post("/api/users", requireAuth, async (req, res) => {
     try {
-      console.log("Received user data:", req.body);
 
       // ID will be auto-generated by the database (serial/auto-increment)
 
@@ -3653,7 +3637,6 @@ Do not include quotes or explanations.`;
       };
 
       const user = await storage.createUser(processedData);
-      console.log("Created user:", user);
       res.json(user);
     } catch (error) {
       console.error("User creation error:", error);
@@ -3664,7 +3647,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/users/:id", async (req, res) => {
+  app.put("/api/users/:id", requireAuth, async (req, res) => {
     try {
       // Enhanced parameter validation
       if (!req.params?.id) {
@@ -3680,7 +3663,6 @@ Do not include quotes or explanations.`;
         return res.status(400).json({ message: "بيانات التحديث مطلوبة" });
       }
 
-      console.log("Updating user:", id, req.body);
 
       // Process role_id and section_id to convert empty strings and "none" to null with enhanced null safety
       let roleId = null;
@@ -3715,14 +3697,6 @@ Do not include quotes or explanations.`;
         section_id: sectionId,
       };
 
-      console.log("Processed role_id:", roleId, "from:", req.body.role_id);
-      console.log(
-        "Processed section_id:",
-        sectionId,
-        "from:",
-        req.body.section_id,
-      );
-
       const user = await storage.updateUser(id, processedData);
       if (!user) {
         return res.status(404).json({ message: "المستخدم غير موجود" });
@@ -3750,9 +3724,7 @@ Do not include quotes or explanations.`;
 
   app.post("/api/roles", requireAuth, requirePermission('manage_roles'), async (req: AuthRequest, res) => {
     try {
-      console.log("Received role data:", req.body);
       const role = await storage.createRole(req.body);
-      console.log("Created role:", role);
       res.json(role);
     } catch (error) {
       console.error("Role creation error:", error);
@@ -3779,7 +3751,6 @@ Do not include quotes or explanations.`;
         return res.status(400).json({ message: "بيانات التحديث مطلوبة" });
       }
 
-      console.log("Updating role:", id, req.body);
       const role = await storage.updateRole(id, req.body);
       if (!role) {
         return res.status(404).json({ message: "الدور غير موجود" });
@@ -3819,9 +3790,8 @@ Do not include quotes or explanations.`;
   });
 
   // Sections routes
-  app.post("/api/sections", async (req, res) => {
+  app.post("/api/sections", requireAuth, async (req, res) => {
     try {
-      console.log("Received section data:", req.body);
 
       // Generate sequential ID if not provided with enhanced null safety
       let sectionId = req.body?.id;
@@ -3849,9 +3819,7 @@ Do not include quotes or explanations.`;
         id: sectionId,
       };
 
-      console.log("Processed section data:", processedData);
       const section = await storage.createSection(processedData);
-      console.log("Created section:", section);
       res.json(section);
     } catch (error) {
       console.error("Section creation error:", error);
@@ -3862,7 +3830,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/sections/:id", async (req, res) => {
+  app.put("/api/sections/:id", requireAuth, async (req, res) => {
     try {
       // Enhanced parameter validation
       if (!req.params?.id?.trim()) {
@@ -3887,9 +3855,8 @@ Do not include quotes or explanations.`;
   // Material Groups routes
 
   // Items routes
-  app.post("/api/items", async (req, res) => {
+  app.post("/api/items", requireAuth, async (req, res) => {
     try {
-      console.log("Received item data:", req.body);
 
       // Generate sequential ID if not provided with enhanced null safety
       let itemId = req.body?.id;
@@ -3924,9 +3891,7 @@ Do not include quotes or explanations.`;
         code: !req.body?.code || req.body.code === "" ? null : req.body.code,
       };
 
-      console.log("Processed item data:", processedData);
       const item = await storage.createItem(processedData);
-      console.log("Created item:", item);
       res.json(item);
     } catch (error) {
       console.error("Item creation error:", error);
@@ -3941,7 +3906,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/items/:id", async (req, res) => {
+  app.put("/api/items/:id", requireAuth, async (req, res) => {
     try {
       // Enhanced parameter validation
       if (!req.params?.id?.trim()) {
@@ -3953,7 +3918,6 @@ Do not include quotes or explanations.`;
       }
 
       const id = req.params.id.trim();
-      console.log("Updating item:", id, req.body);
 
       // Convert empty strings to null for optional fields with enhanced null safety
       const processedData = {
@@ -3967,7 +3931,6 @@ Do not include quotes or explanations.`;
         code: !req.body?.code || req.body.code === "" ? null : req.body.code,
       };
 
-      console.log("Processed item update data:", processedData);
       const item = await storage.updateItem(id, processedData);
       if (!item) {
         return res.status(404).json({ message: "الصنف غير موجود" });
@@ -3982,25 +3945,8 @@ Do not include quotes or explanations.`;
     }
   });
 
-  // Customer Products routes
-  app.post("/api/customer-products", async (req, res) => {
-    try {
-      // Convert material_group_id to category_id for backwards compatibility
-      const processedData = {
-        ...req.body,
-        category_id: req.body.material_group_id || req.body.category_id,
-      };
-      delete processedData.material_group_id;
 
-      const customerProduct =
-        await storage.createCustomerProduct(processedData);
-      res.json(customerProduct);
-    } catch (error) {
-      res.status(500).json({ message: "خطأ في إنشاء منتج العميل" });
-    }
-  });
-
-  app.put("/api/customer-products/:id", async (req, res) => {
+  app.put("/api/customer-products/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
 
@@ -4054,60 +4000,6 @@ Do not include quotes or explanations.`;
     }
   });
 
-  // Locations routes
-  app.post("/api/locations", async (req, res) => {
-    try {
-      console.log("Received location data:", req.body);
-
-      // Generate sequential ID if not provided
-      let locationId = req.body.id;
-      if (!locationId) {
-        // Get the latest location to determine the next sequential number
-        const existingLocations = await storage.getLocations();
-        const locationNumbers = existingLocations
-          .map((location) => location.id)
-          .filter((id) => id.startsWith("LOC"))
-          .map((id) => parseInt(id.replace("LOC", "")))
-          .filter((num) => !isNaN(num))
-          .sort((a, b) => b - a);
-
-        const nextNumber =
-          locationNumbers.length > 0 ? locationNumbers[0] + 1 : 1;
-        locationId = `LOC${nextNumber.toString().padStart(2, "0")}`;
-      }
-
-      const processedData = {
-        ...req.body,
-        id: locationId,
-      };
-
-      console.log("Processed location data:", processedData);
-      const location = await storage.createLocation(processedData);
-      console.log("Created location:", location);
-      res.json(location);
-    } catch (error) {
-      console.error("Location creation error:", error);
-      res.status(500).json({
-        message: "خطأ في إنشاء الموقع",
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
-  });
-
-  app.put("/api/locations/:id", async (req, res) => {
-    try {
-      const id = req.params.id; // Now using string ID
-      console.log("Updating location:", id, req.body);
-      const location = await storage.updateLocation(id, req.body);
-      res.json(location);
-    } catch (error) {
-      console.error("Location update error:", error);
-      res.status(500).json({
-        message: "خطأ في تحديث الموقع",
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
-  });
 
   // ============ HR System API Routes ============
 
@@ -4121,7 +4013,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/training-programs", async (req, res) => {
+  app.post("/api/hr/training-programs", requireAuth, async (req, res) => {
     try {
       const program = await storage.createTrainingProgram(req.body);
       res.json(program);
@@ -4130,7 +4022,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/hr/training-programs/:id", async (req, res) => {
+  app.put("/api/hr/training-programs/:id", requireAuth, async (req, res) => {
     try {
       // Enhanced parameter validation
       if (!req.params?.id) {
@@ -4209,7 +4101,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/training-materials", async (req, res) => {
+  app.post("/api/hr/training-materials", requireAuth, async (req, res) => {
     try {
       const material = await storage.createTrainingMaterial(req.body);
       res.json(material);
@@ -4241,7 +4133,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/training-enrollments", async (req, res) => {
+  app.post("/api/hr/training-enrollments", requireAuth, async (req, res) => {
     try {
       const enrollment = await storage.createTrainingEnrollment(req.body);
       res.json(enrollment);
@@ -4250,9 +4142,9 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/hr/training-enrollments/:id", async (req, res) => {
+  app.put("/api/hr/training-enrollments/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteParam(req.params.id, "ID");
       const enrollment = await storage.updateTrainingEnrollment(id, req.body);
       res.json(enrollment);
     } catch (error) {
@@ -4279,7 +4171,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/training-evaluations", async (req, res) => {
+  app.post("/api/hr/training-evaluations", requireAuth, async (req, res) => {
     try {
       const evaluation = await storage.createTrainingEvaluation(req.body);
       res.json(evaluation);
@@ -4288,9 +4180,9 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/hr/training-evaluations/:id", async (req, res) => {
+  app.put("/api/hr/training-evaluations/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteParam(req.params.id, "ID");
       const evaluation = await storage.updateTrainingEvaluation(id, req.body);
       res.json(evaluation);
     } catch (error) {
@@ -4300,7 +4192,7 @@ Do not include quotes or explanations.`;
 
   app.get("/api/hr/training-evaluations/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteParam(req.params.id, "ID");
       const evaluation = await storage.getTrainingEvaluationById(id);
       if (evaluation) {
         res.json(evaluation);
@@ -4325,7 +4217,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/training-certificates", async (req, res) => {
+  app.post("/api/hr/training-certificates", requireAuth, async (req, res) => {
     try {
       const certificate = await storage.createTrainingCertificate(req.body);
       res.json(certificate);
@@ -4336,9 +4228,10 @@ Do not include quotes or explanations.`;
 
   app.post(
     "/api/hr/training-certificates/generate/:enrollmentId",
+    requireAuth,
     async (req, res) => {
       try {
-        const enrollmentId = parseInt(req.params.enrollmentId);
+        const enrollmentId = parseRouteParam(req.params.enrollmentId, "Enrollment ID");
         const certificate =
           await storage.generateTrainingCertificate(enrollmentId);
         res.json(certificate);
@@ -4348,7 +4241,7 @@ Do not include quotes or explanations.`;
     },
   );
 
-  app.put("/api/hr/training-certificates/:id", async (req, res) => {
+  app.put("/api/hr/training-certificates/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const certificate = await storage.updateTrainingCertificate(id, req.body);
@@ -4358,67 +4251,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  // Training Evaluations
-  app.get("/api/hr/training-evaluations", async (req, res) => {
-    try {
-      const employeeId = req.query.employee_id
-        ? parseInt(req.query.employee_id as string)
-        : undefined;
-      const programId = req.query.program_id
-        ? parseInt(req.query.program_id as string)
-        : undefined;
-      const evaluations = await storage.getTrainingEvaluations(
-        employeeId,
-        programId,
-      );
-      res.json(evaluations);
-    } catch (error) {
-      res.status(500).json({ message: "خطأ في جلب تقييمات التدريب" });
-    }
-  });
-
-  app.post("/api/hr/training-evaluations", async (req, res) => {
-    try {
-      const evaluation = await storage.createTrainingEvaluation(req.body);
-      res.json(evaluation);
-    } catch (error) {
-      res.status(500).json({ message: "خطأ في إنشاء تقييم التدريب" });
-    }
-  });
-
-  app.put("/api/hr/training-evaluations/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const evaluation = await storage.updateTrainingEvaluation(id, req.body);
-      res.json(evaluation);
-    } catch (error) {
-      res.status(500).json({ message: "خطأ في تحديث تقييم التدريب" });
-    }
-  });
-
-  // Training Certificates
-  app.get("/api/hr/training-certificates", async (req, res) => {
-    try {
-      const employeeId = req.query.employee_id
-        ? parseInt(req.query.employee_id as string)
-        : undefined;
-      const certificates = await storage.getTrainingCertificates(employeeId);
-      res.json(certificates);
-    } catch (error) {
-      res.status(500).json({ message: "خطأ في جلب شهادات التدريب" });
-    }
-  });
-
-  app.post("/api/hr/training-certificates", async (req, res) => {
-    try {
-      const certificate = await storage.createTrainingCertificate(req.body);
-      res.json(certificate);
-    } catch (error) {
-      res.status(500).json({ message: "خطأ في إنشاء شهادة التدريب" });
-    }
-  });
-
-  app.get("/api/hr/training-certificates/:id/generate", async (req, res) => {
+  app.get("/api/hr/training-certificates/:id/generate", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const certificate = await storage.generateTrainingCertificate(id);
@@ -4441,7 +4274,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/performance-reviews", async (req, res) => {
+  app.post("/api/hr/performance-reviews", requireAuth, async (req, res) => {
     try {
       const review = await storage.createPerformanceReview(req.body);
       res.json(review);
@@ -4450,7 +4283,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/hr/performance-reviews/:id", async (req, res) => {
+  app.put("/api/hr/performance-reviews/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const review = await storage.updatePerformanceReview(id, req.body);
@@ -4470,7 +4303,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/performance-criteria", async (req, res) => {
+  app.post("/api/hr/performance-criteria", requireAuth, async (req, res) => {
     try {
       const criteria = await storage.createPerformanceCriteria(req.body);
       res.json(criteria);
@@ -4489,7 +4322,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/leave-types", async (req, res) => {
+  app.post("/api/hr/leave-types", requireAuth, async (req, res) => {
     try {
       const leaveType = await storage.createLeaveType(req.body);
       res.json(leaveType);
@@ -4511,7 +4344,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/leave-requests", async (req, res) => {
+  app.post("/api/hr/leave-requests", requireAuth, async (req, res) => {
     try {
       const request = await storage.createLeaveRequest(req.body);
       res.json(request);
@@ -4520,7 +4353,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/hr/leave-requests/:id", async (req, res) => {
+  app.put("/api/hr/leave-requests/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const request = await storage.updateLeaveRequest(id, req.body);
@@ -4553,7 +4386,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/leave-balances", async (req, res) => {
+  app.post("/api/hr/leave-balances", requireAuth, async (req, res) => {
     try {
       const balance = await storage.createLeaveBalance(req.body);
       res.json(balance);
@@ -4563,7 +4396,7 @@ Do not include quotes or explanations.`;
   });
 
   // DELETE routes for definitions
-  app.delete("/api/customers/:id", async (req, res) => {
+  app.delete("/api/customers/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteCustomer(req.params.id);
       res.json({ message: "تم حذف العميل بنجاح" });
@@ -4572,7 +4405,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/sections/:id", async (req, res) => {
+  app.delete("/api/sections/:id", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
       await storage.deleteSection(id);
@@ -4582,7 +4415,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/items/:id", async (req, res) => {
+  app.delete("/api/items/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteItem(req.params.id);
       res.json({ message: "تم حذف الصنف بنجاح" });
@@ -4611,7 +4444,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/machines/:id", async (req, res) => {
+  app.delete("/api/machines/:id", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
       await storage.deleteMachine(id);
@@ -4621,7 +4454,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/users/:id", async (req, res) => {
+  app.delete("/api/users/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteUser(id);
@@ -4756,7 +4589,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/inventory/:id", async (req, res) => {
+  app.delete("/api/inventory/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteInventoryItem(id);
@@ -4766,55 +4599,6 @@ Do not include quotes or explanations.`;
     }
   });
 
-  // ============ Locations Management API ============
-
-  app.get("/api/locations", async (req, res) => {
-    try {
-      const locations = await storage.getLocations();
-      res.json(locations);
-    } catch (error) {
-      console.error("Error fetching locations:", error);
-      res.status(500).json({ message: "خطأ في جلب المواقع" });
-    }
-  });
-
-  app.post("/api/locations", async (req, res) => {
-    try {
-      const result = insertLocationSchema.safeParse(req.body);
-      if (!result.success) {
-        return res
-          .status(400)
-          .json({ message: "بيانات غير صحيحة", errors: result.error.errors });
-      }
-
-      const location = await storage.createLocationExtended(result.data);
-      res.status(201).json(location);
-    } catch (error) {
-      console.error("Error creating location:", error);
-      res.status(500).json({ message: "خطأ في إنشاء الموقع" });
-    }
-  });
-
-  app.put("/api/locations/:id", async (req, res) => {
-    try {
-      const locationId = req.params.id;
-      const result = insertLocationSchema.safeParse(req.body);
-      if (!result.success) {
-        return res
-          .status(400)
-          .json({ message: "بيانات غير صحيحة", errors: result.error.errors });
-      }
-
-      const location = await storage.updateLocationExtended(
-        locationId,
-        result.data,
-      );
-      res.json(location);
-    } catch (error) {
-      console.error("Error updating location:", error);
-      res.status(500).json({ message: "خطأ في تحديث الموقع" });
-    }
-  });
 
   // ============ Machine Queues Management API ============
   
@@ -5026,45 +4810,6 @@ Do not include quotes or explanations.`;
     }
   });
 
-  // ============ Inventory Movements Management API ============
-
-  app.get("/api/inventory-movements", async (req, res) => {
-    try {
-      const movements = await storage.getAllInventoryMovements();
-      res.json(movements);
-    } catch (error) {
-      console.error("Error fetching inventory movements:", error);
-      res.status(500).json({ message: "خطأ في جلب حركات المخزون" });
-    }
-  });
-
-  app.post("/api/inventory-movements", async (req, res) => {
-    try {
-      const result = insertInventoryMovementSchema.safeParse(req.body);
-      if (!result.success) {
-        return res
-          .status(400)
-          .json({ message: "بيانات غير صحيحة", errors: result.error.errors });
-      }
-
-      const movement = await storage.createInventoryMovement(result.data);
-      res.status(201).json(movement);
-    } catch (error) {
-      console.error("Error creating inventory movement:", error);
-      res.status(500).json({ message: "خطأ في إنشاء حركة المخزون" });
-    }
-  });
-
-  app.delete("/api/inventory-movements/:id", async (req, res) => {
-    try {
-      const movementId = parseInt(req.params.id);
-      await storage.deleteInventoryMovement(movementId);
-      res.json({ message: "تم حذف الحركة بنجاح" });
-    } catch (error) {
-      console.error("Error deleting inventory movement:", error);
-      res.status(500).json({ message: "خطأ في حذف الحركة" });
-    }
-  });
 
   // ============ Orders Management API ============
 
@@ -5078,9 +4823,8 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/orders", async (req, res) => {
+  app.post("/api/orders", requireAuth, async (req, res) => {
     try {
-      console.log("Received order data:", req.body);
       const order = await storage.createOrder(req.body);
       res.status(201).json(order);
     } catch (error) {
@@ -5321,7 +5065,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/settings/user/:userId", async (req, res) => {
+  app.post("/api/settings/user/:userId", requireAuth, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const { settings } = req.body;
@@ -5484,10 +5228,6 @@ Do not include quotes or explanations.`;
             .json({ message: "البيانات المرسلة غير صالحة" });
         }
 
-        console.log(
-          `Processing batch import for ${tableName}: ${data.length} records (Batch ${options?.batchNumber || 1}/${options?.totalBatches || 1})`,
-        );
-
         const results = {
           successful: 0,
           failed: 0,
@@ -5596,10 +5336,6 @@ Do not include quotes or explanations.`;
                 processedRecord.cutting_unit !== null
               ) {
                 // Keep the cutting_unit value as is
-                console.log(
-                  "Processing cutting_unit:",
-                  processedRecord.cutting_unit,
-                );
               }
 
               // Convert numeric string fields to proper types
@@ -5822,7 +5558,7 @@ Do not include quotes or explanations.`;
   });
 
   // Bulk upsert manual attendance
-  app.post("/api/attendance/manual", async (req, res) => {
+  app.post("/api/attendance/manual", requireAuth, async (req, res) => {
     try {
       const { entries } = req.body;
       
@@ -6332,7 +6068,7 @@ Do not include quotes or explanations.`;
   });
 
   // تسجيل الحضور مع تحقق الموقع الجغرافي المحسّن
-  app.post("/api/attendance", async (req, res) => {
+  app.post("/api/attendance", requireAuth, async (req, res) => {
     try {
       const isDevMode = process.env.NODE_ENV === 'development';
       
@@ -6350,7 +6086,6 @@ Do not include quotes or explanations.`;
       
       // =============== التحقق من وجود بيانات الموقع ===============
       if (!req.body.location || !req.body.location.lat || !req.body.location.lng) {
-        console.log(`⚠️ [حماية] محاولة تسجيل بدون موقع - IP: ${deviceInfo.ip}`);
         return res.status(400).json({
           message: "يجب توفير الموقع الجغرافي لتسجيل الحضور",
           code: "LOCATION_REQUIRED"
@@ -6366,13 +6101,11 @@ Do not include quotes or explanations.`;
       if (hasValidAccuracy) {
         // دقة عالية جداً (أقل من 5 متر) قد تشير لتزوير
         if (accuracy < MIN_ACCURACY_METERS) {
-          console.log(`🚨 [حماية] دقة مشبوهة جداً (${accuracy}م) - المستخدم: ${req.body.user_id}, IP: ${deviceInfo.ip}`);
           // نسجل التحذير لكن لا نرفض (قد يكون GPS حقيقي ممتاز)
         }
         
         // دقة منخفضة جداً
         if (accuracy > MAX_ACCURACY_METERS) {
-          console.log(`❌ [حماية] دقة GPS منخفضة (${accuracy}م) - المستخدم: ${req.body.user_id}`);
           return res.status(400).json({
             message: `دقة الموقع منخفضة جداً (${Math.round(accuracy)} متر). يرجى الانتظار حتى تتحسن دقة GPS أو الخروج لمكان مفتوح.`,
             code: "LOW_ACCURACY",
@@ -6382,12 +6115,10 @@ Do not include quotes or explanations.`;
         }
       } else {
         // تحذير في السجل إذا لم تتوفر معلومات الدقة
-        console.log(`⚠️ [تحذير] لم تتوفر معلومات دقة GPS للمستخدم: ${req.body.user_id}`);
       }
 
       // =============== كشف تزوير الموقع (Mock Location) ===============
       if (isMocked === true) {
-        console.log(`🚨 [أمان] اكتشاف موقع مزور! المستخدم: ${req.body.user_id}, IP: ${deviceInfo.ip}`);
         
         // تسجيل محاولة التلاعب
         try {
@@ -6415,7 +6146,6 @@ Do not include quotes or explanations.`;
 
       // =============== التحقق من صحة إحداثيات الموقع ===============
       if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-        console.log(`❌ [حماية] إحداثيات غير صالحة: lat=${lat}, lng=${lng}`);
         return res.status(400).json({
           message: "إحداثيات الموقع غير صالحة",
           code: "INVALID_COORDINATES"
@@ -6428,7 +6158,6 @@ Do not include quotes or explanations.`;
       const isSalesRep = user?.role_id === SALES_REP_ROLE_ID;
       
       if (isSalesRep) {
-        console.log(`📍 [مندوب مبيعات] المستخدم ${req.body.user_id} (${user?.display_name_ar || user?.username}) - السماح بتسجيل الحضور من أي موقع`);
       }
 
       // =============== جلب مواقع المصانع النشطة ===============
@@ -6470,9 +6199,6 @@ Do not include quotes or explanations.`;
       let matchedLocation: any = null;
 
       if (isDevMode) {
-        console.log(`📍 بدء التحقق من الموقع للمستخدم ${req.body.user_id}`);
-        console.log(`📍 الموقع المستلم: lat=${lat}, lng=${lng}, دقة=${accuracy || 'غير محددة'}م`);
-        console.log(`📍 عدد المواقع النشطة: ${activeLocations.length}`);
       }
 
       for (const factoryLocation of activeLocations) {
@@ -6488,12 +6214,6 @@ Do not include quotes or explanations.`;
         const effectiveRadius = factoryLocation.allowed_radius + (accuracy || 0);
 
         if (isDevMode) {
-          console.log(`📍 مقارنة مع ${factoryLocation.name_ar}:`);
-          console.log(`   - موقع المصنع: lat=${factoryLocation.latitude}, lng=${factoryLocation.longitude}`);
-          console.log(`   - المسافة المحسوبة: ${Math.round(distance)} متر`);
-          console.log(`   - المسافة الفعلية (مع الدقة): ${Math.round(effectiveDistance)} متر`);
-          console.log(`   - النطاق المسموح: ${factoryLocation.allowed_radius} متر`);
-          console.log(`   - ضمن النطاق: ${distance <= factoryLocation.allowed_radius ? 'نعم ✅' : 'لا ❌'}`);
         }
 
         if (distance < closestDistance) {
@@ -6504,14 +6224,12 @@ Do not include quotes or explanations.`;
         if (distance <= factoryLocation.allowed_radius) {
           isWithinRange = true;
           matchedLocation = factoryLocation;
-          console.log(`✅ تم التحقق من الموقع عند ${factoryLocation.name_ar} - المسافة: ${Math.round(distance)} متر`);
           break;
         }
       }
 
       if (!isWithinRange) {
         const errorMsg = `أنت خارج نطاق المصنع. المسافة: ${Math.round(closestDistance)} متر. النطاق المسموح: ${closestLocation?.allowed_radius} متر.`;
-        console.log(`❌ رفض الحضور للمستخدم ${req.body.user_id} - ${errorMsg}`);
         
         return res.status(403).json({
           message: errorMsg,
@@ -6545,7 +6263,6 @@ Do not include quotes or explanations.`;
 
       const attendance = await storage.createAttendance(attendanceData);
       
-      console.log(`✅ تم تسجيل الحضور بنجاح - المستخدم: ${req.body.user_id}, الموقع: ${matchedLocation?.name_ar}, المسافة: ${Math.round(closestDistance)}م`);
 
       // Send attendance notification
       try {
@@ -6611,7 +6328,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/attendance/:id", async (req, res) => {
+  app.put("/api/attendance/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const attendance = await storage.updateAttendance(id, req.body);
@@ -6622,7 +6339,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/attendance/:id", async (req, res) => {
+  app.delete("/api/attendance/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteAttendance(id);
@@ -6964,7 +6681,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/violations", async (req, res) => {
+  app.post("/api/violations", requireAuth, async (req, res) => {
     try {
       const violation = await storage.createViolation(req.body);
       res.status(201).json(violation);
@@ -6974,7 +6691,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/violations/:id", async (req, res) => {
+  app.put("/api/violations/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const violation = await storage.updateViolation(id, req.body);
@@ -6985,7 +6702,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/violations/:id", async (req, res) => {
+  app.delete("/api/violations/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteViolation(id);
@@ -7000,14 +6717,7 @@ Do not include quotes or explanations.`;
 
   app.get("/api/user-requests", async (req, res) => {
     try {
-      console.log("Fetching user requests - Session ID:", req.sessionID);
-      console.log(
-        "Fetching user requests - User ID in session:",
-        req.session.userId,
-      );
-
       const requests = await storage.getUserRequests();
-      console.log("Found", requests.length, "user requests");
 
       res.json(requests);
     } catch (error) {
@@ -7016,7 +6726,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/user-requests", async (req, res) => {
+  app.post("/api/user-requests", requireAuth, async (req, res) => {
     try {
       const request = await storage.createUserRequest(req.body);
       res.status(201).json(request);
@@ -7026,7 +6736,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/user-requests/:id", async (req, res) => {
+  app.put("/api/user-requests/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const request = await storage.updateUserRequest(id, req.body);
@@ -7037,7 +6747,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.patch("/api/user-requests/:id", async (req, res) => {
+  app.patch("/api/user-requests/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const request = await storage.updateUserRequest(id, req.body);
@@ -7048,7 +6758,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/user-requests/:id", async (req, res) => {
+  app.delete("/api/user-requests/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteUserRequest(id);
@@ -7087,7 +6797,7 @@ Do not include quotes or explanations.`;
   });
 
   // Update system setting
-  app.put("/api/system-settings/:key", async (req, res) => {
+  app.put("/api/system-settings/:key", requireAuth, async (req, res) => {
     try {
       const { setting_value } = req.body;
       if (!req.session.userId) {
@@ -7102,7 +6812,7 @@ Do not include quotes or explanations.`;
   });
 
   // Create system setting
-  app.post("/api/system-settings", async (req, res) => {
+  app.post("/api/system-settings", requireAuth, async (req, res) => {
     try {
       const setting = await storage.createSystemSetting(req.body);
       res.status(201).json(setting);
@@ -7152,7 +6862,7 @@ Do not include quotes or explanations.`;
   });
 
   // Create factory location
-  app.post("/api/factory-locations", async (req, res) => {
+  app.post("/api/factory-locations", requireAuth, async (req, res) => {
     try {
       const location = await storage.createFactoryLocation({
         ...req.body,
@@ -7166,7 +6876,7 @@ Do not include quotes or explanations.`;
   });
 
   // Update factory location
-  app.put("/api/factory-locations/:id", async (req, res) => {
+  app.put("/api/factory-locations/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const location = await storage.updateFactoryLocation(id, req.body);
@@ -7178,7 +6888,7 @@ Do not include quotes or explanations.`;
   });
 
   // Delete factory location
-  app.delete("/api/factory-locations/:id", async (req, res) => {
+  app.delete("/api/factory-locations/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteFactoryLocation(id);
@@ -7202,7 +6912,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.patch("/api/production/settings", async (req, res) => {
+  app.patch("/api/production/settings", requireAuth, async (req, res) => {
     try {
       const validationSchema = insertProductionSettingsSchema
         .pick({
@@ -7229,7 +6939,7 @@ Do not include quotes or explanations.`;
   });
 
   // Start Production
-  app.patch("/api/production-orders/:id/start-production", async (req, res) => {
+  app.patch("/api/production-orders/:id/start-production", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const productionOrder = await storage.startProduction(id);
@@ -7247,12 +6957,6 @@ Do not include quotes or explanations.`;
     validateRequest({ body: insertRollSchema.omit({ created_by: true }) }),
     async (req, res) => {
       try {
-        console.log(
-          "Roll creation request body:",
-          JSON.stringify(req.body, null, 2),
-        );
-        console.log("Session userId:", req.session.userId);
-
         // Ensure session userId is valid
         if (!req.session.userId || typeof req.session.userId !== "number") {
           return res.status(401).json({ message: "معرف المستخدم غير صحيح" });
@@ -7271,7 +6975,6 @@ Do not include quotes or explanations.`;
         let validatedRollData;
         try {
           validatedRollData = insertRollSchema.parse(rollData);
-          console.log("Validation successful for roll data");
         } catch (validationError) {
           console.error("Roll schema validation failed:", validationError);
           if (validationError instanceof z.ZodError) {
@@ -7282,11 +6985,6 @@ Do not include quotes or explanations.`;
           }
           throw validationError;
         }
-
-        console.log(
-          "Final validated roll data:",
-          JSON.stringify(validatedRollData, null, 2),
-        );
 
         // INVARIANT B: Validate roll weight against production order limits
         const productionOrder = await storage.getProductionOrderById(
@@ -7361,7 +7059,7 @@ Do not include quotes or explanations.`;
   );
 
   // Printing Operations
-  app.patch("/api/rolls/:id/print", async (req, res) => {
+  app.patch("/api/rolls/:id/print", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (!req.session.userId) {
@@ -7406,7 +7104,7 @@ Do not include quotes or explanations.`;
   });
 
   // Cutting Operations
-  app.post("/api/cuts", async (req, res) => {
+  app.post("/api/cuts", requireAuth, async (req, res) => {
     try {
       const validationSchema = insertCutSchema.extend({
         cut_weight_kg: z.coerce
@@ -7470,7 +7168,7 @@ Do not include quotes or explanations.`;
   });
 
   // Warehouse Receipts
-  app.post("/api/warehouse/receipts", async (req, res) => {
+  app.post("/api/warehouse/receipts", requireAuth, async (req, res) => {
     try {
       const validationSchema = insertWarehouseReceiptSchema.extend({
         received_weight_kg: z.coerce
@@ -7559,7 +7257,7 @@ Do not include quotes or explanations.`;
   });
 
   // Create warehouse receipt from production hall
-  app.post("/api/warehouse/receipts", async (req, res) => {
+  app.post("/api/warehouse/receipts", requireAuth, async (req, res) => {
     try {
       const receiptData = req.body;
       const receipt = await storage.createWarehouseReceipt(receiptData);
