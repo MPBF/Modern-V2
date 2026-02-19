@@ -45,6 +45,7 @@ import {
   users,
   attendance,
   factory_layouts,
+  notifications as notificationsTable,
 } from "@shared/schema";
 import { eq, sql, and, gte, lte } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -84,16 +85,16 @@ const parseOptionalQueryParam = (
 };
 
 // Helper function to check if an order is paused and block production
-const checkOrderNotPaused = async (productionOrderId: number): Promise<{ isPaused: boolean; orderStatus?: string; message?: string }> => {
+const checkOrderNotPaused = async (productionOrderId: number): Promise<{ isPaused: boolean; notFound?: boolean; orderStatus?: string; message?: string }> => {
   try {
     const productionOrder = await storage.getProductionOrderById(productionOrderId);
     if (!productionOrder) {
-      return { isPaused: false };
+      return { isPaused: true, notFound: true, message: "أمر الإنتاج غير موجود" };
     }
     
     const order = await storage.getOrderById(productionOrder.order_id);
     if (!order) {
-      return { isPaused: false };
+      return { isPaused: true, notFound: true, message: "الطلب المرتبط بأمر الإنتاج غير موجود" };
     }
     
     if (order.status === "paused" || order.status === "on_hold") {
@@ -109,7 +110,7 @@ const checkOrderNotPaused = async (productionOrderId: number): Promise<{ isPause
     return { isPaused: false };
   } catch (error) {
     console.error("Error checking order status:", error);
-    return { isPaused: false };
+    return { isPaused: true, message: "خطأ في التحقق من حالة الطلب" };
   }
 };
 
@@ -601,7 +602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get notifications
-  app.get("/api/notifications", async (req, res) => {
+  app.get("/api/notifications", requireAuth, async (req, res) => {
     try {
       // Enhanced parameter validation with safe parsing
       let userId: number | undefined;
@@ -934,16 +935,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         offset,
       });
 
-      // Count unread notifications
-      const unreadNotifications = await storage.getUserNotifications(userId, {
-        unreadOnly: true,
-        limit: 1000, // Get all unread to count
-      });
+      // Count unread notifications efficiently using SQL COUNT
+      const user = await storage.getSafeUser(userId);
+      let unreadCount = 0;
+      if (user) {
+        const countResult = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(notificationsTable)
+          .where(
+            and(
+              sql`${notificationsTable.read_at} IS NULL`,
+              eq(notificationsTable.recipient_id, userId.toString()),
+            ),
+          );
+        unreadCount = Number(countResult[0]?.count || 0);
+      }
 
       res.json({
         success: true,
         notifications,
-        unread_count: unreadNotifications.length,
+        unread_count: unreadCount,
         total_returned: notifications.length,
       });
     } catch (error: any) {
@@ -982,7 +993,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Get notification templates
-  app.get("/api/notification-templates", async (req, res) => {
+  app.get("/api/notification-templates", requireAuth, async (req, res) => {
     try {
       const templates = await storage.getNotificationTemplates();
       res.json(templates);
@@ -1037,7 +1048,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate next order number
+  // Generate next order number using SQL MAX for atomicity
   app.get("/api/orders/next-number", requireAuth, async (req, res) => {
     try {
       // Prevent caching to ensure fresh order numbers
@@ -1045,21 +1056,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader("Pragma", "no-cache");
       res.setHeader("Expires", "0");
 
-      const orders = await storage.getAllOrders();
-      const orderNumbers = orders
-        .map((order: any) => order.order_number)
-        .filter((num: string) => num && num.startsWith("ORD"))
-        .map((num: string) => {
-          const match = num.match(/^ORD(\d+)$/);
-          if (!match || !match[1]) return 0;
-          // Use parseInt directly for order numbers to handle leading zeros
-          const parsed = parseInt(match[1], 10);
-          return isNaN(parsed) || parsed < 1 ? 0 : parsed;
-        })
-        .filter((num) => num > 0); // Remove invalid entries (zeros)
-
-      const nextNumber =
-        orderNumbers.length > 0 ? Math.max(...orderNumbers) + 1 : 1;
+      // Use SQL MAX to atomically get highest order number - prevents race conditions
+      const result = await db.execute(
+        sql`SELECT MAX(CAST(SUBSTRING(order_number FROM 4) AS INTEGER)) as max_num 
+            FROM orders 
+            WHERE order_number ~ '^ORD[0-9]+$'`
+      );
+      const maxNum = (result as any).rows?.[0]?.max_num || 0;
+      const nextNumber = maxNum + 1;
       const orderNumber = `ORD${nextNumber.toString().padStart(3, "0")}`;
 
       res.json({ orderNumber });
@@ -2498,7 +2502,7 @@ Do not include quotes or explanations.`;
   });
 
   // Sections routes
-  app.get("/api/sections", async (req, res) => {
+  app.get("/api/sections", requireAuth, async (req, res) => {
     try {
       const sections = await storage.getSections();
       res.json(sections);
@@ -2508,7 +2512,7 @@ Do not include quotes or explanations.`;
   });
 
   // Material Groups routes (Categories)
-  app.get("/api/material-groups", async (req, res) => {
+  app.get("/api/material-groups", requireAuth, async (req, res) => {
     try {
       const categories = await storage.getCategories();
       res.json(categories);
@@ -2519,7 +2523,7 @@ Do not include quotes or explanations.`;
   });
 
   // Items routes
-  app.get("/api/items", async (req, res) => {
+  app.get("/api/items", requireAuth, async (req, res) => {
     try {
       const items = await storage.getItems();
       res.json(items);
@@ -2530,7 +2534,7 @@ Do not include quotes or explanations.`;
   });
 
   // Customer Products routes
-  app.get("/api/customer-products", async (req, res) => {
+  app.get("/api/customer-products", requireAuth, async (req, res) => {
     try {
       const { customer_id, ids, page, limit, search } = req.query;
       
@@ -2614,7 +2618,7 @@ Do not include quotes or explanations.`;
   });
 
   // Locations routes
-  app.get("/api/locations", async (req, res) => {
+  app.get("/api/locations", requireAuth, async (req, res) => {
     try {
       const locations = await storage.getLocations();
       res.json(locations);
@@ -2647,7 +2651,7 @@ Do not include quotes or explanations.`;
   });
 
   // Inventory movements routes
-  app.get("/api/inventory-movements", async (req, res) => {
+  app.get("/api/inventory-movements", requireAuth, async (req, res) => {
     try {
       const movements = await storage.getInventoryMovements();
       res.json(movements);
@@ -2693,7 +2697,7 @@ Do not include quotes or explanations.`;
   });
 
   // Users routes
-  app.get("/api/users", async (req, res) => {
+  app.get("/api/users", requireAuth, async (req, res) => {
     try {
       const users = await storage.getSafeUsers();
       res.json(users);
@@ -2703,7 +2707,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/users/sales-reps", async (req, res) => {
+  app.get("/api/users/sales-reps", requireAuth, async (req, res) => {
     try {
       // Sales section ID is 7 (SEC07)
       const salesReps = await storage.getSafeUsersBySection(7);
@@ -2714,7 +2718,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/users/:id", async (req, res) => {
+  app.get("/api/users/:id", requireAuth, async (req, res) => {
     try {
       // Enhanced parameter validation
       if (!req.params?.id) {
@@ -2738,7 +2742,7 @@ Do not include quotes or explanations.`;
   });
 
   // Categories routes (for material groups)
-  app.get("/api/categories", async (req, res) => {
+  app.get("/api/categories", requireAuth, async (req, res) => {
     try {
       const categories = await storage.getCategories();
       res.json(categories);
@@ -2839,7 +2843,7 @@ Do not include quotes or explanations.`;
   });
 
   // ===== Master Batch Colors Routes =====
-  app.get("/api/master-batch-colors", async (req, res) => {
+  app.get("/api/master-batch-colors", requireAuth, async (req, res) => {
     try {
       const colors = await storage.getMasterBatchColors();
       res.json(colors);
@@ -2849,7 +2853,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/master-batch-colors/:id", async (req, res) => {
+  app.get("/api/master-batch-colors/:id", requireAuth, async (req, res) => {
     try {
       const color = await storage.getMasterBatchColorById(req.params.id);
       if (!color) {
@@ -2916,7 +2920,7 @@ Do not include quotes or explanations.`;
   });
 
   // Training Records routes
-  app.get("/api/training-records", async (req, res) => {
+  app.get("/api/training-records", requireAuth, async (req, res) => {
     try {
       const trainingRecords = await storage.getTrainingRecords();
       res.json(trainingRecords);
@@ -2935,7 +2939,7 @@ Do not include quotes or explanations.`;
   });
 
   // Admin Decisions routes
-  app.get("/api/admin-decisions", async (req, res) => {
+  app.get("/api/admin-decisions", requireAuth, async (req, res) => {
     try {
       const adminDecisions = await storage.getAdminDecisions();
       res.json(adminDecisions);
@@ -2954,7 +2958,7 @@ Do not include quotes or explanations.`;
   });
 
   // Warehouse Transactions routes
-  app.get("/api/warehouse-transactions", async (req, res) => {
+  app.get("/api/warehouse-transactions", requireAuth, async (req, res) => {
     try {
       const warehouseTransactions = await storage.getWarehouseTransactions();
       res.json(warehouseTransactions);
@@ -2975,7 +2979,7 @@ Do not include quotes or explanations.`;
   });
 
   // Mixing Recipes routes
-  app.get("/api/mixing-recipes", async (req, res) => {
+  app.get("/api/mixing-recipes", requireAuth, async (req, res) => {
     try {
       const mixingRecipes = await storage.getMixingRecipes();
       res.json(mixingRecipes);
@@ -2994,7 +2998,7 @@ Do not include quotes or explanations.`;
   });
 
   // Maintenance routes
-  app.get("/api/maintenance", async (req, res) => {
+  app.get("/api/maintenance", requireAuth, async (req, res) => {
     try {
       const requests = await storage.getMaintenanceRequests();
       res.json(requests);
@@ -3014,7 +3018,7 @@ Do not include quotes or explanations.`;
   });
 
   // Quality checks routes
-  app.get("/api/quality-checks", async (req, res) => {
+  app.get("/api/quality-checks", requireAuth, async (req, res) => {
     try {
       const qualityChecks = await storage.getQualityChecks();
       res.json(qualityChecks);
@@ -3024,7 +3028,7 @@ Do not include quotes or explanations.`;
   });
 
   // Maintenance requests routes
-  app.get("/api/maintenance-requests", async (req, res) => {
+  app.get("/api/maintenance-requests", requireAuth, async (req, res) => {
     try {
       const maintenanceRequests = await storage.getMaintenanceRequests();
       res.json(maintenanceRequests);
@@ -3067,7 +3071,7 @@ Do not include quotes or explanations.`;
   });
 
   // Maintenance Actions routes
-  app.get("/api/maintenance-actions", async (req, res) => {
+  app.get("/api/maintenance-actions", requireAuth, async (req, res) => {
     try {
       const actions = await storage.getAllMaintenanceActions();
       res.json(actions);
@@ -3077,7 +3081,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/maintenance-actions/request/:requestId", async (req, res) => {
+  app.get("/api/maintenance-actions/request/:requestId", requireAuth, async (req, res) => {
     try {
       const requestId = parseRouteParam(req.params.requestId, "Request ID");
       const actions = await storage.getMaintenanceActionsByRequestId(requestId);
@@ -6783,7 +6787,7 @@ Do not include quotes or explanations.`;
   });
 
   // Get specific system setting by key
-  app.get("/api/system-settings/:key", async (req, res) => {
+  app.get("/api/system-settings/:key", requireAuth, async (req, res) => {
     try {
       const setting = await storage.getSystemSettingByKey(req.params.key);
       if (!setting) {
@@ -6825,7 +6829,7 @@ Do not include quotes or explanations.`;
   // ============ Factory Locations API ============
 
   // Get all factory locations
-  app.get("/api/factory-locations", async (req, res) => {
+  app.get("/api/factory-locations", requireAuth, async (req, res) => {
     try {
       const locations = await storage.getFactoryLocations();
       res.json(locations);
@@ -6836,7 +6840,7 @@ Do not include quotes or explanations.`;
   });
 
   // Get active factory locations only
-  app.get("/api/factory-locations/active", async (req, res) => {
+  app.get("/api/factory-locations/active", requireAuth, async (req, res) => {
     try {
       const locations = await storage.getActiveFactoryLocations();
       res.json(locations);
@@ -6847,7 +6851,7 @@ Do not include quotes or explanations.`;
   });
 
   // Get single factory location
-  app.get("/api/factory-locations/:id", async (req, res) => {
+  app.get("/api/factory-locations/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const location = await storage.getFactoryLocation(id);
@@ -6902,7 +6906,7 @@ Do not include quotes or explanations.`;
   // ============ PRODUCTION FLOW API ENDPOINTS ============
 
   // Production Settings
-  app.get("/api/production/settings", async (req, res) => {
+  app.get("/api/production/settings", requireAuth, async (req, res) => {
     try {
       const settings = await storage.getProductionSettings();
       res.json(settings);
@@ -7194,7 +7198,7 @@ Do not include quotes or explanations.`;
   });
 
   // Get warehouse receipts with detailed information grouped by order number
-  app.get("/api/warehouse/receipts-detailed", async (req, res) => {
+  app.get("/api/warehouse/receipts-detailed", requireAuth, async (req, res) => {
     try {
       const receipts = await storage.getWarehouseReceiptsDetailed();
       res.json(receipts);
@@ -7205,7 +7209,7 @@ Do not include quotes or explanations.`;
   });
 
   // Production Queues
-  app.get("/api/production/film-queue", async (req, res) => {
+  app.get("/api/production/film-queue", requireAuth, async (req, res) => {
     try {
       const queue = await storage.getFilmQueue();
       res.json(queue);
@@ -7215,7 +7219,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/production/printing-queue", async (req, res) => {
+  app.get("/api/production/printing-queue", requireAuth, async (req, res) => {
     try {
       const queue = await storage.getPrintingQueue();
       res.json(queue);
@@ -7225,7 +7229,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/production/cutting-queue", async (req, res) => {
+  app.get("/api/production/cutting-queue", requireAuth, async (req, res) => {
     try {
       const queue = await storage.getCuttingQueue();
       res.json(queue);
@@ -7235,7 +7239,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/production/grouped-cutting-queue", async (req, res) => {
+  app.get("/api/production/grouped-cutting-queue", requireAuth, async (req, res) => {
     try {
       const queue = await storage.getGroupedCuttingQueue();
       res.json(queue);
@@ -7246,7 +7250,7 @@ Do not include quotes or explanations.`;
   });
 
   // Production hall - get production orders ready for warehouse receipt
-  app.get("/api/warehouse/production-hall", async (req, res) => {
+  app.get("/api/warehouse/production-hall", requireAuth, async (req, res) => {
     try {
       const productionOrders = await storage.getProductionOrdersForReceipt();
       res.json(productionOrders);
@@ -7268,7 +7272,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/production/order-progress/:jobOrderId", async (req, res) => {
+  app.get("/api/production/order-progress/:jobOrderId", requireAuth, async (req, res) => {
     try {
       const jobOrderId = parseInt(req.params.jobOrderId);
       const progress = await storage.getOrderProgress(jobOrderId);
@@ -7279,7 +7283,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/rolls/:id/qr", async (req, res) => {
+  app.get("/api/rolls/:id/qr", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const qrData = await storage.getRollQR(id);
@@ -7291,7 +7295,7 @@ Do not include quotes or explanations.`;
   });
 
   // Label printing endpoint - generates 4" x 5" label
-  app.get("/api/rolls/:id/label", async (req, res) => {
+  app.get("/api/rolls/:id/label", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const labelData = await storage.getRollLabelData(id);
@@ -8319,7 +8323,7 @@ Do not include quotes or explanations.`;
   // ============ Warehouse Vouchers API Routes ============
 
   // سندات إدخال المواد الخام
-  app.get("/api/warehouse/vouchers/raw-material-in", async (req, res) => {
+  app.get("/api/warehouse/vouchers/raw-material-in", requireAuth, async (req, res) => {
     try {
       const vouchers = await storage.getRawMaterialVouchersIn();
       res.json(vouchers);
@@ -8349,7 +8353,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/warehouse/vouchers/raw-material-in/:id", async (req, res) => {
+  app.get("/api/warehouse/vouchers/raw-material-in/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const voucher = await storage.getRawMaterialVoucherInById(id);
@@ -8364,7 +8368,7 @@ Do not include quotes or explanations.`;
   });
 
   // سندات إخراج المواد الخام
-  app.get("/api/warehouse/vouchers/raw-material-out", async (req, res) => {
+  app.get("/api/warehouse/vouchers/raw-material-out", requireAuth, async (req, res) => {
     try {
       const vouchers = await storage.getRawMaterialVouchersOut();
       res.json(vouchers);
@@ -8394,7 +8398,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/warehouse/vouchers/raw-material-out/:id", async (req, res) => {
+  app.get("/api/warehouse/vouchers/raw-material-out/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const voucher = await storage.getRawMaterialVoucherOutById(id);
@@ -8409,7 +8413,7 @@ Do not include quotes or explanations.`;
   });
 
   // سندات استلام المواد التامة
-  app.get("/api/warehouse/vouchers/finished-goods-in", async (req, res) => {
+  app.get("/api/warehouse/vouchers/finished-goods-in", requireAuth, async (req, res) => {
     try {
       const vouchers = await storage.getFinishedGoodsVouchersIn();
       res.json(vouchers);
@@ -8439,7 +8443,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/warehouse/vouchers/finished-goods-in/:id", async (req, res) => {
+  app.get("/api/warehouse/vouchers/finished-goods-in/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const voucher = await storage.getFinishedGoodsVoucherInById(id);
@@ -8454,7 +8458,7 @@ Do not include quotes or explanations.`;
   });
 
   // سندات إخراج المواد التامة
-  app.get("/api/warehouse/vouchers/finished-goods-out", async (req, res) => {
+  app.get("/api/warehouse/vouchers/finished-goods-out", requireAuth, async (req, res) => {
     try {
       const vouchers = await storage.getFinishedGoodsVouchersOut();
       res.json(vouchers);
@@ -8484,7 +8488,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/warehouse/vouchers/finished-goods-out/:id", async (req, res) => {
+  app.get("/api/warehouse/vouchers/finished-goods-out/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const voucher = await storage.getFinishedGoodsVoucherOutById(id);
@@ -8499,7 +8503,7 @@ Do not include quotes or explanations.`;
   });
 
   // إحصائيات السندات
-  app.get("/api/warehouse/vouchers/stats", async (req, res) => {
+  app.get("/api/warehouse/vouchers/stats", requireAuth, async (req, res) => {
     try {
       const stats = await storage.getWarehouseVouchersStats();
       res.json(stats);
@@ -8511,7 +8515,7 @@ Do not include quotes or explanations.`;
 
   // ============ Inventory Count (الجرد) API Routes ============
 
-  app.get("/api/warehouse/inventory-counts", async (req, res) => {
+  app.get("/api/warehouse/inventory-counts", requireAuth, async (req, res) => {
     try {
       const counts = await storage.getInventoryCounts();
       res.json(counts);
@@ -8541,7 +8545,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/warehouse/inventory-counts/:id", async (req, res) => {
+  app.get("/api/warehouse/inventory-counts/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const count = await storage.getInventoryCountById(id);
@@ -8588,7 +8592,7 @@ Do not include quotes or explanations.`;
   });
 
   // البحث بالباركود
-  app.get("/api/warehouse/barcode-lookup/:barcode", async (req, res) => {
+  app.get("/api/warehouse/barcode-lookup/:barcode", requireAuth, async (req, res) => {
     try {
       const barcode = req.params.barcode;
       const result = await storage.lookupByBarcode(barcode);
@@ -8603,7 +8607,7 @@ Do not include quotes or explanations.`;
   });
 
   // توليد رقم سند جديد
-  app.get("/api/warehouse/vouchers/next-number/:type", async (req, res) => {
+  app.get("/api/warehouse/vouchers/next-number/:type", requireAuth, async (req, res) => {
     try {
       const type = req.params.type as "RMI" | "RMO" | "FGI" | "FGO" | "IC";
       const nextNumber = await storage.getNextVoucherNumber(type);
@@ -8615,7 +8619,7 @@ Do not include quotes or explanations.`;
   });
 
   // ============ Suppliers API Routes ============
-  app.get("/api/suppliers", async (req, res) => {
+  app.get("/api/suppliers", requireAuth, async (req, res) => {
     try {
       const result = await db.execute(sql`SELECT * FROM suppliers WHERE is_active = true ORDER BY name_ar`);
       res.json(result.rows || []);
@@ -8670,7 +8674,7 @@ Do not include quotes or explanations.`;
   });
 
   // ============ Units API Routes ============
-  app.get("/api/units", async (req, res) => {
+  app.get("/api/units", requireAuth, async (req, res) => {
     try {
       const result = await db.execute(sql`SELECT * FROM units WHERE is_active = true ORDER BY name_ar`);
       res.json(result.rows || []);
@@ -8727,7 +8731,7 @@ Do not include quotes or explanations.`;
   // ============ Excel Import/Export API Routes ============
   
   // تصدير الأصناف إلى Excel
-  app.get("/api/warehouse/export/items", async (req, res) => {
+  app.get("/api/warehouse/export/items", requireAuth, async (req, res) => {
     try {
       const result = await db.execute(sql`
         SELECT id, name, name_ar, code, barcode, unit, category, current_stock, min_stock, max_stock
@@ -8749,7 +8753,7 @@ Do not include quotes or explanations.`;
   });
 
   // تصدير الموردين إلى Excel
-  app.get("/api/warehouse/export/suppliers", async (req, res) => {
+  app.get("/api/warehouse/export/suppliers", requireAuth, async (req, res) => {
     try {
       const result = await db.execute(sql`
         SELECT id, name, name_ar, phone, email, address, contact_person
@@ -8771,7 +8775,7 @@ Do not include quotes or explanations.`;
   });
 
   // تصدير سندات الإدخال/الإخراج إلى Excel - باستخدام استعلامات آمنة
-  app.get("/api/warehouse/export/vouchers/:type", async (req, res) => {
+  app.get("/api/warehouse/export/vouchers/:type", requireAuth, async (req, res) => {
     try {
       const type = req.params.type;
       let result;
@@ -8914,7 +8918,7 @@ Do not include quotes or explanations.`;
   });
 
   // تحميل قالب Excel فارغ
-  app.get("/api/warehouse/template/:type", async (req, res) => {
+  app.get("/api/warehouse/template/:type", requireAuth, async (req, res) => {
     try {
       const type = req.params.type;
       let headers: string[] = [];
@@ -8954,7 +8958,7 @@ Do not include quotes or explanations.`;
   // ============ Warehouse Reports API Routes ============
   
   // تقرير حركات المخزون - باستخدام استعلامات معلمة آمنة
-  app.get("/api/warehouse/reports/movements", async (req, res) => {
+  app.get("/api/warehouse/reports/movements", requireAuth, async (req, res) => {
     try {
       const startDate = typeof req.query.startDate === 'string' ? req.query.startDate : null;
       const endDate = typeof req.query.endDate === 'string' ? req.query.endDate : null;
@@ -8991,7 +8995,7 @@ Do not include quotes or explanations.`;
   });
 
   // تقرير الأرصدة الحالية - باستخدام استعلامات معلمة آمنة
-  app.get("/api/warehouse/reports/stock-levels", async (req, res) => {
+  app.get("/api/warehouse/reports/stock-levels", requireAuth, async (req, res) => {
     try {
       const category = typeof req.query.category === 'string' ? req.query.category : null;
       const belowMinimum = req.query.belowMinimum === "true";
@@ -9028,7 +9032,7 @@ Do not include quotes or explanations.`;
   });
 
   // تقرير التنبيهات (أصناف تحت الحد الأدنى)
-  app.get("/api/warehouse/reports/alerts", async (req, res) => {
+  app.get("/api/warehouse/reports/alerts", requireAuth, async (req, res) => {
     try {
       const result = await db.execute(sql`
         SELECT 
@@ -9053,7 +9057,7 @@ Do not include quotes or explanations.`;
   });
 
   // ملخص إحصائيات المستودع
-  app.get("/api/warehouse/reports/summary", async (req, res) => {
+  app.get("/api/warehouse/reports/summary", requireAuth, async (req, res) => {
     try {
       const [itemsCount, suppliersCount, lowStockCount, totalValue] = await Promise.all([
         db.execute(sql`SELECT COUNT(*) as count FROM inventory WHERE is_active = true`),
