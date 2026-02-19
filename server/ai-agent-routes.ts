@@ -94,207 +94,241 @@ async function generateQuotePdfBuffer(quoteId: number): Promise<Buffer> {
   if (!quote) {
     throw new Error("Quote not found");
   }
-  
+
   const items = await db.select().from(quote_items).where(eq(quote_items.quote_id, quoteId)).orderBy(quote_items.line_number);
-  
-  const formatCurrency = (amount: string | number) => {
-    return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(amount));
-  };
-  
-  const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleDateString("en-GB");
-  };
-  
+
+  const fmtCur = (n: string | number) => new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n || 0));
+  const fmtDate = (d: string | Date) => { try { return new Date(d).toLocaleDateString("en-GB"); } catch { return ""; } };
+
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
-    const doc = new PDFDocument({ size: "A4", margin: 30, bufferPages: true });
-    
+    const doc = new PDFDocument({ size: "A4", margin: 25, bufferPages: true });
+
     const fontPath = path.join(__dirname, 'fonts', 'Amiri-Regular.ttf');
     const logoPath = path.join(__dirname, 'fonts', 'factory-logo.png');
-    const hasArabicFont = fs.existsSync(fontPath);
+    const hasAr = fs.existsSync(fontPath);
     const hasLogo = fs.existsSync(logoPath);
-    if (hasArabicFont) {
-      doc.registerFont('Arabic', fontPath);
-    }
-    
-    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+    if (hasAr) doc.registerFont('Arabic', fontPath);
+
+    doc.on('data', (c: Buffer) => chunks.push(c));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', (err) => reject(err));
-    
-    const pageWidth = 595;
-    const contentWidth = pageWidth - 60;
-    const leftMargin = 30;
-    const rightEdge = pageWidth - 30;
-    
+    doc.on('error', (e) => reject(e));
+
+    const W = 595, L = 25, R = W - 25, CW = R - L;
+    let Y = 25;
+
+    // ──── HEADER: Logo + Company Name (single compact row) ────
     if (hasLogo) {
-      try {
-        doc.image(logoPath, leftMargin, 30, { width: 50, height: 50 });
-      } catch (e) {
-        console.error("Logo load error:", e);
-      }
+      try { doc.image(logoPath, L, Y, { width: 40, height: 40 }); } catch (e) { console.error("Logo error:", e); }
     }
-    
-    const textStartX = hasLogo ? leftMargin + 58 : leftMargin;
-    const textWidth = hasLogo ? contentWidth - 58 : contentWidth;
-    
-    doc.fontSize(18).fillColor("#2563eb").text("Modern Plastic Bags Factory", textStartX, 32, { width: textWidth, align: "center" });
-    if (hasArabicFont) {
-      doc.font('Arabic').fontSize(12).fillColor("#666").text(processArabicText("مصنع الأكياس البلاستيكية الحديثة"), textStartX, 52, { width: textWidth, align: "center" });
+
+    const hx = hasLogo ? L + 48 : L;
+    const hw = hasLogo ? CW - 48 : CW;
+    doc.font('Helvetica-Bold').fontSize(11).fillColor("#1e40af");
+    doc.text("Modern Plastic Bags Factory", hx, Y + 2, { width: hw, align: "left" });
+    if (hasAr) {
+      doc.font('Arabic').fontSize(10).fillColor("#374151");
+      doc.text(processArabicText("مصنع الأكياس البلاستيكية الحديثة"), hx, Y + 16, { width: hw, align: "left" });
       doc.font('Helvetica');
     }
-    doc.fontSize(7).fillColor("#999").text("Industrial Area, Phase 2 | P.O. Box 12345, Riyadh, Saudi Arabia", textStartX, 66, { width: textWidth, align: "center" });
-    doc.text("Tel: +966 11 XXX XXXX | Fax: +966 11 XXX XXXX | www.modplastic.com", textStartX, 75, { width: textWidth, align: "center" });
-    doc.y = 88;
-    doc.moveDown(0.3);
-    
-    doc.strokeColor("#2563eb").lineWidth(1.5).moveTo(leftMargin, doc.y).lineTo(rightEdge, doc.y).stroke();
-    doc.moveDown(0.5);
-    
-    doc.fontSize(16).fillColor("#2563eb").text("PRICE QUOTATION / " + (hasArabicFont ? processArabicText("عرض سعر") : ""), { align: "center" });
-    doc.moveDown(0.2);
-    doc.fontSize(11).fillColor("#333").text(`Document: ${quote.document_number}  |  Date: ${formatDate(quote.quote_date)}`, { align: "center" });
-    doc.moveDown(0.5);
-    
-    const customerBoxY = doc.y;
-    doc.rect(leftMargin, customerBoxY, contentWidth, 50).fillColor("#f8fafc").fill();
-    doc.fillColor("#333");
-    const customerY = customerBoxY + 8;
-    doc.fontSize(10).text("Customer Information", leftMargin + 10, customerY, { underline: true });
-    
-    const customerName = quote.customer_name || "";
-    const hasArabicName = /[\u0600-\u06FF]/.test(customerName);
-    if (hasArabicFont && hasArabicName) {
-      doc.font('Helvetica').fontSize(9).text("Customer: ", leftMargin + 10, customerY + 16, { continued: true });
-      doc.font('Arabic').text(processArabicText(customerName));
+    doc.fontSize(6.5).fillColor("#6b7280");
+    doc.text("Industrial Area, Riyadh, Saudi Arabia | Tel: +966 11 XXX XXXX", hx, Y + 30, { width: hw, align: "left" });
+
+    Y += 44;
+    doc.strokeColor("#2563eb").lineWidth(1.2).moveTo(L, Y).lineTo(R, Y).stroke();
+    Y += 6;
+
+    // ──── TITLE ROW ────
+    doc.font('Helvetica-Bold').fontSize(12).fillColor("#2563eb");
+    doc.text("PRICE QUOTATION", L, Y, { width: CW / 2, align: "left" });
+    if (hasAr) {
+      doc.font('Arabic').fontSize(11).fillColor("#2563eb");
+      doc.text(processArabicText("عرض سعر"), L + CW / 2, Y, { width: CW / 2, align: "right" });
       doc.font('Helvetica');
+    }
+    Y += 18;
+
+    // ──── INFO ROW (Document + Date + Customer + Tax in one compact box) ────
+    doc.rect(L, Y, CW, 32).fillColor("#f8fafc").fill();
+    doc.fillColor("#333").font('Helvetica').fontSize(7.5);
+    const col1 = L + 8, col2 = L + CW / 4 + 8, col3 = L + CW / 2 + 8, col4 = L + (CW * 3 / 4) + 8;
+    const colW = CW / 4 - 16;
+
+    doc.font('Helvetica-Bold').text("Doc #:", col1, Y + 5, { continued: true, width: colW }).font('Helvetica').text(` ${quote.document_number}`);
+    doc.font('Helvetica-Bold').text("Date:", col2, Y + 5, { continued: true, width: colW }).font('Helvetica').text(` ${fmtDate(quote.quote_date)}`);
+
+    const custName = quote.customer_name || "";
+    const custHasAr = /[\u0600-\u06FF]/.test(custName);
+    if (hasAr && custHasAr) {
+      doc.font('Helvetica-Bold').text("Customer:", col3, Y + 5, { continued: true, width: colW }).font('Arabic').fontSize(7.5).text(` ${processArabicText(custName)}`);
+      doc.font('Helvetica').fontSize(7.5);
     } else {
-      doc.fontSize(9).text(`Customer: ${customerName}`, leftMargin + 10, customerY + 16);
+      doc.font('Helvetica-Bold').text("Customer:", col3, Y + 5, { continued: true, width: colW }).font('Helvetica').text(` ${custName}`);
     }
-    doc.text(`Tax Number: ${quote.tax_number || "N/A"}`, leftMargin + 10, customerY + 30);
-    doc.y = customerBoxY + 55;
-    
-    const tableTop = doc.y;
-    const colWidths = [25, 180, 50, 55, 70, 75];
-    const headers = ["#", "Item Name", "Unit", "Qty", "Unit Price", "Total"];
-    const rowHeight = 18;
-    
-    doc.rect(leftMargin, tableTop, contentWidth, 20).fillColor("#2563eb").fill();
-    doc.font('Helvetica').fillColor("#fff").fontSize(8);
-    let xPos = leftMargin + 3;
-    headers.forEach((header, i) => {
-      doc.text(header, xPos, tableTop + 6, { width: colWidths[i], align: "center" });
-      xPos += colWidths[i];
-    });
-    
-    let rowY = tableTop + 20;
-    
-    const maxRowsPerPage = Math.floor((780 - rowY) / rowHeight) - 8;
-    const itemsPerPage = Math.min(items.length, maxRowsPerPage);
-    
-    items.slice(0, itemsPerPage).forEach((item, index) => {
-      const isEven = index % 2 === 0;
-      if (isEven) {
-        doc.rect(leftMargin, rowY, contentWidth, rowHeight).fillColor("#f8fafc").fill();
-      }
-      
-      doc.fillColor("#333").fontSize(8);
-      xPos = leftMargin + 3;
-      doc.font('Helvetica').text(String(item.line_number), xPos, rowY + 5, { width: colWidths[0], align: "center" });
-      xPos += colWidths[0];
-      
-      const itemName = item.item_name || "";
-      const hasArabicItem = /[\u0600-\u06FF]/.test(itemName);
-      if (hasArabicFont && hasArabicItem) {
-        doc.font('Arabic').text(processArabicText(itemName.substring(0, 40)), xPos, rowY + 3, { width: colWidths[1], align: "center" });
-        doc.font('Helvetica');
-      } else {
-        doc.text(itemName.substring(0, 40), xPos, rowY + 5, { width: colWidths[1], align: "center" });
-      }
-      xPos += colWidths[1];
-      
-      const unitText = item.unit || "";
-      const hasArabicUnit = /[\u0600-\u06FF]/.test(unitText);
-      if (hasArabicFont && hasArabicUnit) {
-        doc.font('Arabic').text(processArabicText(unitText), xPos, rowY + 3, { width: colWidths[2], align: "center" });
-        doc.font('Helvetica');
-      } else {
-        doc.text(unitText, xPos, rowY + 5, { width: colWidths[2], align: "center" });
-      }
-      xPos += colWidths[2];
-      
+
+    doc.font('Helvetica-Bold').text("Tax #:", col4, Y + 5, { continued: true, width: colW }).font('Helvetica').text(` ${quote.tax_number || "N/A"}`);
+
+    if (hasAr) {
+      doc.font('Arabic').fontSize(6.5).fillColor("#6b7280");
+      doc.text(processArabicText("رقم المستند"), col1, Y + 19, { width: colW });
+      doc.text(processArabicText("التاريخ"), col2, Y + 19, { width: colW });
+      doc.text(processArabicText("العميل"), col3, Y + 19, { width: colW });
+      doc.text(processArabicText("الرقم الضريبي"), col4, Y + 19, { width: colW });
       doc.font('Helvetica');
-      doc.text(formatCurrency(item.quantity), xPos, rowY + 5, { width: colWidths[3], align: "center" });
-      xPos += colWidths[3];
-      doc.text(`${formatCurrency(item.unit_price)}`, xPos, rowY + 5, { width: colWidths[4], align: "center" });
-      xPos += colWidths[4];
-      doc.text(`${formatCurrency(item.line_total)}`, xPos, rowY + 5, { width: colWidths[5], align: "center" });
-      
-      rowY += rowHeight;
-    });
-    
-    if (items.length > itemsPerPage) {
-      doc.fontSize(7).fillColor("#666").text(`... و ${items.length - itemsPerPage} عناصر إضافية`, leftMargin, rowY + 2);
-      rowY += 15;
     }
-    
-    doc.strokeColor("#e2e8f0").lineWidth(0.5).moveTo(leftMargin, rowY).lineTo(rightEdge, rowY).stroke();
-    doc.y = rowY + 10;
-    
-    const totalsBoxY = doc.y;
-    doc.rect(leftMargin, totalsBoxY, 200, 60).fillColor("#f8fafc").fill();
-    const totalsY = totalsBoxY + 8;
-    doc.font('Helvetica').fillColor("#333").fontSize(9);
-    doc.text("Subtotal:", leftMargin + 10, totalsY);
-    doc.text(`${formatCurrency(quote.total_before_tax)} SAR`, leftMargin + 100, totalsY, { align: "right", width: 90 });
-    doc.text("VAT (15%):", leftMargin + 10, totalsY + 15);
-    doc.text(`${formatCurrency(quote.tax_amount)} SAR`, leftMargin + 100, totalsY + 15, { align: "right", width: 90 });
-    doc.strokeColor("#e2e8f0").moveTo(leftMargin + 10, totalsY + 30).lineTo(leftMargin + 190, totalsY + 30).stroke();
-    doc.fontSize(11).fillColor("#2563eb").text("Total:", leftMargin + 10, totalsY + 38);
-    doc.text(`${formatCurrency(quote.total_with_tax)} SAR`, leftMargin + 100, totalsY + 38, { align: "right", width: 90 });
-    
-    doc.y = totalsBoxY + 65;
-    
+    doc.fillColor("#333");
+    Y += 36;
+
+    // ──── ITEMS TABLE ────
+    const cols = [
+      { key: "idx", hdr: "#", hdrAr: "#", w: 28, align: "center" as const },
+      { key: "name", hdr: "Item Description", hdrAr: "الوصف", w: CW - 28 - 50 - 55 - 75 - 75, align: "left" as const },
+      { key: "unit", hdr: "Unit", hdrAr: "الوحدة", w: 50, align: "center" as const },
+      { key: "qty", hdr: "Qty", hdrAr: "الكمية", w: 55, align: "center" as const },
+      { key: "price", hdr: "Price", hdrAr: "السعر", w: 75, align: "center" as const },
+      { key: "total", hdr: "Total", hdrAr: "الإجمالي", w: 75, align: "center" as const },
+    ];
+    const rowH = 16;
+
+    doc.rect(L, Y, CW, 16).fillColor("#1e40af").fill();
+    doc.fillColor("#fff").font('Helvetica-Bold').fontSize(7);
+    let cx = L;
+    cols.forEach(c => {
+      doc.text(c.hdr, cx + 2, Y + 4, { width: c.w - 4, align: c.align });
+      cx += c.w;
+    });
+    Y += 16;
+
+    const footerSpace = 170 + (quote.notes ? 32 : 0);
+    const maxItemY = 842 - 25 - footerSpace;
+    const maxRows = Math.floor((maxItemY - Y) / rowH);
+    const visibleItems = items.slice(0, maxRows);
+    const truncated = items.length > maxRows;
+
+    visibleItems.forEach((item, i) => {
+      if (i % 2 === 0) doc.rect(L, Y, CW, rowH).fillColor("#f8fafc").fill();
+      doc.fillColor("#333").fontSize(7);
+
+      cx = L;
+      doc.font('Helvetica').text(String(item.line_number), cx + 2, Y + 4, { width: cols[0].w - 4, align: "center" });
+      cx += cols[0].w;
+
+      const itemName = (item.item_name || "").substring(0, 60);
+      if (hasAr && /[\u0600-\u06FF]/.test(itemName)) {
+        doc.font('Arabic').fontSize(7).text(processArabicText(itemName), cx + 2, Y + 2, { width: cols[1].w - 4, align: "right" });
+        doc.font('Helvetica');
+      } else {
+        doc.font('Helvetica').text(itemName, cx + 2, Y + 4, { width: cols[1].w - 4, align: "left" });
+      }
+      cx += cols[1].w;
+
+      const unitTxt = item.unit || "";
+      if (hasAr && /[\u0600-\u06FF]/.test(unitTxt)) {
+        doc.font('Arabic').fontSize(7).text(processArabicText(unitTxt), cx + 2, Y + 2, { width: cols[2].w - 4, align: "center" });
+        doc.font('Helvetica');
+      } else {
+        doc.font('Helvetica').text(unitTxt, cx + 2, Y + 4, { width: cols[2].w - 4, align: "center" });
+      }
+      cx += cols[2].w;
+
+      doc.font('Helvetica').fontSize(7);
+      doc.text(fmtCur(item.quantity), cx + 2, Y + 4, { width: cols[3].w - 4, align: "center" });
+      cx += cols[3].w;
+      doc.text(fmtCur(item.unit_price), cx + 2, Y + 4, { width: cols[4].w - 4, align: "center" });
+      cx += cols[4].w;
+      doc.text(fmtCur(item.line_total), cx + 2, Y + 4, { width: cols[5].w - 4, align: "center" });
+
+      Y += rowH;
+    });
+
+    if (truncated) {
+      const remaining = items.length - maxRows;
+      doc.font('Helvetica').fontSize(6.5).fillColor("#6b7280");
+      doc.text(`... + ${remaining} more items`, L + 4, Y + 2);
+      if (hasAr) {
+        doc.font('Arabic').fontSize(6.5);
+        doc.text(processArabicText(`... و ${remaining} عناصر إضافية`), L + CW / 2, Y + 2, { width: CW / 2 - 4, align: "right" });
+        doc.font('Helvetica');
+      }
+      Y += 12;
+    }
+
+    doc.strokeColor("#cbd5e1").lineWidth(0.5).moveTo(L, Y).lineTo(R, Y).stroke();
+    Y += 6;
+
+    // ──── TOTALS BOX (aligned right) ────
+    const tBoxW = 200, tBoxX = R - tBoxW;
+    doc.rect(tBoxX, Y, tBoxW, 48).fillColor("#f1f5f9").fill();
+    doc.strokeColor("#cbd5e1").rect(tBoxX, Y, tBoxW, 48).stroke();
+
+    doc.font('Helvetica').fontSize(7.5).fillColor("#333");
+    doc.text("Subtotal:", tBoxX + 8, Y + 6);
+    doc.text(`${fmtCur(quote.total_before_tax)} SAR`, tBoxX + 90, Y + 6, { width: 102, align: "right" });
+
+    doc.text("VAT (15%):", tBoxX + 8, Y + 18);
+    doc.text(`${fmtCur(quote.tax_amount)} SAR`, tBoxX + 90, Y + 18, { width: 102, align: "right" });
+
+    doc.strokeColor("#94a3b8").moveTo(tBoxX + 8, Y + 30).lineTo(tBoxX + tBoxW - 8, Y + 30).stroke();
+
+    doc.font('Helvetica-Bold').fontSize(9).fillColor("#1e40af");
+    doc.text("TOTAL:", tBoxX + 8, Y + 34);
+    doc.text(`${fmtCur(quote.total_with_tax)} SAR`, tBoxX + 90, Y + 34, { width: 102, align: "right" });
+
+    if (hasAr) {
+      doc.font('Arabic').fontSize(7).fillColor("#6b7280");
+      doc.text(processArabicText("الإجمالي شامل الضريبة"), L, Y + 34, { width: tBoxX - L - 10, align: "right" });
+      doc.font('Helvetica');
+    }
+
+    Y += 56;
+
+    // ──── NOTES (compact, only if present) ────
     if (quote.notes) {
-      const notesY = doc.y;
-      const notesHeight = 40;
-      doc.rect(leftMargin, notesY, contentWidth, notesHeight).fillColor("#fffbeb").fill();
-      doc.strokeColor("#fcd34d").lineWidth(0.5).rect(leftMargin, notesY, contentWidth, notesHeight).stroke();
-      doc.font('Helvetica').fillColor("#b45309").fontSize(8).text("Notes:", leftMargin + 8, notesY + 6);
-      
-      const notesText = (quote.notes || "").substring(0, 200);
-      const hasArabicNotes = /[\u0600-\u06FF]/.test(notesText);
-      if (hasArabicFont && hasArabicNotes) {
-        doc.font('Arabic').fillColor("#78350f").fontSize(8).text(processArabicText(notesText), leftMargin + 8, notesY + 18, { width: contentWidth - 16, align: "right" });
+      doc.rect(L, Y, CW, 28).fillColor("#fffbeb").fill();
+      doc.strokeColor("#fbbf24").lineWidth(0.5).rect(L, Y, CW, 28).stroke();
+      doc.font('Helvetica-Bold').fontSize(7).fillColor("#92400e").text("Notes:", L + 6, Y + 4);
+      const notesText = (quote.notes || "").substring(0, 250);
+      if (hasAr && /[\u0600-\u06FF]/.test(notesText)) {
+        doc.font('Arabic').fontSize(7).fillColor("#78350f").text(processArabicText(notesText), L + 6, Y + 14, { width: CW - 12, align: "right" });
         doc.font('Helvetica');
       } else {
-        doc.fillColor("#78350f").fontSize(8).text(notesText, leftMargin + 8, notesY + 18, { width: contentWidth - 16 });
+        doc.font('Helvetica').fillColor("#78350f").fontSize(7).text(notesText, L + 6, Y + 14, { width: CW - 12 });
       }
-      doc.y = notesY + notesHeight + 5;
+      Y += 32;
     }
-    
-    doc.moveDown(0.5);
-    doc.strokeColor("#e2e8f0").lineWidth(0.5).moveTo(leftMargin, doc.y).lineTo(rightEdge, doc.y).stroke();
-    doc.moveDown(0.3);
-    doc.font('Helvetica').fillColor("#666").fontSize(7).text("This quotation is valid for 15 days from the issue date.", { align: "center" });
-    if (hasArabicFont) {
-      doc.font('Arabic').fontSize(7).text(processArabicText("هذا العرض صالح لمدة 15 يوم من تاريخ الإصدار"), { align: "center" });
-      doc.font('Helvetica');
-    }
-    
+
+    // ──── FOOTER: Validity + Signature + Prepared By (compact row) ────
+    const fColW = (CW - 10) / 2;
+    doc.rect(L, Y, fColW, 40).fillColor("#f3f4f6").fill();
+    doc.strokeColor("#e5e7eb").rect(L, Y, fColW, 40).stroke();
+    doc.font('Helvetica-Bold').fontSize(7).fillColor("#333").text("Validity / ", L + 6, Y + 5, { continued: true });
+    if (hasAr) { doc.font('Arabic').fontSize(7).text(processArabicText("الصلاحية")); doc.font('Helvetica'); }
+    else { doc.text("Period"); }
+    doc.font('Helvetica').fontSize(6.5).fillColor("#4b5563").text("Valid for 15 days from issue date", L + 6, Y + 17, { width: fColW - 12 });
+    if (hasAr) { doc.font('Arabic').fontSize(6.5).text(processArabicText("صالح لمدة ١٥ يوم من تاريخ الإصدار"), L + 6, Y + 27, { width: fColW - 12, align: "right" }); doc.font('Helvetica'); }
+
+    doc.rect(L + fColW + 10, Y, fColW, 40).fillColor("#f3f4f6").fill();
+    doc.strokeColor("#e5e7eb").rect(L + fColW + 10, Y, fColW, 40).stroke();
+    doc.font('Helvetica-Bold').fontSize(7).fillColor("#333").text("Signature & Stamp / ", L + fColW + 16, Y + 5, { continued: true });
+    if (hasAr) { doc.font('Arabic').fontSize(7).text(processArabicText("التوقيع والختم")); doc.font('Helvetica'); }
+    else { doc.text(""); }
+    doc.strokeColor("#9ca3af").moveTo(L + fColW + 16, Y + 30).lineTo(R - 6, Y + 30).stroke();
+
+    Y += 44;
+
     if (quote.created_by_name) {
-      doc.moveDown(0.3);
-      const preparedByName = quote.created_by_name || "";
-      const hasArabicPreparer = /[\u0600-\u06FF]/.test(preparedByName);
-      doc.fontSize(7);
-      if (hasArabicFont && hasArabicPreparer) {
-        doc.font('Helvetica').text("Prepared by: ", { align: "center", continued: true });
-        doc.font('Arabic').text(processArabicText(preparedByName) + (quote.created_by_phone ? ` - ${quote.created_by_phone}` : ""));
+      doc.font('Helvetica').fontSize(6.5).fillColor("#6b7280");
+      const prep = quote.created_by_name || "";
+      const phone = quote.created_by_phone ? ` - ${quote.created_by_phone}` : "";
+      if (hasAr && /[\u0600-\u06FF]/.test(prep)) {
+        doc.font('Helvetica').text("Prepared by: ", L, Y, { continued: true });
+        doc.font('Arabic').text(processArabicText(prep) + phone);
         doc.font('Helvetica');
       } else {
-        doc.text(`Prepared by: ${preparedByName}${quote.created_by_phone ? ` - ${quote.created_by_phone}` : ""}`, { align: "center" });
+        doc.text(`Prepared by: ${prep}${phone}`, L, Y);
       }
     }
-    
+
     doc.end();
   });
 }
