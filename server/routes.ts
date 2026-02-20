@@ -3129,7 +3129,7 @@ Do not include quotes or explanations.`;
   });
 
   // Maintenance Reports routes
-  app.get("/api/maintenance-reports", async (req, res) => {
+  app.get("/api/maintenance-reports", requireAuth, async (req, res) => {
     try {
       const { type } = req.query;
       const reports = type
@@ -3176,7 +3176,7 @@ Do not include quotes or explanations.`;
   });
 
   // Operator Negligence Reports routes
-  app.get("/api/operator-negligence-reports", async (req, res) => {
+  app.get("/api/operator-negligence-reports", requireAuth, async (req, res) => {
     try {
       const { operator_id } = req.query;
       const reports = operator_id
@@ -3225,7 +3225,7 @@ Do not include quotes or explanations.`;
   });
 
   // Spare Parts routes
-  app.get("/api/spare-parts", async (req, res) => {
+  app.get("/api/spare-parts", requireAuth, async (req, res) => {
     try {
       const spareParts = await storage.getAllSpareParts();
       res.json(spareParts);
@@ -3268,7 +3268,7 @@ Do not include quotes or explanations.`;
   });
 
   // Consumable Parts routes
-  app.get("/api/consumable-parts", async (req, res) => {
+  app.get("/api/consumable-parts", requireAuth, async (req, res) => {
     try {
       const consumableParts = await storage.getAllConsumableParts();
       res.json(consumableParts);
@@ -3311,7 +3311,7 @@ Do not include quotes or explanations.`;
   });
 
   // Consumable Parts Transactions routes
-  app.get("/api/consumable-parts-transactions", async (req, res) => {
+  app.get("/api/consumable-parts-transactions", requireAuth, async (req, res) => {
     try {
       const transactions = await storage.getConsumablePartTransactions();
       res.json(transactions);
@@ -3325,6 +3325,7 @@ Do not include quotes or explanations.`;
 
   app.get(
     "/api/consumable-parts-transactions/part/:partId",
+    requireAuth,
     async (req, res) => {
       try {
         const partId = parseRouteParam(req.params.partId, "Part ID");
@@ -3430,43 +3431,14 @@ Do not include quotes or explanations.`;
     }
   });
 
-  // Attendance routes
-  app.get("/api/attendance", async (req, res) => {
-    try {
-      const attendance = await storage.getAttendance();
-      res.json(attendance);
-    } catch (error) {
-      res.status(500).json({ message: "خطأ في جلب بيانات الحضور" });
-    }
-  });
-
-  // Rolls endpoint
-  app.get("/api/rolls", async (req, res) => {
-    try {
-      const rolls = await storage.getRolls();
-      res.json(rolls);
-    } catch (error) {
-      res.status(500).json({ message: "خطأ في جلب الرولات" });
-    }
-  });
 
   // Reports endpoint
-  app.get("/api/reports", async (req, res) => {
+  app.get("/api/reports", requireAuth, async (req, res) => {
     try {
       const reports: any[] = []; // Placeholder for reports data
       res.json(reports);
     } catch (error) {
       res.status(500).json({ message: "خطأ في جلب التقارير" });
-    }
-  });
-
-  // Machines routes
-  app.get("/api/machines", async (req, res) => {
-    try {
-      const machines = await storage.getMachines();
-      res.json(machines);
-    } catch (error) {
-      res.status(500).json({ message: "خطأ في جلب المكائن" });
     }
   });
 
@@ -4008,7 +3980,7 @@ Do not include quotes or explanations.`;
   // ============ HR System API Routes ============
 
   // Training Programs
-  app.get("/api/hr/training-programs", async (req, res) => {
+  app.get("/api/hr/training-programs", requireAuth, async (req, res) => {
     try {
       const programs = await storage.getTrainingPrograms();
       res.json(programs);
@@ -4056,7 +4028,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/hr/training-programs/:id", async (req, res) => {
+  app.get("/api/hr/training-programs/:id", requireAuth, async (req, res) => {
     try {
       // Enhanced parameter validation
       if (!req.params?.id) {
@@ -4083,7 +4055,7 @@ Do not include quotes or explanations.`;
   });
 
   // Training Materials
-  app.get("/api/hr/training-materials", async (req, res) => {
+  app.get("/api/hr/training-materials", requireAuth, async (req, res) => {
     try {
       // Enhanced query parameter validation
       let programId: number | undefined;
@@ -4115,7 +4087,7 @@ Do not include quotes or explanations.`;
   });
 
   // Training Enrollments
-  app.get("/api/hr/training-enrollments", async (req, res) => {
+  app.get("/api/hr/training-enrollments", requireAuth, async (req, res) => {
     try {
       // Enhanced query parameter validation
       let employeeId: number | undefined;
@@ -4157,7 +4129,7 @@ Do not include quotes or explanations.`;
   });
 
   // Training Evaluations
-  app.get("/api/hr/training-evaluations", async (req, res) => {
+  app.get("/api/hr/training-evaluations", requireAuth, async (req, res) => {
     try {
       const employeeId = req.query.employee_id
         ? parseInt(req.query.employee_id as string)
@@ -4194,7 +4166,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/hr/training-evaluations/:id", async (req, res) => {
+  app.get("/api/hr/training-evaluations/:id", requireAuth, async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "ID");
       const evaluation = await storage.getTrainingEvaluationById(id);
@@ -4209,7 +4181,7 @@ Do not include quotes or explanations.`;
   });
 
   // Training Certificates
-  app.get("/api/hr/training-certificates", async (req, res) => {
+  app.get("/api/hr/training-certificates", requireAuth, async (req, res) => {
     try {
       const employeeId = req.query.employee_id
         ? parseInt(req.query.employee_id as string)
@@ -4266,7 +4238,7 @@ Do not include quotes or explanations.`;
   });
 
   // Performance Reviews
-  app.get("/api/hr/performance-reviews", async (req, res) => {
+  app.get("/api/hr/performance-reviews", requireAuth, async (req, res) => {
     try {
       const employeeId = req.query.employee_id
         ? (req.query.employee_id as string)
@@ -4298,7 +4270,7 @@ Do not include quotes or explanations.`;
   });
 
   // Performance Criteria
-  app.get("/api/hr/performance-criteria", async (req, res) => {
+  app.get("/api/hr/performance-criteria", requireAuth, async (req, res) => {
     try {
       const criteria = await storage.getPerformanceCriteria();
       res.json(criteria);
@@ -4317,7 +4289,7 @@ Do not include quotes or explanations.`;
   });
 
   // Leave Types
-  app.get("/api/hr/leave-types", async (req, res) => {
+  app.get("/api/hr/leave-types", requireAuth, async (req, res) => {
     try {
       const leaveTypes = await storage.getLeaveTypes();
       res.json(leaveTypes);
@@ -4336,7 +4308,7 @@ Do not include quotes or explanations.`;
   });
 
   // Leave Requests
-  app.get("/api/hr/leave-requests", async (req, res) => {
+  app.get("/api/hr/leave-requests", requireAuth, async (req, res) => {
     try {
       const employeeId = req.query.employee_id
         ? (req.query.employee_id as string)
@@ -4367,7 +4339,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/hr/leave-requests/pending", async (req, res) => {
+  app.get("/api/hr/leave-requests/pending", requireAuth, async (req, res) => {
     try {
       const requests = await storage.getPendingLeaveRequests();
       res.json(requests);
@@ -4377,7 +4349,7 @@ Do not include quotes or explanations.`;
   });
 
   // Leave Balances
-  app.get("/api/hr/leave-balances/:employeeId", async (req, res) => {
+  app.get("/api/hr/leave-balances/:employeeId", requireAuth, async (req, res) => {
     try {
       const employeeId = req.params.employeeId;
       const year = req.query.year
@@ -4469,7 +4441,7 @@ Do not include quotes or explanations.`;
   });
 
   // Inventory Management routes
-  app.get("/api/inventory", async (req, res) => {
+  app.get("/api/inventory", requireAuth, async (req, res) => {
     try {
       const inventory = await storage.getInventoryItems();
       res.json(inventory);
@@ -4478,7 +4450,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.get("/api/inventory/stats", async (req, res) => {
+  app.get("/api/inventory/stats", requireAuth, async (req, res) => {
     try {
       const stats = await storage.getInventoryStats();
       res.json(stats);
@@ -4817,15 +4789,6 @@ Do not include quotes or explanations.`;
 
   // ============ Orders Management API ============
 
-  app.get("/api/orders", async (req, res) => {
-    try {
-      const orders = await storage.getAllOrders();
-      res.json(orders);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-      res.status(500).json({ message: "خطأ في جلب الطلبات" });
-    }
-  });
 
   app.post("/api/orders", requireAuth, async (req, res) => {
     try {
@@ -5058,7 +5021,7 @@ Do not include quotes or explanations.`;
   });
 
   // User Settings
-  app.get("/api/settings/user/:userId", async (req, res) => {
+  app.get("/api/settings/user/:userId", requireAuth, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const settings = await storage.getUserSettings(userId);
@@ -5524,7 +5487,7 @@ Do not include quotes or explanations.`;
 
   // ============ HR Attendance Management API ============
 
-  app.get("/api/attendance", async (req, res) => {
+  app.get("/api/attendance", requireAuth, async (req, res) => {
     try {
       const attendance = await storage.getAttendance();
       res.json(attendance);
@@ -5535,9 +5498,12 @@ Do not include quotes or explanations.`;
   });
 
   // Get daily attendance status for a user
-  app.get("/api/attendance/daily-status/:userId", async (req, res) => {
+  app.get("/api/attendance/daily-status/:userId", requireAuth, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
+      if (isNaN(userId) || userId <= 0) {
+        return res.status(400).json({ message: "معرف المستخدم غير صحيح" });
+      }
       const date =
         (req.query.date as string) || new Date().toISOString().split("T")[0];
 
@@ -5550,7 +5516,7 @@ Do not include quotes or explanations.`;
   });
 
   // Get attendance by date for manual entry (all users)
-  app.get("/api/attendance/manual", async (req, res) => {
+  app.get("/api/attendance/manual", requireAuth, async (req, res) => {
     try {
       const date = (req.query.date as string) || new Date().toISOString().split("T")[0];
       const attendanceData = await storage.getAttendanceByDate(date);
@@ -6675,7 +6641,7 @@ Do not include quotes or explanations.`;
 
   // ============ User Violations Management API ============
 
-  app.get("/api/violations", async (req, res) => {
+  app.get("/api/violations", requireAuth, async (req, res) => {
     try {
       const violations = await storage.getViolations();
       res.json(violations);
@@ -6719,7 +6685,7 @@ Do not include quotes or explanations.`;
 
   // ============ User Requests Management API ============
 
-  app.get("/api/user-requests", async (req, res) => {
+  app.get("/api/user-requests", requireAuth, async (req, res) => {
     try {
       const requests = await storage.getUserRequests();
 
@@ -6776,7 +6742,7 @@ Do not include quotes or explanations.`;
   // ============ System Settings API ============
 
   // Get all system settings
-  app.get("/api/system-settings", async (req, res) => {
+  app.get("/api/system-settings", requireAuth, async (req, res) => {
     try {
       const settings = await storage.getSystemSettings();
       res.json(settings);
