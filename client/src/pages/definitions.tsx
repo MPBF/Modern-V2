@@ -535,7 +535,7 @@ export default function Definitions() {
           <span class="detail-value">${itemName}</span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">وصف المقاس:</span>
+          <span class="detail-label">المقاس:</span>
           <span class="detail-value">${product.size_caption || "-"}</span>
         </div>
       </div>
@@ -1182,7 +1182,7 @@ export default function Definitions() {
         <th>#</th>
         <th>رقم المنتج</th>
         <th>الصنف</th>
-        <th>وصف المقاس</th>
+        <th>المقاس</th>
         <th>العرض</th>
         <th>السماكة</th>
         <th>المادة الخام</th>
@@ -2703,10 +2703,7 @@ export default function Definitions() {
                                   اسم العميل
                                 </th>
                                 <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                                  اسم الصنف
-                                </th>
-                                <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                                  وصف المقاس
+                                  الصنف / المقاس
                                 </th>
                                 <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                                   الطباعة/القطع
@@ -2777,11 +2774,13 @@ export default function Definitions() {
                                               </span>
                                             </div>
                                           </td>
-                                          <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
-                                            {item?.name_ar || item?.name || "-"}
-                                          </td>
-                                          <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
-                                            {product.size_caption || "-"}
+                                          <td className="px-3 py-4 text-sm text-gray-900 text-center">
+                                            <div className="flex flex-col items-center">
+                                              <span className="font-medium">{item?.name_ar || item?.name || "-"}</span>
+                                              {product.size_caption && (
+                                                <span className="text-[11px] text-gray-500 leading-tight">{product.size_caption}</span>
+                                              )}
+                                            </div>
                                           </td>
                                           <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
                                             {product.is_printed
@@ -2970,7 +2969,7 @@ export default function Definitions() {
                                 ) : (
                                   <tr>
                                     <td
-                                      colSpan={11}
+                                      colSpan={10}
                                       className="px-6 py-8 text-center text-gray-500"
                                     >
                                       {t("definitions.noSearchResults")}
