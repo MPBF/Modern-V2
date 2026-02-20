@@ -1066,6 +1066,126 @@ export default function Definitions() {
       "id",
     ]);
 
+  const handlePrintCustomer = useCallback((customer: any) => {
+    const customerProds = (customerProducts as any[]).filter(
+      (p: any) => p.customer_id === customer.id
+    );
+    const rep = Array.isArray(salesReps)
+      ? salesReps.find((r: any) => r.id === customer.sales_rep_id)
+      : null;
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const productsRows = customerProds
+      .map((product: any, idx: number) => {
+        const item = Array.isArray(items)
+          ? items.find((i: any) => i.id === product.item_id)
+          : null;
+        const mbColor = masterBatchColors.find(
+          (mb: any) =>
+            mb.id === product.master_batch_id ||
+            mb.aliases?.includes(product.master_batch_id || "")
+        );
+        return `<tr>
+          <td>${idx + 1}</td>
+          <td>${product.id || "-"}</td>
+          <td>${item?.name_ar || item?.name || "-"}</td>
+          <td>${product.size_caption || "-"}</td>
+          <td>${product.width || "-"}</td>
+          <td>${product.thickness || "-"}</td>
+          <td>${product.raw_material || "-"}</td>
+          <td>${mbColor?.name_ar || mbColor?.name || product.master_batch_id || "-"}</td>
+          <td>${product.is_printed ? (product.printing_cylinder || "نعم") : "لا"}</td>
+          <td>${product.cutting_length_cm ? product.cutting_length_cm + " سم" : "-"}</td>
+          <td>${product.punching || "-"}</td>
+          <td>${product.cutting_unit || "-"}</td>
+          <td>${product.unit_weight_kg ? product.unit_weight_kg + " كجم" : "-"}</td>
+          <td>${product.unit_quantity || "-"}</td>
+          <td>${product.package_weight_kg ? product.package_weight_kg + " كجم" : "-"}</td>
+          <td>${product.notes || "-"}</td>
+        </tr>`;
+      })
+      .join("");
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>بيانات العميل - ${customer.name_ar || customer.name}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px; direction: rtl; color: #333; }
+    .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #2563eb; padding-bottom: 15px; }
+    .header h1 { font-size: 22px; color: #1e40af; margin-bottom: 5px; }
+    .header p { font-size: 13px; color: #666; }
+    .customer-info { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; background: #f9fafb; }
+    .customer-info .info-item { display: flex; gap: 8px; padding: 6px 0; }
+    .customer-info .info-label { font-weight: bold; color: #374151; min-width: 120px; }
+    .customer-info .info-value { color: #1f2937; }
+    .products-section h2 { font-size: 18px; color: #1e40af; margin-bottom: 12px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
+    th { background: #2563eb; color: white; padding: 8px 4px; text-align: center; font-size: 10px; }
+    td { padding: 6px 4px; text-align: center; border-bottom: 1px solid #e5e7eb; }
+    tr:nth-child(even) { background: #f9fafb; }
+    .no-products { text-align: center; padding: 30px; color: #9ca3af; font-size: 14px; }
+    .footer { text-align: center; margin-top: 30px; font-size: 11px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 10px; }
+    @media print { body { padding: 10px; } .no-print { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>بيانات العميل</h1>
+    <p>تاريخ الطباعة: ${new Date().toLocaleDateString("ar-SA")} - ${new Date().toLocaleTimeString("ar-SA")}</p>
+  </div>
+  <div class="customer-info">
+    <div class="info-item"><span class="info-label">كود العميل:</span><span class="info-value">${customer.id || "-"}</span></div>
+    <div class="info-item"><span class="info-label">الاسم العربي:</span><span class="info-value">${customer.name_ar || "-"}</span></div>
+    <div class="info-item"><span class="info-label">الاسم الإنجليزي:</span><span class="info-value">${customer.name || "-"}</span></div>
+    <div class="info-item"><span class="info-label">الهاتف:</span><span class="info-value">${customer.phone || "-"}</span></div>
+    <div class="info-item"><span class="info-label">المدينة:</span><span class="info-value">${customer.city || "-"}</span></div>
+    <div class="info-item"><span class="info-label">العنوان:</span><span class="info-value">${customer.address || "-"}</span></div>
+    <div class="info-item"><span class="info-label">الرقم الضريبي:</span><span class="info-value">${customer.tax_number || "-"}</span></div>
+    <div class="info-item"><span class="info-label">رقم درج الكليشيهات:</span><span class="info-value">${customer.plate_drawer_code || "-"}</span></div>
+    <div class="info-item"><span class="info-label">الاسم التجاري:</span><span class="info-value">${customer.commercial_name || "-"}</span></div>
+    <div class="info-item"><span class="info-label">الرقم الموحد:</span><span class="info-value">${customer.unified_number || "-"}</span></div>
+    <div class="info-item"><span class="info-label">رقم العميل الفريد:</span><span class="info-value">${customer.unique_customer_number || "-"}</span></div>
+    <div class="info-item"><span class="info-label">المندوب:</span><span class="info-value">${rep ? (rep.display_name_ar || rep.display_name || "-") : "-"}</span></div>
+  </div>
+  <div class="products-section">
+    <h2>منتجات العميل (${customerProds.length})</h2>
+    ${customerProds.length > 0 ? `<table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>رقم المنتج</th>
+          <th>الصنف</th>
+          <th>وصف المقاس</th>
+          <th>العرض</th>
+          <th>السماكة</th>
+          <th>المادة الخام</th>
+          <th>الماستر باتش</th>
+          <th>الطباعة</th>
+          <th>طول القطع</th>
+          <th>التخريم</th>
+          <th>الوحدة</th>
+          <th>وزن الوحدة</th>
+          <th>الكمية</th>
+          <th>وزن التعبئة</th>
+          <th>ملاحظات</th>
+        </tr>
+      </thead>
+      <tbody>${productsRows}</tbody>
+    </table>` : `<div class="no-products">لا توجد منتجات مسجلة لهذا العميل</div>`}
+  </div>
+  <div class="footer">تم الطباعة من نظام إدارة المصنع</div>
+</body>
+</html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 500);
+  }, [customerProducts, salesReps, items, masterBatchColors]);
+
   // Pagination component
   const PaginationComponent = ({
     currentPage,
@@ -1877,6 +1997,14 @@ export default function Definitions() {
                                           <Button
                                             variant="outline"
                                             size="sm"
+                                            className="text-blue-600"
+                                            onClick={() => handlePrintCustomer(customer)}
+                                          >
+                                            <Printer className="w-4 h-4" />
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
                                             onClick={() => {
                                               setEditingItem(customer);
                                               setCustomerForm({
@@ -1994,6 +2122,15 @@ export default function Definitions() {
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                                         <div className="flex items-center justify-center gap-2">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                            onClick={() => handlePrintCustomer(customer)}
+                                            title="طباعة بيانات العميل"
+                                          >
+                                            <Printer className="w-4 h-4" />
+                                          </Button>
                                           <Button
                                             variant="outline"
                                             size="sm"
