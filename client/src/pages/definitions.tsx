@@ -2807,19 +2807,17 @@ export default function Definitions() {
                                                     mb.aliases?.includes(product.master_batch_id || ""),
                                                 );
                                               return masterBatchColor ? (
-                                                <div className="flex items-center justify-center gap-2">
+                                                <div className="flex flex-col items-center gap-1">
                                                   <div
-                                                    className="w-5 h-5 rounded-sm border border-gray-300 shadow-sm flex-shrink-0"
+                                                    className="w-6 h-6 rounded border border-gray-300 shadow-sm"
                                                     style={{
                                                       backgroundColor:
                                                         masterBatchColor.color || "#E0E0E0",
                                                     }}
-                                                    title={
-                                                      masterBatchColor.name
-                                                    }
+                                                    title={masterBatchColor.name}
                                                   ></div>
-                                                  <span className="text-xs font-medium text-gray-700">
-                                                    {masterBatchColor.name_ar} ({masterBatchColor.id})
+                                                  <span className="text-[10px] font-medium text-gray-600 leading-tight">
+                                                    {masterBatchColor.id}
                                                   </span>
                                                 </div>
                                               ) : (
@@ -2838,12 +2836,12 @@ export default function Definitions() {
                                               ? `${formatNumber(parseFloat(product.package_weight_kg))} كغ`
                                               : "-"}
                                           </td>
-                                          <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-center">
-                                            <div className="flex items-center justify-center gap-1">
-                                              {/* Edit Button */}
+                                          <td className="px-2 py-3 text-sm font-medium text-center">
+                                            <div className="grid grid-cols-2 gap-1 w-fit mx-auto">
                                               <Button
                                                 variant="outline"
                                                 size="sm"
+                                                className="h-7 w-7 p-0"
                                                 onClick={() => {
                                                   setEditingItem(product);
                                                   setCustomerProductForm({
@@ -2917,48 +2915,42 @@ export default function Definitions() {
                                               >
                                                 <Edit className="w-3 h-3" />
                                               </Button>
-
-                                              {/* Clone Button */}
                                               <Button
                                                 variant="outline"
                                                 size="sm"
+                                                className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                                 onClick={() =>
                                                   handleCloneCustomerProduct(
                                                     product,
                                                   )
                                                 }
                                                 title="استنساخ"
-                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                               >
                                                 <Copy className="w-3 h-3" />
                                               </Button>
-
-                                              {/* Print Button */}
                                               <Button
                                                 variant="outline"
                                                 size="sm"
+                                                className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
                                                 onClick={() =>
                                                   handlePrintCustomerProduct(
                                                     product,
                                                   )
                                                 }
                                                 title="طباعة"
-                                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
                                               >
                                                 <Printer className="w-3 h-3" />
                                               </Button>
-
-                                              {/* Delete Button */}
                                               <Button
                                                 variant="outline"
                                                 size="sm"
+                                                className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                                                 onClick={() =>
                                                   handleDeleteCustomerProduct(
                                                     product,
                                                   )
                                                 }
                                                 title="حذف"
-                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                                 disabled={
                                                   deleteCustomerProductMutation.isPending
                                                 }
