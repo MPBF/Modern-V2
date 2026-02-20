@@ -13,6 +13,7 @@ import { eq } from "drizzle-orm";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { NOTO_SANS_ARABIC_REGULAR_BASE64, NOTO_SANS_ARABIC_BOLD_BASE64 } from "./fonts/noto-sans-arabic-base64";
 
 const ADOBE_CLIENT_ID = process.env.ADOBE_CLIENT_ID;
 const ADOBE_CLIENT_SECRET = process.env.ADOBE_CLIENT_SECRET;
@@ -56,8 +57,18 @@ function generateQuoteHtml(quote: any, items: any[]): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @font-face {
+      font-family: 'Noto Sans Arabic';
+      font-style: normal;
+      font-weight: 400;
+      src: url(data:font/truetype;base64,${NOTO_SANS_ARABIC_REGULAR_BASE64}) format('truetype');
+    }
+    @font-face {
+      font-family: 'Noto Sans Arabic';
+      font-style: normal;
+      font-weight: 700;
+      src: url(data:font/truetype;base64,${NOTO_SANS_ARABIC_BOLD_BASE64}) format('truetype');
+    }
     
     * {
       margin: 0;
@@ -68,6 +79,7 @@ function generateQuoteHtml(quote: any, items: any[]): string {
     body {
       font-family: 'Noto Sans Arabic', 'Traditional Arabic', 'Arial', sans-serif;
       direction: rtl;
+      unicode-bidi: embed;
       text-align: right;
       background: #fff;
       color: #1f2937;
