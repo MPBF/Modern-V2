@@ -8932,8 +8932,10 @@ Do not include quotes or explanations.`;
   app.get("/api/warehouse/export/items", requireAuth, async (req, res) => {
     try {
       const result = await db.execute(sql`
-        SELECT id, name, name_ar, code, barcode, unit, category, current_stock, min_stock, max_stock
-        FROM inventory WHERE is_active = true ORDER BY name_ar
+        SELECT inv.id, itm.name, itm.name_ar, itm.code, inv.unit, itm.category_id as category, inv.current_stock, inv.min_stock, inv.max_stock
+        FROM inventory inv
+        JOIN items itm ON inv.item_id = itm.id
+        WHERE itm.status = 'active' ORDER BY itm.name_ar
       `);
       
       const ws = XLSX.utils.json_to_sheet(result.rows || []);
@@ -9040,11 +9042,10 @@ Do not include quotes or explanations.`;
             continue;
           }
 
-          // تحديث الرصيد في جدول المخزون
           await db.execute(sql`
             UPDATE inventory 
-            SET current_stock = ${quantity}, unit_cost = ${unitCost}, updated_at = NOW()
-            WHERE code = ${code}
+            SET current_stock = ${quantity}, cost_per_unit = ${unitCost}, last_updated = NOW()
+            WHERE item_id = ${code}
           `);
           imported++;
         } catch (err: any) {
@@ -9166,21 +9167,22 @@ Do not include quotes or explanations.`;
       const result = await db.execute(sql`
         SELECT 
           im.id,
-          im.item_id,
+          im.inventory_id,
           im.movement_type,
           im.quantity,
           im.reference_type,
-          im.reference_id,
+          im.reference_number,
           im.notes,
           im.created_at,
-          i.name_ar as item_name,
-          i.code as item_code
+          itm.name_ar as item_name,
+          itm.code as item_code
         FROM inventory_movements im
-        LEFT JOIN inventory i ON im.item_id = i.id
+        LEFT JOIN inventory inv ON im.inventory_id = inv.id
+        LEFT JOIN items itm ON inv.item_id = itm.id
         WHERE 1=1
           AND (${startDate}::date IS NULL OR im.created_at >= ${startDate}::date)
           AND (${endDate}::date IS NULL OR im.created_at <= ${endDate}::date)
-          AND (${itemId}::int IS NULL OR im.item_id = ${itemId})
+          AND (${itemId}::int IS NULL OR im.inventory_id = ${itemId})
           AND (${movementType}::text IS NULL OR im.movement_type = ${movementType})
         ORDER BY im.created_at DESC
         LIMIT 500
@@ -9200,27 +9202,28 @@ Do not include quotes or explanations.`;
       
       const result = await db.execute(sql`
         SELECT 
-          id,
-          code,
-          name_ar,
-          name,
-          category,
-          unit,
-          current_stock,
-          min_stock,
-          max_stock,
-          unit_cost,
-          (current_stock * COALESCE(unit_cost, 0)) as total_value,
+          inv.id,
+          itm.code,
+          itm.name_ar,
+          itm.name,
+          itm.category_id as category,
+          inv.unit,
+          inv.current_stock,
+          inv.min_stock,
+          inv.max_stock,
+          inv.cost_per_unit as unit_cost,
+          (inv.current_stock * COALESCE(inv.cost_per_unit, 0)) as total_value,
           CASE 
-            WHEN current_stock <= min_stock THEN 'low'
-            WHEN current_stock >= max_stock THEN 'high'
+            WHEN inv.current_stock <= inv.min_stock THEN 'low'
+            WHEN inv.current_stock >= inv.max_stock THEN 'high'
             ELSE 'normal'
           END as stock_status
-        FROM inventory
-        WHERE is_active = true
-          AND (${category}::text IS NULL OR category = ${category})
-          AND (${belowMinimum} = false OR current_stock <= min_stock)
-        ORDER BY name_ar
+        FROM inventory inv
+        JOIN items itm ON inv.item_id = itm.id
+        WHERE itm.status = 'active'
+          AND (${category}::text IS NULL OR itm.category_id = ${category})
+          AND (${belowMinimum} = false OR inv.current_stock <= inv.min_stock)
+        ORDER BY itm.name_ar
       `);
       res.json(result.rows || []);
     } catch (error) {
@@ -9234,18 +9237,19 @@ Do not include quotes or explanations.`;
     try {
       const result = await db.execute(sql`
         SELECT 
-          id,
-          code,
-          name_ar,
-          name,
-          category,
-          unit,
-          current_stock,
-          min_stock,
-          (min_stock - current_stock) as shortage
-        FROM inventory
-        WHERE is_active = true AND current_stock < min_stock
-        ORDER BY (min_stock - current_stock) DESC
+          inv.id,
+          itm.code,
+          itm.name_ar,
+          itm.name,
+          itm.category_id as category,
+          inv.unit,
+          inv.current_stock,
+          inv.min_stock,
+          (inv.min_stock - inv.current_stock) as shortage
+        FROM inventory inv
+        JOIN items itm ON inv.item_id = itm.id
+        WHERE itm.status = 'active' AND inv.current_stock < inv.min_stock
+        ORDER BY (inv.min_stock - inv.current_stock) DESC
       `);
       res.json(result.rows || []);
     } catch (error) {
@@ -9258,10 +9262,10 @@ Do not include quotes or explanations.`;
   app.get("/api/warehouse/reports/summary", requireAuth, async (req, res) => {
     try {
       const [itemsCount, suppliersCount, lowStockCount, totalValue] = await Promise.all([
-        db.execute(sql`SELECT COUNT(*) as count FROM inventory WHERE is_active = true`),
+        db.execute(sql`SELECT COUNT(*) as count FROM inventory inv JOIN items itm ON inv.item_id = itm.id WHERE itm.status = 'active'`),
         db.execute(sql`SELECT COUNT(*) as count FROM suppliers WHERE is_active = true`),
-        db.execute(sql`SELECT COUNT(*) as count FROM inventory WHERE is_active = true AND current_stock < min_stock`),
-        db.execute(sql`SELECT COALESCE(SUM(current_stock * COALESCE(unit_cost, 0)), 0) as total FROM inventory WHERE is_active = true`)
+        db.execute(sql`SELECT COUNT(*) as count FROM inventory inv JOIN items itm ON inv.item_id = itm.id WHERE itm.status = 'active' AND inv.current_stock < inv.min_stock`),
+        db.execute(sql`SELECT COALESCE(SUM(inv.current_stock * COALESCE(inv.cost_per_unit, 0)), 0) as total FROM inventory inv JOIN items itm ON inv.item_id = itm.id WHERE itm.status = 'active'`)
       ]);
       
       res.json({
@@ -9839,8 +9843,8 @@ Do not include quotes or explanations.`;
           o.order_number,
           c.name as customer_name,
           c.name_ar as customer_name_ar,
-          cp.product_name,
-          cp.product_name_ar,
+          cp.size_caption as product_name,
+          cp.size_caption as product_name_ar,
           cp.master_batch_id,
           COALESCE(mbc.color_hex, '#808080') as color_hex,
           COALESCE(mbc.name_ar, '') as color_name_ar,
