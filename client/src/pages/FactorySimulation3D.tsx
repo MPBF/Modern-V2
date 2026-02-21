@@ -39,7 +39,8 @@ interface Machine {
   id: string;
   dbId?: string;
   nameAr: string;
-  type: 'film' | 'printing' | 'cutting' | 'mixer' | 'pallet';
+  type: 'film' | 'printing' | 'cutting' | 'mixer' | 'pallet' | 'inline_printer';
+  attachedTo?: string;
   color: string;
   position: [number, number, number];
   size: [number, number, number];
@@ -129,7 +130,10 @@ const MACHINE_CONFIGS: Record<string, { nameAr: string; color: string; icon: typ
   cutter: { nameAr: 'ماكينة تقطيع', color: '#059669', icon: Scissors },
   mixer: { nameAr: 'خلاط مواد', color: '#dc2626', icon: Blend },
   pallet: { nameAr: 'بالة خشبية', color: '#92400e', icon: Package },
+  inline_printer: { nameAr: 'طابعة متصلة', color: '#8b5cf6', icon: Printer },
 };
+
+const SNAP_DISTANCE = 3.5;
 
 function mapDbTypeToLocal(type: string): Machine['type'] {
   const lower = type.toLowerCase();
@@ -137,6 +141,7 @@ function mapDbTypeToLocal(type: string): Machine['type'] {
   if (lower === 'printer' || lower === 'printing') return 'printing';
   if (lower === 'cutter' || lower === 'cutting') return 'cutting';
   if (lower === 'mixer') return 'mixer';
+  if (lower === 'inline_printer') return 'inline_printer';
   return 'film';
 }
 
@@ -205,39 +210,237 @@ function useDraggable(
 }
 
 function ProfessionalFilmMachine({ machine, isSelected }: { machine: Machine; isSelected: boolean }) {
-  const towerHeight = 5.5;
+  const towerHeight = 6;
   return (
     <group rotation={[0, (machine.rotation || 0) * Math.PI / 180, 0]} scale={machine.scale}>
-      <mesh castShadow position={[0, 0.4, 0]}>
-        <boxGeometry args={[2.5, 0.8, 1.8]} />
+      {/* Main body / base frame */}
+      <mesh castShadow position={[0, 0.5, 0]}>
+        <boxGeometry args={[3, 1, 2.2]} />
         <meshStandardMaterial color={machine.color} metalness={0.7} roughness={0.3} />
       </mesh>
-      <mesh castShadow position={[1.2, 0.5, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.35, 0.35, 2, 20]} />
+      {/* Motor housing */}
+      <mesh castShadow position={[0, 0.5, -0.9]}>
+        <boxGeometry args={[1.6, 0.7, 0.4]} />
         <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.2} />
       </mesh>
-      <mesh castShadow position={[1.8, 1.3, 0]}>
-        <cylinderGeometry args={[0.4, 0.15, 0.7, 16]} />
-        <meshStandardMaterial color="#fbbf24" metalness={0.5} />
-      </mesh>
-      <mesh castShadow position={[-0.8, 1.2, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.25, 0.25, 1.2, 16]} />
-        <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.1} />
-      </mesh>
-      {[[-0.8, -0.8], [-0.8, 0.8], [0.8, -0.8], [0.8, 0.8]].map((pos, i) => (
-        <mesh key={i} position={[pos[0], towerHeight / 2, pos[1]]}>
-          <boxGeometry args={[0.1, towerHeight, 0.1]} />
-          <meshStandardMaterial color="#64748b" metalness={0.6} />
+      {/* Motor vent lines */}
+      {[-0.4, 0, 0.4].map((x, i) => (
+        <mesh key={`vent-${i}`} position={[x, 0.55, -1.12]}>
+          <boxGeometry args={[0.05, 0.3, 0.02]} />
+          <meshStandardMaterial color="#1e293b" />
         </mesh>
       ))}
-      <mesh castShadow position={[0, towerHeight, 0]}>
-        <boxGeometry args={[2, 0.15, 2]} />
-        <meshStandardMaterial color="#475569" metalness={0.5} />
+
+      {/* Extruder screw barrel */}
+      <mesh castShadow position={[0, 1.3, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.3, 0.3, 2.6, 20]} />
+        <meshStandardMaterial color="#64748b" metalness={0.85} roughness={0.15} />
       </mesh>
+      {/* Hopper / material feeding basin (iron basin at back) */}
+      <group position={[-1.2, 1.6, 0]}>
+        {/* Basin back wall */}
+        <mesh castShadow position={[0, 0.5, 0]}>
+          <boxGeometry args={[0.8, 1.2, 1]} />
+          <meshStandardMaterial color="#475569" metalness={0.75} roughness={0.25} transparent opacity={0.85} />
+        </mesh>
+        {/* Basin front opening - tapered */}
+        <mesh castShadow position={[0.35, 0.1, 0]} rotation={[0, 0, 0.3]}>
+          <boxGeometry args={[0.15, 0.8, 0.9]} />
+          <meshStandardMaterial color="#475569" metalness={0.75} roughness={0.25} />
+        </mesh>
+        {/* Basin left wall */}
+        <mesh castShadow position={[0, 0.5, -0.5]}>
+          <boxGeometry args={[0.8, 1.2, 0.08]} />
+          <meshStandardMaterial color="#64748b" metalness={0.7} roughness={0.3} />
+        </mesh>
+        {/* Basin right wall */}
+        <mesh castShadow position={[0, 0.5, 0.5]}>
+          <boxGeometry args={[0.8, 1.2, 0.08]} />
+          <meshStandardMaterial color="#64748b" metalness={0.7} roughness={0.3} />
+        </mesh>
+        {/* Basin back wall */}
+        <mesh castShadow position={[-0.4, 0.5, 0]}>
+          <boxGeometry args={[0.08, 1.2, 1]} />
+          <meshStandardMaterial color="#64748b" metalness={0.7} roughness={0.3} />
+        </mesh>
+        {/* Basin rim / edge */}
+        <mesh castShadow position={[0, 1.1, 0]}>
+          <boxGeometry args={[0.9, 0.06, 1.1]} />
+          <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.1} />
+        </mesh>
+      </group>
+
+      {/* Die head - where film exits upward */}
+      <mesh castShadow position={[0, 1.8, 0]}>
+        <cylinderGeometry args={[0.2, 0.35, 0.6, 16]} />
+        <meshStandardMaterial color="#fbbf24" metalness={0.6} roughness={0.3} />
+      </mesh>
+
+      {/* Tower frame - 4 vertical poles */}
+      {[[-0.9, -0.9], [-0.9, 0.9], [0.9, -0.9], [0.9, 0.9]].map((pos, i) => (
+        <mesh key={`tower-${i}`} position={[pos[0], towerHeight / 2, pos[1]]}>
+          <boxGeometry args={[0.08, towerHeight, 0.08]} />
+          <meshStandardMaterial color="#475569" metalness={0.7} />
+        </mesh>
+      ))}
+      {/* Tower cross beams */}
+      {[2, 4, 5.5].map((y, i) => (
+        <group key={`cross-${i}`}>
+          <mesh position={[0, y, -0.9]}>
+            <boxGeometry args={[1.8, 0.06, 0.06]} />
+            <meshStandardMaterial color="#64748b" metalness={0.6} />
+          </mesh>
+          <mesh position={[0, y, 0.9]}>
+            <boxGeometry args={[1.8, 0.06, 0.06]} />
+            <meshStandardMaterial color="#64748b" metalness={0.6} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Film bubble - transparent tube going up the tower */}
+      <mesh position={[0, 4, 0]}>
+        <cylinderGeometry args={[0.5, 0.15, 4, 24, 1, true]} />
+        <meshStandardMaterial color="#b0d4f1" transparent opacity={0.15} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* Collapsing frame at top */}
+      <mesh castShadow position={[0, towerHeight, 0]}>
+        <boxGeometry args={[2.2, 0.12, 2.2]} />
+        <meshStandardMaterial color="#334155" metalness={0.6} />
+      </mesh>
+      {/* Nip rollers at top */}
+      <mesh castShadow position={[0, towerHeight - 0.3, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.12, 0.12, 1.8, 12]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.1} />
+      </mesh>
+      <mesh castShadow position={[0, towerHeight - 0.55, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.12, 0.12, 1.8, 12]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.1} />
+      </mesh>
+
+      {/* Front shaft with winding roll */}
+      <group position={[1.6, 0.9, 0]}>
+        {/* Shaft support frame */}
+        <mesh castShadow position={[0, 0.4, -0.8]}>
+          <boxGeometry args={[0.12, 1, 0.12]} />
+          <meshStandardMaterial color="#475569" metalness={0.6} />
+        </mesh>
+        <mesh castShadow position={[0, 0.4, 0.8]}>
+          <boxGeometry args={[0.12, 1, 0.12]} />
+          <meshStandardMaterial color="#475569" metalness={0.6} />
+        </mesh>
+        {/* Winding shaft */}
+        <mesh castShadow position={[0, 0.8, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.06, 0.06, 1.6, 8]} />
+          <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.1} />
+        </mesh>
+        {/* Roll of film on shaft */}
+        <mesh castShadow position={[0, 0.8, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.45, 0.45, 1.2, 24]} />
+          <meshStandardMaterial color="#e0e7ef" transparent opacity={0.6} roughness={0.4} />
+        </mesh>
+        {/* Roll core */}
+        <mesh castShadow position={[0, 0.8, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.12, 0.12, 1.25, 12]} />
+          <meshStandardMaterial color="#78716c" metalness={0.5} />
+        </mesh>
+      </group>
+
+      {/* Control panel */}
+      <mesh castShadow position={[0.5, 1.2, -1.15]}>
+        <boxGeometry args={[0.6, 0.5, 0.1]} />
+        <meshStandardMaterial color="#1e293b" metalness={0.3} />
+      </mesh>
+      {/* Control panel screen */}
+      <mesh position={[0.5, 1.25, -1.19]}>
+        <boxGeometry args={[0.4, 0.25, 0.01]} />
+        <meshStandardMaterial color="#0f172a" emissive="#22d3ee" emissiveIntensity={0.15} />
+      </mesh>
+
+      {/* Machine legs */}
+      {[[-1.1, -0.85], [-1.1, 0.85], [1.1, -0.85], [1.1, 0.85]].map((pos, i) => (
+        <mesh key={`leg-${i}`} castShadow position={[pos[0], -0.02, pos[1]]}>
+          <boxGeometry args={[0.2, 0.04, 0.2]} />
+          <meshStandardMaterial color="#1e293b" metalness={0.5} />
+        </mesh>
+      ))}
+
       {isSelected && (
         <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[2.8, 3, 32]} />
+          <ringGeometry args={[3.2, 3.5, 32]} />
           <meshBasicMaterial color="#fbbf24" transparent opacity={0.8} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+function InlinePrinterMachine({ machine, isSelected }: { machine: Machine; isSelected: boolean }) {
+  return (
+    <group rotation={[0, (machine.rotation || 0) * Math.PI / 180, 0]} scale={machine.scale}>
+      {/* Main body */}
+      <mesh castShadow position={[0, 0.5, 0]}>
+        <boxGeometry args={[2.2, 1, 1.6]} />
+        <meshStandardMaterial color={machine.color} metalness={0.65} roughness={0.3} />
+      </mesh>
+      {/* Ink tray / pan */}
+      <mesh castShadow position={[0, 1.1, 0]}>
+        <boxGeometry args={[1.8, 0.15, 1.2]} />
+        <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.2} />
+      </mesh>
+      {/* Printing rollers */}
+      {[-0.4, 0.4].map((x, i) => (
+        <mesh key={`roller-${i}`} castShadow position={[x, 1.4, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.2, 0.2, 1.2, 16]} />
+          <meshStandardMaterial color={i === 0 ? '#ef4444' : '#3b82f6'} metalness={0.5} roughness={0.3} />
+        </mesh>
+      ))}
+      {/* Pressure roller on top */}
+      <mesh castShadow position={[0, 1.8, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.15, 0.15, 1.3, 12]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.1} />
+      </mesh>
+      {/* Side frames */}
+      <mesh castShadow position={[0, 1.2, -0.75]}>
+        <boxGeometry args={[2.4, 1.8, 0.08]} />
+        <meshStandardMaterial color="#475569" metalness={0.6} roughness={0.3} />
+      </mesh>
+      <mesh castShadow position={[0, 1.2, 0.75]}>
+        <boxGeometry args={[2.4, 1.8, 0.08]} />
+        <meshStandardMaterial color="#475569" metalness={0.6} roughness={0.3} />
+      </mesh>
+      {/* Input guide roller */}
+      <mesh castShadow position={[-1.2, 1.2, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.1, 0.1, 1.0, 8]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.8} />
+      </mesh>
+      {/* Output guide roller */}
+      <mesh castShadow position={[1.2, 1.2, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.1, 0.1, 1.0, 8]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.8} />
+      </mesh>
+      {/* Small control panel */}
+      <mesh castShadow position={[-0.9, 1.6, -0.8]}>
+        <boxGeometry args={[0.4, 0.35, 0.08]} />
+        <meshStandardMaterial color="#1e293b" emissive="#10b981" emissiveIntensity={0.15} />
+      </mesh>
+      {/* Ink containers on side */}
+      {[-0.3, 0.3].map((x, i) => (
+        <mesh key={`ink-${i}`} castShadow position={[x, 0.3, 0.9]}>
+          <cylinderGeometry args={[0.12, 0.12, 0.4, 8]} />
+          <meshStandardMaterial color={i === 0 ? '#dc2626' : '#2563eb'} metalness={0.3} />
+        </mesh>
+      ))}
+      {/* Snap indicator - connection points */}
+      <mesh position={[-1.3, 0.5, 0]}>
+        <boxGeometry args={[0.15, 0.6, 0.8]} />
+        <meshStandardMaterial color={machine.color} metalness={0.7} roughness={0.3} />
+      </mesh>
+
+      {isSelected && (
+        <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[2, 2.3, 32]} />
+          <meshBasicMaterial color="#a78bfa" transparent opacity={0.8} />
         </mesh>
       )}
     </group>
@@ -516,9 +719,19 @@ function DraggableGroup({ machine, isSelected, onSelect, onDrag, rolls }: { mach
       {machine.type === 'cutting' && <ProfessionalCuttingMachine machine={machine} isSelected={isSelected} />}
       {machine.type === 'mixer' && <ProfessionalMixer machine={machine} isSelected={isSelected} />}
       {machine.type === 'pallet' && <WoodenPallet machine={machine} isSelected={isSelected} />}
-      <Html position={[0, machine.type === 'film' ? 6 * machine.scale[1] : 3.5 * machine.scale[1], 0]} center>
+      {machine.type === 'inline_printer' && <InlinePrinterMachine machine={machine} isSelected={isSelected} />}
+      {machine.type === 'inline_printer' && machine.attachedTo && (
+        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[1.8, 1.9, 32]} />
+          <meshBasicMaterial color="#22c55e" transparent opacity={0.6} />
+        </mesh>
+      )}
+      <Html position={[0, machine.type === 'film' ? 7 * machine.scale[1] : machine.type === 'inline_printer' ? 2.8 * machine.scale[1] : 3.5 * machine.scale[1], 0]} center>
         <div className="bg-black/85 text-white px-2.5 py-1 rounded-md text-[9px] font-bold border border-white/20 shadow-xl pointer-events-none whitespace-nowrap backdrop-blur-sm">
           {machine.customName || machine.nameAr}
+          {machine.type === 'inline_printer' && machine.attachedTo && (
+            <span className="mr-1.5 bg-green-500/80 text-white px-1 rounded text-[7px]">متصلة</span>
+          )}
           {machineRolls.length > 0 && (
             <span className="mr-1.5 bg-emerald-500/80 text-white px-1 rounded text-[7px]">{machineRolls.length}</span>
           )}
@@ -964,17 +1177,88 @@ export default function FactorySimulation3D() {
   const handleDrag = (id: string, pos: [number, number, number]) => {
     const clampedX = Math.max(-HALL_WIDTH / 2 + 2, Math.min(HALL_WIDTH / 2 - 2, pos[0]));
     const clampedZ = Math.max(-HALL_LENGTH / 2 + 2, Math.min(HALL_LENGTH / 2 - 2, pos[2]));
-    updateMachines(prev => prev.map(m => m.id === id ? { ...m, position: [clampedX, 0, clampedZ] } : m));
+
+    updateMachines(prev => {
+      const draggedMachine = prev.find(m => m.id === id);
+      if (!draggedMachine) return prev;
+
+      if (draggedMachine.type === 'inline_printer') {
+        const filmMachines = prev.filter(m => m.type === 'film' && m.id !== id);
+        let snappedTo: string | undefined;
+        let finalX = clampedX;
+        let finalZ = clampedZ;
+        let finalRotation = draggedMachine.rotation || 0;
+
+        for (const fm of filmMachines) {
+          const dx = clampedX - fm.position[0];
+          const dz = clampedZ - fm.position[2];
+          const dist = Math.sqrt(dx * dx + dz * dz);
+
+          if (dist < SNAP_DISTANCE) {
+            const fmRotRad = ((fm.rotation || 0) * Math.PI) / 180;
+            const offsetX = Math.cos(fmRotRad) * 3.2;
+            const offsetZ = -Math.sin(fmRotRad) * 3.2;
+            finalX = fm.position[0] + offsetX;
+            finalZ = fm.position[2] + offsetZ;
+            finalRotation = fm.rotation || 0;
+            snappedTo = fm.id;
+            break;
+          }
+        }
+
+        return prev.map(m =>
+          m.id === id
+            ? { ...m, position: [finalX, 0, finalZ] as [number, number, number], attachedTo: snappedTo, rotation: snappedTo ? finalRotation : m.rotation }
+            : m
+        );
+      }
+
+      return prev.map(m => {
+        if (m.id === id) {
+          return { ...m, position: [clampedX, 0, clampedZ] as [number, number, number] };
+        }
+        if (m.type === 'inline_printer' && m.attachedTo === id) {
+          const fmRotRad = ((draggedMachine.rotation || 0) * Math.PI) / 180;
+          const offsetX = Math.cos(fmRotRad) * 3.2;
+          const offsetZ = -Math.sin(fmRotRad) * 3.2;
+          return { ...m, position: [clampedX + offsetX, 0, clampedZ + offsetZ] as [number, number, number] };
+        }
+        return m;
+      });
+    });
   };
 
   const rotateMachine = () => {
     if (!selectedId) return;
-    updateMachines(prev => prev.map(m => m.id === selectedId ? { ...m, rotation: ((m.rotation || 0) + 45) % 360 } : m));
+    updateMachines(prev => {
+      const rotatedMachine = prev.find(m => m.id === selectedId);
+      if (!rotatedMachine) return prev;
+      const newRotation = ((rotatedMachine.rotation || 0) + 45) % 360;
+
+      return prev.map(m => {
+        if (m.id === selectedId) {
+          return { ...m, rotation: newRotation };
+        }
+        if (m.type === 'inline_printer' && m.attachedTo === selectedId) {
+          const fmRotRad = (newRotation * Math.PI) / 180;
+          const offsetX = Math.cos(fmRotRad) * 3.2;
+          const offsetZ = -Math.sin(fmRotRad) * 3.2;
+          return {
+            ...m,
+            rotation: newRotation,
+            position: [rotatedMachine.position[0] + offsetX, 0, rotatedMachine.position[2] + offsetZ] as [number, number, number],
+          };
+        }
+        return m;
+      });
+    });
   };
 
   const deleteMachine = () => {
     if (!selectedId) return;
-    updateMachines(machines.filter(m => m.id !== selectedId));
+    updateMachines(machines.filter(m => m.id !== selectedId).map(m =>
+      m.type === 'inline_printer' && m.attachedTo === selectedId ? { ...m, attachedTo: undefined } : m
+    ));
     setSelectedId(null);
   };
 
@@ -1021,7 +1305,7 @@ export default function FactorySimulation3D() {
                   <span className="text-xs font-bold text-slate-300">إضافة معدات</span>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {(['film', 'printing', 'cutting', 'mixer', 'pallet'] as Machine['type'][]).map((type) => {
+                  {(['film', 'printing', 'cutting', 'mixer', 'pallet', 'inline_printer'] as Machine['type'][]).map((type) => {
                     const config = MACHINE_CONFIGS[type];
                     const Icon = config.icon;
                     return (

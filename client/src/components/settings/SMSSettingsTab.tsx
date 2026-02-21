@@ -252,7 +252,7 @@ export default function SMSSettingsTab() {
                   ) : sendersData?.success && sendersData?.senders && sendersData.senders.length > 0 ? (
                     sendersData.senders.map((sender: any, idx: number) => (
                       <Badge key={idx} variant="secondary" className="text-xs">
-                        {typeof sender === "string" ? sender : sender.name || sender}
+                        {typeof sender === "string" ? sender : sender.senderName || sender.name || JSON.stringify(sender)}
                       </Badge>
                     ))
                   ) : (
