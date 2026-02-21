@@ -8932,9 +8932,10 @@ Do not include quotes or explanations.`;
   app.get("/api/warehouse/export/items", requireAuth, async (req, res) => {
     try {
       const result = await db.execute(sql`
-        SELECT inv.id, itm.name, itm.name_ar, itm.code, inv.unit, itm.category_id as category, inv.current_stock, inv.min_stock, inv.max_stock
+        SELECT inv.id, itm.name, itm.name_ar, itm.code, inv.unit, COALESCE(cat.name_ar, cat.name) as category, inv.current_stock, inv.min_stock, inv.max_stock
         FROM inventory inv
         JOIN items itm ON inv.item_id = itm.id
+        LEFT JOIN categories cat ON itm.category_id = cat.id
         WHERE itm.status = 'active' ORDER BY itm.name_ar
       `);
       
