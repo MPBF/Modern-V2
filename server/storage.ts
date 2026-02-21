@@ -202,6 +202,11 @@ import {
   type InsertNotificationEventSetting,
   type NotificationEventLog,
   type InsertNotificationEventLog,
+
+  // Factory Snapshots
+  factory_snapshots,
+  type FactorySnapshot,
+  type InsertFactorySnapshot,
 } from "@shared/schema";
 
 import { db, pool } from "./db";
@@ -876,6 +881,13 @@ export interface IStorage {
   getNotificationEventLogs(options?: { limit?: number; offset?: number; eventKey?: string; status?: string }): Promise<NotificationEventLog[]>;
   createNotificationEventLog(log: InsertNotificationEventLog): Promise<NotificationEventLog>;
   updateNotificationEventLog(id: number, updates: Partial<NotificationEventLog>): Promise<NotificationEventLog>;
+
+  // Factory Snapshots
+  getFactorySnapshots(userId?: number): Promise<FactorySnapshot[]>;
+  getFactorySnapshot(id: number): Promise<FactorySnapshot | undefined>;
+  getFactorySnapshotByToken(token: string): Promise<FactorySnapshot | undefined>;
+  createFactorySnapshot(snapshot: InsertFactorySnapshot): Promise<FactorySnapshot>;
+  deleteFactorySnapshot(id: number): Promise<void>;
 
   // Maintenance Actions
   getAllMaintenanceActions(): Promise<MaintenanceAction[]>;
@@ -14362,6 +14374,61 @@ export class DatabaseStorage implements IStorage {
       },
       "updateNotificationEventLog",
       `تحديث سجل حدث الإشعار ${id}`,
+    );
+  }
+  async getFactorySnapshots(userId?: number): Promise<FactorySnapshot[]> {
+    return withDatabaseErrorHandling(
+      async () => {
+        if (userId) {
+          return await db.select().from(factory_snapshots).where(eq(factory_snapshots.created_by, userId)).orderBy(desc(factory_snapshots.created_at));
+        }
+        return await db.select().from(factory_snapshots).orderBy(desc(factory_snapshots.created_at));
+      },
+      "getFactorySnapshots",
+      "جلب لقطات المصنع",
+    );
+  }
+
+  async getFactorySnapshot(id: number): Promise<FactorySnapshot | undefined> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [snapshot] = await db.select().from(factory_snapshots).where(eq(factory_snapshots.id, id));
+        return snapshot;
+      },
+      "getFactorySnapshot",
+      `جلب لقطة المصنع ${id}`,
+    );
+  }
+
+  async getFactorySnapshotByToken(token: string): Promise<FactorySnapshot | undefined> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [snapshot] = await db.select().from(factory_snapshots).where(eq(factory_snapshots.share_token, token));
+        return snapshot;
+      },
+      "getFactorySnapshotByToken",
+      `جلب لقطة المصنع بالرمز`,
+    );
+  }
+
+  async createFactorySnapshot(snapshot: InsertFactorySnapshot): Promise<FactorySnapshot> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [created] = await db.insert(factory_snapshots).values(snapshot).returning();
+        return created;
+      },
+      "createFactorySnapshot",
+      "إنشاء لقطة مصنع جديدة",
+    );
+  }
+
+  async deleteFactorySnapshot(id: number): Promise<void> {
+    return withDatabaseErrorHandling(
+      async () => {
+        await db.delete(factory_snapshots).where(eq(factory_snapshots.id, id));
+      },
+      "deleteFactorySnapshot",
+      `حذف لقطة المصنع ${id}`,
     );
   }
 }

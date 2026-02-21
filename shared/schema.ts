@@ -3576,3 +3576,17 @@ export const factory_layouts = pgTable("factory_layouts", {
 });
 
 export type FactoryLayout = typeof factory_layouts.$inferSelect;
+
+export const factory_snapshots = pgTable("factory_snapshots", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 200 }).notNull(),
+  comment: text("comment"),
+  layout_data: jsonb("layout_data").notNull(),
+  share_token: varchar("share_token", { length: 64 }).unique(),
+  created_by: integer("created_by"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const insertFactorySnapshotSchema = createInsertSchema(factory_snapshots).omit({ id: true, created_at: true });
+export type InsertFactorySnapshot = z.infer<typeof insertFactorySnapshotSchema>;
+export type FactorySnapshot = typeof factory_snapshots.$inferSelect;

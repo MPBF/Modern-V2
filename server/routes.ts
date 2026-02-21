@@ -45,6 +45,8 @@ import {
   users,
   attendance,
   factory_layouts,
+  factory_snapshots,
+  insertFactorySnapshotSchema,
   notifications as notificationsTable,
 } from "@shared/schema";
 import { eq, sql, and, gte, lte } from "drizzle-orm";
@@ -9724,6 +9726,78 @@ Do not include quotes or explanations.`;
     } catch (error) {
       console.error("Error saving factory layout:", error);
       res.status(500).json({ message: "خطأ في حفظ تخطيط المصنع" });
+    }
+  });
+
+  // ============ Factory Snapshots ============
+  
+  app.get("/api/factory-3d/snapshots", requireAuth, async (req, res) => {
+    try {
+      const snapshots = await storage.getFactorySnapshots();
+      res.json(snapshots);
+    } catch (error) {
+      console.error("Error loading snapshots:", error);
+      res.status(500).json({ message: "خطأ في تحميل اللقطات" });
+    }
+  });
+
+  app.get("/api/factory-3d/snapshots/share/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      if (!token) return res.status(400).json({ message: "رمز المشاركة مطلوب" });
+      const snapshot = await storage.getFactorySnapshotByToken(token);
+      if (!snapshot) return res.status(404).json({ message: "اللقطة غير موجودة" });
+      res.json(snapshot);
+    } catch (error) {
+      console.error("Error loading shared snapshot:", error);
+      res.status(500).json({ message: "خطأ في تحميل اللقطة المشتركة" });
+    }
+  });
+
+  app.get("/api/factory-3d/snapshots/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "معرف غير صالح" });
+      const snapshot = await storage.getFactorySnapshot(id);
+      if (!snapshot) return res.status(404).json({ message: "اللقطة غير موجودة" });
+      res.json(snapshot);
+    } catch (error) {
+      console.error("Error loading snapshot:", error);
+      res.status(500).json({ message: "خطأ في تحميل اللقطة" });
+    }
+  });
+
+  app.post("/api/factory-3d/snapshots", requireAuth, async (req, res) => {
+    try {
+      const authReq = req as AuthRequest;
+      const userId = authReq.user?.id;
+      
+      const parsed = insertFactorySnapshotSchema.parse({
+        ...req.body,
+        created_by: userId,
+        share_token: require('crypto').randomBytes(24).toString('hex'),
+      });
+      
+      const snapshot = await storage.createFactorySnapshot(parsed);
+      res.status(201).json(snapshot);
+    } catch (error) {
+      console.error("Error creating snapshot:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "بيانات غير صالحة", errors: error.errors });
+      }
+      res.status(500).json({ message: "خطأ في إنشاء اللقطة" });
+    }
+  });
+
+  app.delete("/api/factory-3d/snapshots/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "معرف غير صالح" });
+      await storage.deleteFactorySnapshot(id);
+      res.json({ success: true, message: "تم حذف اللقطة بنجاح" });
+    } catch (error) {
+      console.error("Error deleting snapshot:", error);
+      res.status(500).json({ message: "خطأ في حذف اللقطة" });
     }
   });
 

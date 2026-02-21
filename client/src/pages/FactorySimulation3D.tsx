@@ -3,7 +3,7 @@ import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Environment, Html, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { apiRequest } from '../lib/queryClient';
+import { apiRequest, queryClient } from '../lib/queryClient';
 import { useToast } from '../hooks/use-toast';
 
 import Header from '../components/layout/Header';
@@ -15,11 +15,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../com
 import { Slider } from '../components/ui/slider';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
 import { 
   Eye, Layers, Trash2, RotateCw, Factory, Box, Printer, Scissors, 
   Blend, Package, Move, Maximize2, Building2, Palette,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Ruler, Save, Pencil, Check,
-  Users, X, ChevronDown, ChevronUp, Circle
+  Users, X, ChevronDown, ChevronUp, Circle, Camera, Share2, Download, Clock, MessageSquare, Copy, List
 } from 'lucide-react';
 
 const HALL_WIDTH = 20;
@@ -1237,6 +1238,10 @@ export default function FactorySimulation3D() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
   const [dbMachinesLoaded, setDbMachinesLoaded] = useState(false);
+  const [showSnapshotSave, setShowSnapshotSave] = useState(false);
+  const [showSnapshotList, setShowSnapshotList] = useState(false);
+  const [snapshotName, setSnapshotName] = useState('');
+  const [snapshotComment, setSnapshotComment] = useState('');
   const nameInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -1350,6 +1355,78 @@ export default function FactorySimulation3D() {
       toast({ title: 'خطأ', description: 'فشل حفظ التخطيط', variant: 'destructive' });
     },
   });
+
+  interface FactorySnapshot {
+    id: number;
+    name: string;
+    comment: string | null;
+    layout_data: any;
+    share_token: string | null;
+    created_by: number | null;
+    created_at: string | null;
+  }
+
+  const { data: snapshots = [] } = useQuery<FactorySnapshot[]>({
+    queryKey: ['/api/factory-3d/snapshots'],
+  });
+
+  const saveSnapshotMutation = useMutation({
+    mutationFn: async (data: { name: string; comment: string; layout_data: any }) => {
+      const res = await apiRequest('/api/factory-3d/snapshots', { method: 'POST', body: JSON.stringify(data) });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/factory-3d/snapshots'] });
+      setShowSnapshotSave(false);
+      setSnapshotName('');
+      setSnapshotComment('');
+      toast({ title: 'تم الحفظ', description: 'تم حفظ لقطة التخطيط بنجاح' });
+    },
+    onError: () => {
+      toast({ title: 'خطأ', description: 'فشل حفظ اللقطة', variant: 'destructive' });
+    },
+  });
+
+  const deleteSnapshotMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest(`/api/factory-3d/snapshots/${id}`, { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/factory-3d/snapshots'] });
+      toast({ title: 'تم الحذف', description: 'تم حذف اللقطة بنجاح' });
+    },
+    onError: () => {
+      toast({ title: 'خطأ', description: 'فشل حذف اللقطة', variant: 'destructive' });
+    },
+  });
+
+  const handleSaveSnapshot = () => {
+    if (!snapshotName.trim()) {
+      toast({ title: 'تنبيه', description: 'يرجى إدخال اسم اللقطة', variant: 'destructive' });
+      return;
+    }
+    saveSnapshotMutation.mutate({ name: snapshotName.trim(), comment: snapshotComment.trim(), layout_data: machines });
+  };
+
+  const handleLoadSnapshot = (snapshot: FactorySnapshot) => {
+    if (snapshot.layout_data && Array.isArray(snapshot.layout_data)) {
+      setMachines(snapshot.layout_data as Machine[]);
+      setHasUnsavedChanges(true);
+      setShowSnapshotList(false);
+      toast({ title: 'تم التحميل', description: `تم تحميل لقطة "${snapshot.name}"` });
+    }
+  };
+
+  const handleShareSnapshot = (snapshot: FactorySnapshot) => {
+    if (snapshot.share_token) {
+      const shareUrl = `${window.location.origin}/api/factory-3d/snapshots/share/${snapshot.share_token}`;
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        toast({ title: 'تم النسخ', description: 'تم نسخ رابط المشاركة إلى الحافظة' });
+      }).catch(() => {
+        toast({ title: 'رابط المشاركة', description: shareUrl });
+      });
+    }
+  };
 
   const selectedMachine = machines.find(m => m.id === selectedId);
 
@@ -1705,6 +1782,154 @@ export default function FactorySimulation3D() {
             </div>
           )}
 
+          {showSnapshotSave && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+              <Card className="w-[380px] bg-slate-900/95 border-slate-700/60 shadow-2xl">
+                <CardContent className="p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-white">
+                      <Camera size={18} className="text-blue-400" />
+                      <span className="font-bold text-sm">حفظ لقطة التخطيط</span>
+                    </div>
+                    <Button size="icon" variant="ghost" onClick={() => setShowSnapshotSave(false)} className="h-7 w-7 text-slate-400 hover:text-white">
+                      <X size={14} />
+                    </Button>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs text-slate-400 mb-1.5 block">اسم اللقطة *</Label>
+                      <Input
+                        value={snapshotName}
+                        onChange={e => setSnapshotName(e.target.value)}
+                        placeholder="مثال: تخطيط الإنتاج - فبراير 2026"
+                        className="bg-slate-800/80 border-slate-600/50 text-white text-sm h-9 placeholder:text-slate-500"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-400 mb-1.5 block">ملاحظات / تعليق</Label>
+                      <Textarea
+                        value={snapshotComment}
+                        onChange={e => setSnapshotComment(e.target.value)}
+                        placeholder="أضف ملاحظاتك حول هذا التخطيط..."
+                        className="bg-slate-800/80 border-slate-600/50 text-white text-sm min-h-[80px] resize-none placeholder:text-slate-500"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                      <Factory size={11} />
+                      <span>سيتم حفظ {machines.length} ماكينة في اللقطة</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      onClick={handleSaveSnapshot}
+                      disabled={saveSnapshotMutation.isPending || !snapshotName.trim()}
+                      className="flex-1 h-9 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white"
+                    >
+                      <Camera size={13} className="ml-1.5" />
+                      {saveSnapshotMutation.isPending ? 'جاري الحفظ...' : 'حفظ اللقطة'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowSnapshotSave(false)}
+                      className="h-9 text-xs border-slate-600 text-slate-300 hover:bg-slate-800"
+                    >
+                      إلغاء
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {showSnapshotList && (
+            <div className="absolute top-3 left-3 z-30 w-[340px] max-h-[calc(100vh-120px)]">
+              <Card className="bg-slate-900/95 border-slate-700/60 shadow-2xl backdrop-blur-xl">
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2 text-white">
+                      <List size={15} className="text-blue-400" />
+                      <span className="font-bold text-xs">اللقطات المحفوظة</span>
+                      <Badge className="text-[9px] h-4 bg-blue-500/20 text-blue-300 border-blue-500/30">{snapshots.length}</Badge>
+                    </div>
+                    <Button size="icon" variant="ghost" onClick={() => setShowSnapshotList(false)} className="h-6 w-6 text-slate-400 hover:text-white">
+                      <X size={12} />
+                    </Button>
+                  </div>
+
+                  <div className="max-h-[400px] overflow-y-auto scrollbar-thin space-y-1.5">
+                    {snapshots.length === 0 ? (
+                      <div className="text-center py-6 text-slate-500 text-xs">
+                        <Camera size={24} className="mx-auto mb-2 opacity-40" />
+                        <p>لا توجد لقطات محفوظة</p>
+                        <p className="text-[10px] mt-1">احفظ لقطة من التخطيط الحالي</p>
+                      </div>
+                    ) : (
+                      snapshots.map((snapshot: FactorySnapshot) => (
+                        <div key={snapshot.id} className="bg-slate-800/60 rounded-lg border border-slate-700/30 p-2.5 space-y-2 hover:border-slate-600/50 transition-colors">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-[11px] font-bold text-white truncate">{snapshot.name}</h4>
+                              {snapshot.comment && (
+                                <p className="text-[9px] text-slate-400 mt-0.5 line-clamp-2 flex items-start gap-1">
+                                  <MessageSquare size={9} className="shrink-0 mt-0.5" />
+                                  {snapshot.comment}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-1.5 mt-1 text-[8px] text-slate-500">
+                                <Clock size={8} />
+                                <span>{snapshot.created_at ? new Date(snapshot.created_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                                <span className="mx-1">·</span>
+                                <Factory size={8} />
+                                <span>{Array.isArray(snapshot.layout_data) ? snapshot.layout_data.length : 0} ماكينة</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              onClick={() => handleLoadSnapshot(snapshot)}
+                              className="h-6 px-2.5 text-[9px] bg-blue-600/80 hover:bg-blue-500 text-white flex-1"
+                            >
+                              <Download size={10} className="ml-1" />
+                              تحميل
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleShareSnapshot(snapshot)}
+                              className="h-6 px-2 text-[9px] border-slate-600 text-slate-300 hover:bg-slate-700"
+                            >
+                              <Copy size={10} className="ml-1" />
+                              نسخ الرابط
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => deleteSnapshotMutation.mutate(snapshot.id)}
+                              disabled={deleteSnapshotMutation.isPending}
+                              className="h-6 w-6 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                            >
+                              <Trash2 size={10} />
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <Button
+                    size="sm"
+                    onClick={() => { setShowSnapshotList(false); setShowSnapshotSave(true); }}
+                    className="w-full h-7 text-[10px] bg-blue-600/60 hover:bg-blue-500 text-white border border-blue-500/30"
+                  >
+                    <Camera size={11} className="ml-1" />
+                    حفظ لقطة جديدة
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2">
             {hasUnsavedChanges && (
               <Button
@@ -1776,6 +2001,31 @@ export default function FactorySimulation3D() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="text-xs">إلغاء التحديد</TooltipContent>
+              </Tooltip>
+              <div className="w-full h-px bg-slate-700/50 my-0.5" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    size="icon" variant="secondary"
+                    onClick={() => setShowSnapshotSave(true)}
+                    className="w-9 h-9 bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 hover:bg-slate-800 shadow-xl"
+                  >
+                    <Camera size={14} className="text-blue-400" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="text-xs">حفظ لقطة</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    size="icon" variant="secondary"
+                    onClick={() => setShowSnapshotList(!showSnapshotList)}
+                    className={`w-9 h-9 backdrop-blur-xl border shadow-xl ${showSnapshotList ? 'bg-blue-600/80 border-blue-500/50 hover:bg-blue-600' : 'bg-slate-900/90 border-slate-700/50 hover:bg-slate-800'}`}
+                  >
+                    <List size={14} className={showSnapshotList ? 'text-white' : 'text-slate-300'} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="text-xs">اللقطات المحفوظة ({snapshots.length})</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
