@@ -18,6 +18,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -628,6 +629,9 @@ export default function DisplayControlPanel() {
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingSlide ? t('display.editSlide') : t('display.addSlide')}</DialogTitle>
+                  <DialogDescription>
+                    {editingSlide ? 'تعديل بيانات الشريحة الحالية' : 'إضافة شريحة عرض جديدة للشاشة'}
+                  </DialogDescription>
                 </DialogHeader>
                 <SlideForm
                   initialData={editingSlide || undefined}

@@ -2536,12 +2536,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export Report (Placeholder for PDF/Excel export)
+  // Export Report with real PDF/Excel generation
   app.post("/api/reports/export", requireAuth, async (req, res) => {
     try {
       const { report_type, format, date_from, date_to, filters } = req.body;
 
-      // Basic validation
       if (!report_type || !format) {
         return res.status(400).json({
           message: "نوع التقرير والصيغة مطلوبان",
@@ -2549,20 +2548,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Get the requested report data
       let reportData;
+      let reportTitle = "";
       switch (report_type) {
         case "orders":
           reportData = await storage.getOrderReports(date_from, date_to);
+          reportTitle = "تقرير الطلبات";
           break;
         case "advanced-metrics":
           reportData = await storage.getAdvancedMetrics(date_from, date_to);
+          reportTitle = "تقرير المقاييس المتقدمة";
           break;
         case "hr":
           reportData = await storage.getHRReports(date_from, date_to);
+          reportTitle = "تقرير الموارد البشرية";
           break;
         case "maintenance":
           reportData = await storage.getMaintenanceReports(date_from, date_to);
+          reportTitle = "تقرير الصيانة";
           break;
         default:
           return res.status(400).json({
@@ -2571,31 +2574,202 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
       }
 
-      // For now, return the data as JSON
-      // TODO: Implement actual PDF/Excel generation
-      const exportData = {
-        report_type,
-        format,
-        generated_at: new Date().toISOString(),
-        date_range: { from: date_from, to: date_to },
-        filters,
-        data: reportData,
-      };
-
       if (format === "json") {
-        res.json({
-          success: true,
-          data: exportData,
-        });
-      } else {
-        // For PDF/Excel, return download link or base64 data
-        res.json({
-          success: true,
-          message: `تم تجهيز التقرير بصيغة ${format}`,
-          download_url: `/api/reports/download/${report_type}-${Date.now()}.${format}`,
-          data: exportData,
-        });
+        const exportData = {
+          report_type,
+          format,
+          generated_at: new Date().toISOString(),
+          date_range: { from: date_from, to: date_to },
+          filters,
+          data: reportData,
+        };
+        return res.json({ success: true, data: exportData });
       }
+
+      if (format === "excel") {
+        const ExcelJS = (await import("exceljs")).default;
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = "نظام إدارة الطلبات";
+        workbook.created = new Date();
+
+        const sheet = workbook.addWorksheet(reportTitle, {
+          views: [{ rightToLeft: true }],
+        });
+
+        const flatData = Array.isArray(reportData)
+          ? reportData
+          : typeof reportData === "object" && reportData !== null
+            ? Object.entries(reportData).map(([key, value]) => {
+                if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+                  return { المفتاح: key, ...(value as Record<string, unknown>) };
+                }
+                return { المفتاح: key, القيمة: value };
+              })
+            : [{ البيانات: reportData }];
+
+        if (flatData.length > 0) {
+          const headers = Object.keys(flatData[0] as Record<string, unknown>);
+          const headerRow = sheet.addRow(headers);
+          headerRow.font = { bold: true, size: 12 };
+          headerRow.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FF4472C4" },
+          };
+          headerRow.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 12 };
+
+          for (const item of flatData) {
+            const row = item as Record<string, unknown>;
+            sheet.addRow(headers.map((h) => {
+              const val = row[h];
+              if (val === null || val === undefined) return "";
+              if (typeof val === "object") return JSON.stringify(val);
+              return val;
+            }));
+          }
+
+          headers.forEach((_, i) => {
+            const col = sheet.getColumn(i + 1);
+            col.width = 20;
+          });
+        }
+
+        sheet.addRow([]);
+        sheet.addRow([`تاريخ التقرير: ${new Date().toLocaleDateString("ar-SA")}`]);
+        if (date_from && date_to) {
+          sheet.addRow([`الفترة: من ${date_from} إلى ${date_to}`]);
+        }
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const filename = `${report_type}-${Date.now()}.xlsx`;
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+        return res.send(Buffer.from(buffer as ArrayBuffer));
+      }
+
+      if (format === "pdf") {
+        const PDFDocument = (await import("pdfkit")).default;
+
+        const flatData = Array.isArray(reportData)
+          ? reportData
+          : typeof reportData === "object" && reportData !== null
+            ? Object.entries(reportData).map(([key, value]) => {
+                if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+                  return { key, ...(value as Record<string, unknown>) };
+                }
+                return { key, value };
+              })
+            : [{ data: reportData }];
+
+        const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 40 });
+        const chunks: Buffer[] = [];
+        doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+
+        const pdfReady = new Promise<Buffer>((resolve) => {
+          doc.on("end", () => resolve(Buffer.concat(chunks)));
+        });
+
+        doc.fontSize(16).text(reportTitle, { align: "center" });
+        doc.moveDown(0.5);
+        doc.fontSize(10).text(
+          `Report Date: ${new Date().toLocaleDateString("en-US")}${date_from && date_to ? ` | Period: ${date_from} to ${date_to}` : ""}`,
+          { align: "center" }
+        );
+        doc.moveDown(1);
+
+        if (flatData.length > 0) {
+          const headers = Object.keys(flatData[0] as Record<string, unknown>);
+          const tableWidth = doc.page.width - 80;
+          const colWidth = tableWidth / headers.length;
+          const startX = 40;
+          let y = doc.y;
+          const fontSize = headers.length > 6 ? 6 : 8;
+
+          doc.fontSize(fontSize).font("Helvetica-Bold");
+          headers.forEach((header, i) => {
+            doc.text(String(header), startX + i * colWidth, y, {
+              width: colWidth - 2,
+              align: "left",
+              lineBreak: false,
+            });
+          });
+
+          y += 16;
+          doc.moveTo(startX, y).lineTo(startX + tableWidth, y).stroke();
+          y += 4;
+          doc.font("Helvetica").fontSize(fontSize > 6 ? 7 : 5.5);
+
+          for (const item of flatData) {
+            if (y > doc.page.height - 60) {
+              doc.addPage();
+              y = 40;
+            }
+            const row = item as Record<string, unknown>;
+            headers.forEach((h, i) => {
+              let val = row[h];
+              if (val === null || val === undefined) val = "";
+              if (typeof val === "object") val = JSON.stringify(val);
+              doc.text(String(val), startX + i * colWidth, y, {
+                width: colWidth - 2,
+                align: "left",
+                lineBreak: false,
+              });
+            });
+            y += 12;
+          }
+        } else {
+          doc.fontSize(12).text("No data available", { align: "center" });
+        }
+
+        doc.end();
+        const pdfBuffer = await pdfReady;
+        const filename = `${report_type}-${Date.now()}.pdf`;
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+        return res.send(pdfBuffer);
+      }
+
+      if (format === "csv") {
+        const flatData = Array.isArray(reportData)
+          ? reportData
+          : typeof reportData === "object" && reportData !== null
+            ? Object.entries(reportData).map(([key, value]) => {
+                if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+                  return { key, ...(value as Record<string, unknown>) };
+                }
+                return { key, value };
+              })
+            : [{ data: reportData }];
+
+        if (flatData.length === 0) {
+          return res.status(404).json({ message: "لا توجد بيانات للتصدير", success: false });
+        }
+
+        const headers = Object.keys(flatData[0] as Record<string, unknown>);
+        const csvRows = [headers.join(",")];
+        for (const item of flatData) {
+          const row = item as Record<string, unknown>;
+          csvRows.push(
+            headers.map((h) => {
+              const val = row[h];
+              if (val === null || val === undefined) return "";
+              const str = typeof val === "object" ? JSON.stringify(val) : String(val);
+              return str.includes(",") || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str;
+            }).join(",")
+          );
+        }
+
+        const csvContent = "\uFEFF" + csvRows.join("\n");
+        const filename = `${report_type}-${Date.now()}.csv`;
+        res.setHeader("Content-Type", "text/csv; charset=utf-8");
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+        return res.send(csvContent);
+      }
+
+      return res.status(400).json({
+        message: "صيغة التصدير غير مدعومة. الصيغ المتاحة: json, excel, csv",
+        success: false,
+      });
     } catch (error) {
       console.error("Export report error:", error);
       res.status(500).json({

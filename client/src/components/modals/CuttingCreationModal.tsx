@@ -220,8 +220,7 @@ export default function CuttingCreationModal({ isOpen, onClose, selectedProducti
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>إعداد السكاكين *</FormLabel>
-                  {/* TODO: Replace with real Select when API is ready */}
-                  <NumberInput value={String(field.value ?? "")} onChange={(v: string) => field.onChange(Number.parseInt(v || "0", 10))} placeholder="معرّف الإعداد" />
+                  <NumberInput value={String(field.value ?? "")} onChange={(v: string) => field.onChange(Number.parseInt(v || "0", 10))} placeholder="أدخل رقم إعداد السكاكين" />
                   <FormMessage />
                 </FormItem>
               )}

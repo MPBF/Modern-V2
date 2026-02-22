@@ -227,9 +227,8 @@ export default function Reports() {
       });
 
       if (response.ok) {
-        const data = await response.json();
         if (format === "json") {
-          // Download JSON data
+          const data = await response.json();
           const blob = new Blob([JSON.stringify(data.data, null, 2)], {
             type: "application/json",
           });
@@ -238,9 +237,16 @@ export default function Reports() {
           a.href = url;
           a.download = `${reportType}-${from}-${to}.json`;
           a.click();
+          URL.revokeObjectURL(url);
         } else {
-          console.log(`تم تجهيز التقرير: ${data.download_url}`);
-          // TODO: Implement actual PDF/Excel download
+          const blob = await response.blob();
+          const ext = format === "excel" ? "xlsx" : format;
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${reportType}-${from}-${to}.${ext}`;
+          a.click();
+          URL.revokeObjectURL(url);
         }
       }
     } catch (error) {
@@ -372,17 +378,23 @@ export default function Reports() {
 
                 <div className="flex items-end gap-2">
                   <Button
-                    onClick={() => exportReport("pdf")}
+                    onClick={() => exportReport("excel")}
                     className="flex-1"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    تصدير PDF
+                    تصدير Excel
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => exportReport("excel")}
+                    onClick={() => exportReport("pdf")}
                   >
-                    <FileText className="w-4 h-4" />
+                    PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => exportReport("csv")}
+                  >
+                    CSV
                   </Button>
                 </div>
               </div>

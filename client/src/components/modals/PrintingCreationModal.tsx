@@ -220,8 +220,7 @@ export default function PrintingCreationModal({ isOpen, onClose, selectedProduct
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>طقم الأحبار *</FormLabel>
-                  {/* TODO: Replace with real Select when API is ready */}
-                  <NumberInput value={String(field.value ?? "")} onChange={(v: string) => field.onChange(Number.parseInt(v || "0", 10))} placeholder="معرّف الطقم" />
+                  <NumberInput value={String(field.value ?? "")} onChange={(v: string) => field.onChange(Number.parseInt(v || "0", 10))} placeholder="أدخل رقم طقم الأحبار" />
                   <FormMessage />
                 </FormItem>
               )}

@@ -44,6 +44,8 @@ import AiAgentSettings from "./pages/ai-agent-settings";
 import FactorySimulation3D from "./pages/FactorySimulation3D";
 import DisplayScreen from "./pages/DisplayScreen";
 import DisplayControlPanel from "./pages/DisplayControlPanel";
+import FactoryFloor from "./pages/FactoryFloor";
+import MaterialMixing from "./pages/material-mixing";
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -283,6 +285,18 @@ function AppRoutes() {
       <Route path="/display-control">
         <ProtectedRoute path="/display-control">
           <DisplayControlPanel />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/factory-floor">
+        <ProtectedRoute path="/factory-floor">
+          <FactoryFloor />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/material-mixing">
+        <ProtectedRoute path="/material-mixing">
+          <MaterialMixing />
         </ProtectedRoute>
       </Route>
 
