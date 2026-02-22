@@ -9982,11 +9982,12 @@ Do not include quotes or explanations.`;
     try {
       const result = await db.execute(sql`
         SELECT po.id, po.production_order_number, po.status, po.quantity_kg, po.produced_quantity_kg,
-               po.film_completion_percentage, po.size_caption,
+               po.film_completion_percentage, COALESCE(cp.size_caption, '') as size_caption,
                o.order_number, c.name as customer_name, c.name_ar as customer_name_ar
         FROM production_orders po
         LEFT JOIN orders o ON po.order_id = o.id
         LEFT JOIN customers c ON o.customer_id = c.id
+        LEFT JOIN customer_products cp ON po.customer_product_id = cp.id
         ORDER BY po.created_at DESC
         LIMIT 10
       `);
@@ -10002,10 +10003,11 @@ Do not include quotes or explanations.`;
       const result = await db.execute(sql`
         SELECT r.id, r.roll_number, r.weight_kg, r.status, r.created_at,
                m.name as machine_name, m.name_ar as machine_name_ar,
-               po.production_order_number, po.size_caption
+               po.production_order_number, COALESCE(cp.size_caption, '') as size_caption
         FROM rolls r
         LEFT JOIN machines m ON r.machine_id = m.id
         LEFT JOIN production_orders po ON r.production_order_id = po.id
+        LEFT JOIN customer_products cp ON po.customer_product_id = cp.id
         ORDER BY r.created_at DESC
         LIMIT 8
       `);
@@ -10025,7 +10027,7 @@ Do not include quotes or explanations.`;
           COUNT(DISTINCT po.id) FILTER (WHERE po.status = 'in_progress') as active_orders,
           COUNT(r.id) FILTER (WHERE r.created_at >= ${today}) as rolls_today,
           COALESCE(SUM(r.weight_kg) FILTER (WHERE r.created_at >= ${today}), 0) as production_kg_today,
-          COUNT(DISTINCT po.id) FILTER (WHERE po.status = 'completed' AND po.updated_at >= ${today}) as completed_today
+          COUNT(DISTINCT po.id) FILTER (WHERE po.status = 'completed' AND po.production_end_time >= ${today}) as completed_today
         FROM production_orders po
         LEFT JOIN rolls r ON r.production_order_id = po.id
       `);
