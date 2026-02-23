@@ -904,7 +904,7 @@ export default function Definitions() {
     }
   }, [customerProductForm.category_id, categories]);
 
-  // Auto-calculate cutting length from printing cylinder (skip for sufra categories where it's manual)
+  // Auto-calculate cutting length from printing cylinder (skip for sufra categories and "no printing" where it's manual)
   React.useEffect(() => {
     const selectedCat = Array.isArray(categories)
       ? (categories as any[]).find((c: any) => c.id === customerProductForm.category_id)
@@ -928,6 +928,11 @@ export default function Definitions() {
           cutting_length_cm: calculatedLength.toString(),
         }));
       }
+    } else if (customerProductForm.printing_cylinder === "بدون طباعة") {
+      setCustomerProductForm((prev) => ({
+        ...prev,
+        cutting_length_cm: "",
+      }));
     }
   }, [customerProductForm.printing_cylinder, customerProductForm.category_id, categories]);
 
@@ -4639,6 +4644,8 @@ export default function Definitions() {
                               : null;
                             const catNameAr = selectedCat?.name_ar || "";
                             const isSufra = catNameAr === "سفرة بلاستيكية" || catNameAr === "سفرة بلاستيكية مطوية";
+                            const isNoPrinting = customerProductForm.printing_cylinder === "بدون طباعة";
+                            const isManualInput = isSufra || isNoPrinting;
                             return (
                               <Input
                                 id="cutting_length_cm"
@@ -4650,9 +4657,9 @@ export default function Definitions() {
                                     cutting_length_cm: e.target.value,
                                   })
                                 }
-                                placeholder={isSufra ? t("definitions.form.enterCuttingLength") : t("definitions.form.autoCalculated")}
+                                placeholder={isManualInput ? t("definitions.form.enterCuttingLength") : t("definitions.form.autoCalculated")}
                                 className="mt-1"
-                                disabled={!isSufra}
+                                disabled={!isManualInput}
                               />
                             );
                           })()}
