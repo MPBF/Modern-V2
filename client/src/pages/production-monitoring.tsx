@@ -1053,7 +1053,7 @@ function SectionContent({
 
           {filteredOrders.length > 20 && (
             <p className="text-sm text-gray-500 text-center">
-              {t('production.monitoring.showing20Of', { count: formatNumber(filteredOrders.length) })}
+              {t('production.monitoring.showing20Of', { count: filteredOrders.length })}
             </p>
           )}
         </CardContent>

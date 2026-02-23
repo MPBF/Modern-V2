@@ -4,6 +4,16 @@
  *  page numbers, totals box, notes area, signature box, watermark, and clean business layout.
  **************************************************************************************************/
 
+import fs from "fs";
+import path from "path";
+import PDFDocument from "pdfkit";
+import * as ArabicReshaper from "arabic-reshaper";
+import bidiFactory from "bidi-js";
+const bidi = bidiFactory();
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+import { quotes, quote_items } from "@shared/schema";
+
 // ===================== Arabic Helpers =====================
 function toArabicDigits(input: string | number): string {
   return String(input ?? "");
@@ -77,7 +87,7 @@ function drawLabelValue(
   const lh = 12;
 
   // Arabic
-  if (doc._registeredFonts["Arabic"]) {
+  if ((doc as any)._registeredFonts?.["Arabic"]) {
     doc.font("Arabic").fontSize(9).fillColor("#111");
     drawTextRTL(doc, `${labelAr}: ${shapeArabicSafe(value)}`, x + width, y, {
       width,
@@ -93,7 +103,7 @@ function drawLabelValue(
 // =======================================================================
 // =====================  MAIN PDF GENERATOR  ============================
 // =======================================================================
-async function generateQuotePdfBuffer(quoteId: number): Promise<Buffer> {
+export async function generateQuotePdfBuffer(quoteId: number): Promise<Buffer> {
   const [quote] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
   if (!quote) throw new Error("Quote not found");
 
