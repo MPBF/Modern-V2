@@ -79,6 +79,8 @@ export type PermissionKey =
   | 'manage_warehouse_vouchers'
   | 'view_warehouse_reports'
   | 'manage_production_hall'
+  | 'view_display_screen'
+  | 'manage_display_screen'
   | 'admin'; // Super admin permission
 
 export interface Permission {
@@ -635,6 +637,22 @@ export const PERMISSIONS: Permission[] = [
     description: 'Edit and configure factory simulation layout'
   },
   
+  // Display Screen
+  {
+    id: 'view_display_screen',
+    name: 'View Display Screen',
+    name_ar: 'عرض شاشة العرض',
+    category: 'شاشة العرض',
+    description: 'Access to view the production display screen'
+  },
+  {
+    id: 'manage_display_screen',
+    name: 'Manage Display Screen',
+    name_ar: 'إدارة شاشة العرض',
+    category: 'شاشة العرض',
+    description: 'Control and manage display screen slides and settings'
+  },
+
   // Admin
   { 
     id: 'admin', 
@@ -705,6 +723,10 @@ export const ROUTE_PERMISSIONS: Record<string, PermissionKey[]> = {
   // AI Agent
   '/ai-agent': ['view_ai_agent', 'use_ai_agent'],
   '/ai-agent-settings': ['manage_ai_agent', 'admin'],
+
+  // Display Screen
+  '/display-screen': ['view_display_screen', 'admin'],
+  '/display-control': ['manage_display_screen', 'admin'],
 };
 
 // Settings tabs permissions
@@ -775,6 +797,7 @@ export const PERMISSION_CATEGORIES = [
   'المراقبة',
   'التعريفات',
   'محاكاة المصنع',
+  'شاشة العرض',
   'التكامل',
   'الوكيل الذكي',
   'النظام'

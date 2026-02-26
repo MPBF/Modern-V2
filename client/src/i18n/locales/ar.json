@@ -4985,6 +4985,9 @@
       "monitoring": "المراقبة",
       "integration": "التكامل",
       "aiAgent": "الوكيل الذكي",
+      "factorySimulation": "محاكاة المصنع",
+      "displayScreen": "شاشة العرض",
+      "definitions": "التعريفات",
       "system": "النظام"
     }
   },

@@ -4479,6 +4479,9 @@
       "monitoring": "Monitoring",
       "integration": "Integration",
       "aiAgent": "AI Agent",
+      "factorySimulation": "Factory Simulation",
+      "displayScreen": "Display Screen",
+      "definitions": "Definitions",
       "system": "System"
     }
   },

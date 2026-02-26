@@ -47,6 +47,9 @@ const CATEGORY_TRANSLATION_MAP: Record<string, string> = {
   'المراقبة': 'monitoring',
   'التكامل': 'integration',
   'الوكيل الذكي': 'aiAgent',
+  'محاكاة المصنع': 'factorySimulation',
+  'شاشة العرض': 'displayScreen',
+  'التعريفات': 'definitions',
   'النظام': 'system',
 };
 
