@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from "express";
+import { requireAuth } from "./middleware/auth";
 import OpenAI from "openai";
 import { db } from "./db";
 import { orders, production_orders, rolls, quotes, quote_items, customers, ai_agent_settings, ai_agent_knowledge, quote_templates, users, machines, inventory, maintenance_requests, items } from "@shared/schema";
@@ -2040,7 +2041,7 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
 }
 
 export function registerAiAgentRoutes(app: Express): void {
-  app.post("/api/ai-agent/chat", async (req: Request, res: Response) => {
+  app.post("/api/ai-agent/chat", requireAuth, async (req: Request, res: Response) => {
   let clientClosed = false;
 
   // لمراقبة إغلاق الاتصال من العميل
@@ -2212,7 +2213,7 @@ export function registerAiAgentRoutes(app: Express): void {
 });
 
 
-  app.get("/api/quotes", async (_req: Request, res: Response) => {
+  app.get("/api/quotes", requireAuth, async (_req: Request, res: Response) => {
     try {
       const allQuotes = await db.select().from(quotes).orderBy(desc(quotes.created_at));
       res.json(allQuotes);
@@ -2222,7 +2223,7 @@ export function registerAiAgentRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/quotes/:id", async (req: Request, res: Response) => {
+  app.get("/api/quotes/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
@@ -2307,7 +2308,7 @@ export function registerAiAgentRoutes(app: Express): void {
   });
 
   // ===== رفع الملفات وقراءتها =====
-  app.post("/api/ai-agent/upload", upload.single("file"), async (req: Request, res: Response) => {
+  app.post("/api/ai-agent/upload", requireAuth, upload.single("file"), async (req: Request, res: Response) => {
     const file = req.file;
     const filePath = file?.path;
     
@@ -2394,7 +2395,7 @@ export function registerAiAgentRoutes(app: Express): void {
   });
 
   // ===== تحويل الصوت إلى نص باستخدام Whisper =====
-  app.post("/api/ai-agent/transcribe", upload.single("audio"), async (req: Request, res: Response) => {
+  app.post("/api/ai-agent/transcribe", requireAuth, upload.single("audio"), async (req: Request, res: Response) => {
     const file = req.file;
     const filePath = file?.path;
     
@@ -2454,7 +2455,7 @@ export function registerAiAgentRoutes(app: Express): void {
   });
 
   // ===== إعدادات الوكيل الذكي =====
-  app.get("/api/ai-agent/settings", async (_req: Request, res: Response) => {
+  app.get("/api/ai-agent/settings", requireAuth, async (_req: Request, res: Response) => {
     try {
       const settings = await db.select().from(ai_agent_settings);
       res.json(settings);
@@ -2464,7 +2465,7 @@ export function registerAiAgentRoutes(app: Express): void {
     }
   });
 
-  app.put("/api/ai-agent/settings/:key", async (req: Request, res: Response) => {
+  app.put("/api/ai-agent/settings/:key", requireAuth, async (req: Request, res: Response) => {
     try {
       const { key } = req.params;
       const { value, description } = req.body;
@@ -2487,7 +2488,7 @@ export function registerAiAgentRoutes(app: Express): void {
   });
 
   // ===== قاعدة المعرفة =====
-  app.get("/api/ai-agent/knowledge", async (_req: Request, res: Response) => {
+  app.get("/api/ai-agent/knowledge", requireAuth, async (_req: Request, res: Response) => {
     try {
       const knowledge = await db.select().from(ai_agent_knowledge).orderBy(desc(ai_agent_knowledge.created_at));
       res.json(knowledge);
@@ -2497,7 +2498,7 @@ export function registerAiAgentRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/ai-agent/knowledge", async (req: Request, res: Response) => {
+  app.post("/api/ai-agent/knowledge", requireAuth, async (req: Request, res: Response) => {
     try {
       const { title, content, category } = req.body;
       const [newKnowledge] = await db.insert(ai_agent_knowledge).values({
@@ -2513,7 +2514,7 @@ export function registerAiAgentRoutes(app: Express): void {
     }
   });
 
-  app.put("/api/ai-agent/knowledge/:id", async (req: Request, res: Response) => {
+  app.put("/api/ai-agent/knowledge/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const { title, content, category, is_active } = req.body;
@@ -2530,7 +2531,7 @@ export function registerAiAgentRoutes(app: Express): void {
     }
   });
 
-  app.delete("/api/ai-agent/knowledge/:id", async (req: Request, res: Response) => {
+  app.delete("/api/ai-agent/knowledge/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       await db.delete(ai_agent_knowledge).where(eq(ai_agent_knowledge.id, id));
@@ -2542,7 +2543,7 @@ export function registerAiAgentRoutes(app: Express): void {
   });
 
   // ===== نماذج عروض الأسعار =====
-  app.get("/api/quote-templates", async (_req: Request, res: Response) => {
+  app.get("/api/quote-templates", requireAuth, async (_req: Request, res: Response) => {
     try {
       const templates = await db.select().from(quote_templates).orderBy(desc(quote_templates.created_at));
       res.json(templates);
@@ -2552,7 +2553,7 @@ export function registerAiAgentRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/quote-templates/active", async (_req: Request, res: Response) => {
+  app.get("/api/quote-templates/active", requireAuth, async (_req: Request, res: Response) => {
     try {
       const templates = await db.select().from(quote_templates)
         .where(eq(quote_templates.is_active, true))
@@ -2564,7 +2565,7 @@ export function registerAiAgentRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/quote-templates", async (req: Request, res: Response) => {
+  app.post("/api/quote-templates", requireAuth, async (req: Request, res: Response) => {
     try {
       const { name, description, product_name, product_description, unit_price, unit, min_quantity, specifications, category } = req.body;
       const [newTemplate] = await db.insert(quote_templates).values({
@@ -2586,7 +2587,7 @@ export function registerAiAgentRoutes(app: Express): void {
     }
   });
 
-  app.put("/api/quote-templates/:id", async (req: Request, res: Response) => {
+  app.put("/api/quote-templates/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const { name, description, product_name, product_description, unit_price, unit, min_quantity, specifications, category, is_active } = req.body;
@@ -2615,7 +2616,7 @@ export function registerAiAgentRoutes(app: Express): void {
     }
   });
 
-  app.delete("/api/quote-templates/:id", async (req: Request, res: Response) => {
+  app.delete("/api/quote-templates/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       await db.delete(quote_templates).where(eq(quote_templates.id, id));
