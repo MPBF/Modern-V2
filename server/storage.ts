@@ -2739,7 +2739,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveProductionOrdersForOperator(userId: number): Promise<any[]> {
-    return await db.select().from(production_orders).where(and(eq(production_orders.operator_id, userId), eq(production_orders.status, 'in_progress'))).orderBy(desc(production_orders.id));
+    return await db.select().from(production_orders).where(and(eq(production_orders.assigned_operator_id, userId), eq(production_orders.status, 'active'))).orderBy(desc(production_orders.id));
   }
 
   async getActivePrintingRollsForOperator(userId: number): Promise<any[]> {
