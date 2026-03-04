@@ -2249,22 +2249,51 @@ export class DatabaseStorage implements IStorage {
     await db.delete(sections).where(eq(sections.id, id));
   }
 
-  async getCustomers(): Promise<Customer[]> {
-    return this.getAllCustomers();
+  async getCustomers(options?: { search?: string; page?: number; limit?: number }): Promise<any> {
+    const pageNum = options?.page || 1;
+    const pageLimit = options?.limit || 50;
+    const offset = (pageNum - 1) * pageLimit;
+
+    let query = db.select().from(customers);
+
+    if (options?.search) {
+      const s = `%${options.search}%`;
+      query = query.where(or(
+        sql`${customers.name} ILIKE ${s}`,
+        sql`${customers.name_ar} ILIKE ${s}`,
+        sql`${customers.id} ILIKE ${s}`,
+      )) as any;
+    }
+
+    const total = await db.select({ count: count() }).from(customers).then(r => r[0]?.count || 0);
+    const data = await query.orderBy(customers.name).limit(pageLimit).offset(offset);
+
+    return { data, total, page: pageNum, limit: pageLimit };
   }
 
   async createCustomer(data: any): Promise<Customer> {
-    const [c] = await db.insert(customers).values(data).returning();
+    // Auto-generate ID if not provided (format: CID001)
+    let id = data.id;
+    if (!id) {
+      const [last] = await db.select({ id: customers.id }).from(customers).orderBy(desc(customers.id)).limit(1);
+      const lastNum = last ? parseInt((last.id || '').replace(/\D/g, '') || '0') : 0;
+      id = `CID${String(lastNum + 1).padStart(3, '0')}`;
+    }
+    const [c] = await db.insert(customers).values({ ...data, id }).returning();
     return c;
   }
 
-  async updateCustomer(id: number, data: any): Promise<Customer> {
-    const [u] = await db.update(customers).set({ ...data, updated_at: new Date() }).where(eq(customers.id, id)).returning();
+  async updateCustomer(id: string | any, data: any): Promise<Customer> {
+    const [u] = await db.update(customers).set(data).where(eq(customers.id, String(id))).returning();
     return u;
   }
 
-  async deleteCustomer(id: number): Promise<void> {
-    await db.delete(customers).where(eq(customers.id, id));
+  async deleteCustomer(id: string | any): Promise<void> {
+    await db.delete(customers).where(eq(customers.id, String(id)));
+  }
+
+  async getMachines(): Promise<Machine[]> {
+    return this.getAllMachines();
   }
 
   async createMachine(data: any): Promise<Machine> {
@@ -2281,6 +2310,10 @@ export class DatabaseStorage implements IStorage {
     await db.delete(machines).where(eq(machines.id, id));
   }
 
+  async getMachinesProductionBySection(section: any, dateFrom?: string, dateTo?: string): Promise<any[]> {
+    return await db.select().from(machines).orderBy(machines.name);
+  }
+
   async createItem(data: any): Promise<Item> {
     const [i] = await db.insert(items).values(data).returning();
     return i;
@@ -2295,8 +2328,36 @@ export class DatabaseStorage implements IStorage {
     await db.delete(items).where(eq(items.id, id));
   }
 
-  async getCustomerProducts(): Promise<CustomerProduct[]> {
-    return this.getAllCustomerProducts();
+  async getCustomerProducts(options?: { customer_id?: string; ids?: number[]; page?: number; limit?: number; search?: string }): Promise<any> {
+    const pageNum = options?.page || 1;
+    const pageLimit = options?.limit || 500;
+    const offset = (pageNum - 1) * pageLimit;
+
+    const conditions: any[] = [];
+    if (options?.customer_id) {
+      conditions.push(eq(customer_products.customer_id, options.customer_id));
+    }
+    if (options?.ids && options.ids.length > 0) {
+      conditions.push(inArray(customer_products.id, options.ids));
+    }
+    if (options?.search) {
+      const s = `%${options.search}%`;
+      conditions.push(sql`${customer_products.name} ILIKE ${s}`);
+    }
+
+    let query = db.select().from(customer_products) as any;
+    if (conditions.length > 0) {
+      query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions));
+    }
+
+    const countQuery = db.select({ count: count() }).from(customer_products) as any;
+    const [totalResult] = conditions.length > 0
+      ? await countQuery.where(conditions.length === 1 ? conditions[0] : and(...conditions))
+      : await countQuery;
+    const total = totalResult?.count || 0;
+
+    const data = await query.orderBy(customer_products.name).limit(pageLimit).offset(offset);
+    return { data, total, page: pageNum, limit: pageLimit };
   }
 
   async createCustomerProduct(data: any): Promise<CustomerProduct> {
@@ -2826,6 +2887,212 @@ export class DatabaseStorage implements IStorage {
 
   async getProductionOrdersByStatus(status: string): Promise<ProductionOrder[]> {
     return await db.select().from(production_orders).where(eq(production_orders.status, status)).orderBy(desc(production_orders.id));
+  }
+
+  async getItems(): Promise<Item[]> {
+    return this.getAllItems();
+  }
+
+  async getInventoryItems(): Promise<Inventory[]> {
+    return this.getAllInventory();
+  }
+
+  async getInventoryByItemId(itemId: number): Promise<Inventory | undefined> {
+    const [i] = await db.select().from(inventory).where(eq(inventory.item_id, itemId));
+    return i;
+  }
+
+  async getInventoryStats(): Promise<any> {
+    const [total] = await db.select({ count: count() }).from(inventory);
+    return { totalItems: total?.count || 0, lowStock: 0 };
+  }
+
+  async getMaintenanceRequests(): Promise<MaintenanceRequest[]> {
+    return this.getAllMaintenanceRequests();
+  }
+
+  async getMaintenanceActionsByRequestId(requestId: number): Promise<MaintenanceAction[]> {
+    return this.getMaintenanceActions(requestId);
+  }
+
+  async getMaintenanceReportsByType(type?: string): Promise<MaintenanceReport[]> {
+    return this.getMaintenanceReports();
+  }
+
+  async getMasterBatchColorById(id: number): Promise<MasterBatchColor | undefined> {
+    const [c] = await db.select().from(master_batch_colors).where(eq(master_batch_colors.id, id));
+    return c;
+  }
+
+  async getMixingBatchesByOperator(operatorId: number): Promise<MixingBatch[]> {
+    return await db.select().from(mixing_batches).where(eq(mixing_batches.operator_id, operatorId)).orderBy(desc(mixing_batches.created_at));
+  }
+
+  async getMixingBatchesByProductionOrder(poId: number): Promise<MixingBatch[]> {
+    return await db.select().from(mixing_batches).where(eq(mixing_batches.production_order_id, poId)).orderBy(desc(mixing_batches.created_at));
+  }
+
+  async getNextVoucherNumber(prefix: string): Promise<string> {
+    const result = await pool.query(
+      `SELECT COUNT(*) + 1 AS next FROM (
+        SELECT voucher_number FROM raw_material_vouchers_in WHERE voucher_number LIKE $1
+        UNION ALL
+        SELECT voucher_number FROM raw_material_vouchers_out WHERE voucher_number LIKE $1
+        UNION ALL
+        SELECT voucher_number FROM finished_goods_vouchers_in WHERE voucher_number LIKE $1
+        UNION ALL
+        SELECT voucher_number FROM finished_goods_vouchers_out WHERE voucher_number LIKE $1
+      ) t`,
+      [`${prefix}%`]
+    );
+    const num = parseInt(result.rows[0]?.next || '1');
+    return `${prefix}${String(num).padStart(4, '0')}`;
+  }
+
+  async getOperatorNegligenceReportsByOperator(operatorId: number): Promise<OperatorNegligenceReport[]> {
+    return await db.select().from(operator_negligence_reports).where(eq(operator_negligence_reports.operator_id, operatorId));
+  }
+
+  async getOperatorPerformance(operatorId?: number): Promise<any> {
+    return { operatorId, performance: 0 };
+  }
+
+  async getOrderProgress(orderId: number): Promise<any> {
+    const order = await this.getOrderById(orderId);
+    if (!order) return null;
+    const pos = await db.select().from(production_orders).where(eq(production_orders.order_id, orderId));
+    return { order, productionOrders: pos, progress: pos.length > 0 ? 50 : 0 };
+  }
+
+  async getOrderReports(options?: any): Promise<any> {
+    const allOrders = await this.getAllOrders();
+    return { orders: allOrders, total: allOrders.length };
+  }
+
+  async getOrdersEnhanced(options?: any): Promise<any> {
+    return this.getAllOrders();
+  }
+
+  async getPendingLeaveRequests(): Promise<LeaveRequest[]> {
+    return await db.select().from(leave_requests).where(eq(leave_requests.status, 'pending')).orderBy(desc(leave_requests.created_at));
+  }
+
+  async getPrintingQueue(): Promise<any[]> {
+    return this.getProductionOrdersForPrintingQueue();
+  }
+
+  async getFilmQueue(): Promise<any[]> {
+    return await db.select().from(production_orders).where(eq(production_orders.status, 'waiting_for_film')).orderBy(production_orders.id);
+  }
+
+  async getPrintingStats(): Promise<any> {
+    const [printed] = await db.select({ count: count() }).from(production_orders).where(eq(production_orders.status, 'printed'));
+    return { printed: printed?.count || 0 };
+  }
+
+  async getProductionAlerts(): Promise<any[]> {
+    return [];
+  }
+
+  async getProductionByDate(date?: string): Promise<any[]> {
+    return [];
+  }
+
+  async getProductionByProduct(productId?: number): Promise<any[]> {
+    return [];
+  }
+
+  async getProductionEfficiencyMetrics(): Promise<any> {
+    return { efficiency: 0, target: 100 };
+  }
+
+  async getProductionOrdersBySection(sectionId: number): Promise<ProductionOrder[]> {
+    return await db.select().from(production_orders).where(eq(production_orders.section_id, sectionId)).orderBy(desc(production_orders.id));
+  }
+
+  async getProductionOrdersForReceipt(orderId: number): Promise<ProductionOrder[]> {
+    return await db.select().from(production_orders).where(eq(production_orders.order_id, orderId));
+  }
+
+  async getProductionOrderStats(): Promise<any> {
+    const [total] = await db.select({ count: count() }).from(production_orders);
+    const [active] = await db.select({ count: count() }).from(production_orders).where(eq(production_orders.status, 'in_progress'));
+    return { total: total?.count || 0, active: active?.count || 0 };
+  }
+
+  async getProductionOrdersWithDetails(): Promise<any[]> {
+    return await db.select().from(production_orders).orderBy(desc(production_orders.id));
+  }
+
+  async getProductionStatsBySection(sectionId?: number): Promise<any> {
+    return { sectionId, total: 0 };
+  }
+
+  async getProductionSummary(options?: any): Promise<any> {
+    const stats = await this.getProductionStats();
+    return stats;
+  }
+
+  async getQualityChecks(rollId?: number): Promise<QualityCheck[]> {
+    if (rollId) return this.getQualityChecksByRoll(rollId);
+    return await db.select().from(quality_checks).orderBy(desc(quality_checks.id));
+  }
+
+  async getQuickNoteById(id: number): Promise<QuickNote | undefined> {
+    const [n] = await db.select().from(quick_notes).where(eq(quick_notes.id, id));
+    return n;
+  }
+
+  async getRealTimeProductionStats(): Promise<any> {
+    return { active: 0, completed: 0, pending: 0 };
+  }
+
+  async getDatabaseStats(): Promise<any> {
+    const [userCount] = await db.select({ count: count() }).from(users);
+    const [orderCount] = await db.select({ count: count() }).from(orders);
+    const [rollCount] = await db.select({ count: count() }).from(rolls);
+    return {
+      users: userCount?.count || 0,
+      orders: orderCount?.count || 0,
+      rolls: rollCount?.count || 0,
+    };
+  }
+
+  async getDistributionPreview(options?: any): Promise<any> {
+    return { preview: [], suggestions: [] };
+  }
+
+  async getFactoryLocation(id: number): Promise<FactoryLocation | undefined> {
+    const [l] = await db.select().from(factory_locations).where(eq(factory_locations.id, id));
+    return l;
+  }
+
+  async getHRReports(options?: any): Promise<any> {
+    return { reports: [] };
+  }
+
+  async getMachineCapacityStats(): Promise<any> {
+    return { machines: [], totalCapacity: 0, usedCapacity: 0 };
+  }
+
+  async getMachineDetailAllStages(machineId: number): Promise<any> {
+    const machine = await this.getMachineById(machineId);
+    const queue = await this.getMachineQueue(machineId);
+    return { machine, queue };
+  }
+
+  async getMachinePerformance(machineId?: number): Promise<any> {
+    return { machineId, performance: 0, uptime: 0 };
+  }
+
+  async getMachineQueues(): Promise<any[]> {
+    const allMachines = await this.getAllMachines();
+    const queues = await Promise.all(allMachines.map(m => this.getMachineQueue(m.id)));
+    return allMachines.map((m, i) => ({ machine: m, queue: queues[i] }));
+  }
+
+  async getMachineUtilizationStats(): Promise<any> {
+    return { utilization: 0, machines: [] };
   }
 }
 
