@@ -2356,7 +2356,7 @@ export class DatabaseStorage implements IStorage {
       : await countQuery;
     const total = totalResult?.count || 0;
 
-    const data = await query.orderBy(customer_products.name).limit(pageLimit).offset(offset);
+    const data = await query.orderBy(customer_products.id).limit(pageLimit).offset(offset);
     return { data, total, page: pageNum, limit: pageLimit };
   }
 
