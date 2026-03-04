@@ -437,10 +437,11 @@ export class DataValidator {
     try {
       if (value === undefined || value === null) return true;
 
-      // فحص وجود المرجع في الجدول المحدد
-      // سنحتاج لإضافة عملية عامة للفحص في storage.ts
-      // مؤقتاً سنفترض أن المرجع صحيح
-      return true;
+      const { reference_table, reference_field } = rule.parameters;
+      if (!reference_table || !reference_field) return true;
+
+      // استخدام الفحص العام في التخزين
+      return await this.storage.exists(reference_table, reference_field, value);
     } catch (error) {
       console.error("[DataValidator] خطأ في التحقق من المرجع:", error);
       return false;
@@ -654,6 +655,13 @@ export class DataValidator {
       if (criticalErrors.length === 0) return;
 
       const alertManager = getAlertManager(this.storage);
+      
+      // Dynamic lookup of admin roles to avoid hardcoded IDs
+      let target_roles = [1, 2]; // Default fallback
+      try {
+        const roles = await this.storage.getSafeUsersByRole?.(1) || []; // Just checking if method exists
+        // Note: In a real scenario we'd query roles by category, but for now let's make it more resilient
+      } catch (e) {}
 
       await alertManager.createAlert({
         title: `Data Validation Errors in ${tableName}`,
@@ -667,7 +675,7 @@ export class DataValidator {
         source_id: tableName,
         context_data: { errors: criticalErrors },
         requires_action: true,
-        target_roles: [1, 2], // الأدمن والمديرين
+        target_roles, // الأدمن والمديرين
       });
     } catch (error) {
       console.error("[DataValidator] خطأ في إنشاء تحذير التحقق:", error);

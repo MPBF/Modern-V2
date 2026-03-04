@@ -185,31 +185,36 @@ export class CodeHealthChecker {
 
   private static checkDuplicateCodeFromContent(fileContents: Map<string, string>): CodeIssue[] {
     const issues: CodeIssue[] = [];
-    const functionSignatures = new Map<string, string[]>();
+    const functionHashes = new Map<string, string[]>();
 
     Array.from(fileContents.entries()).forEach(([file, content]) => {
-      const functionRegex = /(?:function|const|let|var)\s+(\w+)\s*[=:]?\s*(?:\([^)]*\)|\([^)]*\)\s*=>)/g;
+      // تحسين البحث عن الدوال ليشمل المتن (بشكل مبسط عبر الهاش) لتجنب التشابه في الأسماء فقط
+      const functionRegex = /(?:function|const|let|var)\s+(\w+)\s*[=:]?\s*(?:\([^)]*\)|\([^)]*\)\s*=>)\s*\{([\s\S]*?)\}/g;
       let match;
 
       while ((match = functionRegex.exec(content)) !== null) {
-        const signature = match[0];
+        const body = match[2].replace(/\s+/g, ''); // إزالة المسافات للمقارنة
+        if (body.length < 50) continue; // تجاهل الدوال القصيرة جداً
 
-        if (!functionSignatures.has(signature)) {
-          functionSignatures.set(signature, []);
+        if (!functionHashes.has(body)) {
+          functionHashes.set(body, []);
         }
-        functionSignatures.get(signature)!.push(file);
+        functionHashes.get(body)!.push(file);
       }
     });
 
-    Array.from(functionSignatures.entries()).forEach(([, filesList]) => {
+    Array.from(functionHashes.entries()).forEach(([, filesList]) => {
       if (filesList.length > 1) {
-        issues.push({
-          type: 'duplicate_code',
-          severity: 'medium',
-          file: filesList.map((f: string) => this.relativePath(f)).join(', '),
-          message: `دالة مشابهة موجودة في ${filesList.length} ملفات`,
-          suggestion: 'يُنصح بإنشاء دالة مشتركة'
-        });
+        const uniqueFiles = [...new Set(filesList)];
+        if (uniqueFiles.length > 1) {
+          issues.push({
+            type: 'duplicate_code',
+            severity: 'medium',
+            file: uniqueFiles.map((f: string) => this.relativePath(f)).join(', '),
+            message: `كود مكرر (نفس المتن) موجود في ${uniqueFiles.length} ملفات`,
+            suggestion: 'يُنصح بإنشاء دالة مشتركة'
+          });
+        }
       }
     });
 
