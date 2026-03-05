@@ -2739,15 +2739,63 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveProductionOrdersForOperator(userId: number): Promise<any[]> {
-    return await db.select().from(production_orders).where(and(eq(production_orders.assigned_operator_id, userId), eq(production_orders.status, 'active'))).orderBy(desc(production_orders.id));
+    const result = await db.execute(sql`
+      SELECT
+        po.id,
+        po.production_order_number,
+        po.order_id,
+        po.customer_product_id,
+        po.quantity_kg,
+        po.final_quantity_kg,
+        po.produced_quantity_kg,
+        po.overrun_percentage,
+        po.status,
+        po.assigned_operator_id,
+        po.assigned_machine_id,
+        po.film_completed,
+        po.printing_completed,
+        po.cutting_completed,
+        po.is_final_roll_created,
+        po.production_start_time,
+        po.production_end_time,
+        po.production_time_minutes,
+        po.film_completion_percentage,
+        po.created_at,
+        o.order_number,
+        o.status AS order_status,
+        c.id AS customer_id,
+        COALESCE(c.name_ar, c.name) AS customer_name,
+        c.name_ar AS customer_name_ar,
+        c.name AS customer_name_en,
+        COALESCE(cp.name_ar, cp.name) AS product_name,
+        cp.name_ar AS product_name_ar,
+        cp.name AS product_name_en,
+        cp.category_id,
+        cp.size_caption,
+        cp.raw_material,
+        cp.thickness,
+        COUNT(r.id) AS rolls_count,
+        COALESCE(SUM(r.weight_kg), 0) AS total_weight_produced,
+        GREATEST(0, COALESCE(po.final_quantity_kg, po.quantity_kg) - COALESCE(po.produced_quantity_kg, 0)) AS remaining_quantity
+      FROM production_orders po
+      JOIN orders o ON o.id = po.order_id
+      JOIN customers c ON c.id = o.customer_id
+      LEFT JOIN customer_products cp ON cp.id = po.customer_product_id
+      LEFT JOIN rolls r ON r.production_order_id = po.id AND r.stage != 'done'
+      WHERE o.status = 'in_production'
+        AND po.status IN ('pending', 'active')
+      GROUP BY po.id, o.id, c.id, cp.id
+      ORDER BY po.id DESC
+    `);
+    return result.rows as any[];
   }
 
   async getActivePrintingRollsForOperator(userId: number): Promise<any[]> {
-    return await db.select().from(rolls).where(and(eq(rolls.operator_id, userId), eq(rolls.stage, 'printing'))).orderBy(desc(rolls.created_at));
+    return await db.select().from(rolls).where(eq(rolls.stage, 'printing')).orderBy(desc(rolls.created_at));
   }
 
   async getActiveCuttingRollsForOperator(userId: number): Promise<any[]> {
-    return await db.select().from(rolls).where(and(eq(rolls.operator_id, userId), eq(rolls.stage, 'cutting'))).orderBy(desc(rolls.created_at));
+    return await db.select().from(rolls).where(eq(rolls.stage, 'cutting')).orderBy(desc(rolls.created_at));
   }
 
   async getActiveFactoryLocations(): Promise<FactoryLocation[]> {
