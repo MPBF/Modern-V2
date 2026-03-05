@@ -151,15 +151,15 @@
     "changeStatus": "Change Status",
     "statuses": {
       "waiting": "New",
-      "for_production": "In Production",
-      "in_production": "In Production",
-      "completed": "Completed",
-      "cancelled": "Cancelled",
-      "on_hold": "Temporarily Paused",
+      "for_production": "For Production",
+      "in_production": "For Production",
+      "completed": "Complete",
+      "cancelled": "Canceled",
+      "on_hold": "Hold",
       "pending": "New",
-      "paused": "Temporarily Paused",
+      "paused": "Hold",
       "received": "Received",
-      "delivered": "Completed"
+      "delivered": "Complete"
     },
     "priorities": {
       "normal": "Normal",
