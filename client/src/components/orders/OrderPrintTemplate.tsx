@@ -222,8 +222,8 @@ export default function OrderPrintTemplate({
 
   const totalWeight = useMemo(() => {
     return sortedOrders.reduce((sum, po) => {
-      const raw = po.final_quantity_kg ?? po.quantity_kg ?? 0;
-      return sum + Number(raw);
+      const raw = Number(po.quantity_kg ?? 0) || Number(po.final_quantity_kg ?? 0);
+      return sum + raw;
     }, 0);
   }, [sortedOrders]);
 
@@ -520,7 +520,7 @@ export default function OrderPrintTemplate({
                 const cp = customerProductsMap.get(po.customer_product_id);
                 const item = cp ? itemsMap.get(cp.item_id) : undefined;
                 const color = getMasterBatchInfo(cp?.master_batch_id);
-                const qty = Number(po.final_quantity_kg ?? po.quantity_kg ?? 0);
+                const qty = Number(po.quantity_kg ?? 0) || Number(po.final_quantity_kg ?? 0);
 
                 return (
                   <tr key={po.id}>
