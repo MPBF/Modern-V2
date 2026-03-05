@@ -999,6 +999,7 @@ export class DatabaseStorage implements IStorage {
   async deleteOrder(id: number): Promise<void> {
     return withDatabaseErrorHandling(
       async () => {
+        await db.delete(production_orders).where(eq(production_orders.order_id, id));
         await db.delete(orders).where(eq(orders.id, id));
       },
       "deleteOrder",
@@ -2767,24 +2768,25 @@ export class DatabaseStorage implements IStorage {
         COALESCE(c.name_ar, c.name) AS customer_name,
         c.name_ar AS customer_name_ar,
         c.name AS customer_name_en,
-        COALESCE(cp.name_ar, cp.name) AS product_name,
-        cp.name_ar AS product_name_ar,
-        cp.name AS product_name_en,
+        COALESCE(i.name_ar, i.name) AS product_name,
+        i.name_ar AS product_name_ar,
+        i.name AS product_name_en,
         cp.category_id,
         cp.size_caption,
         cp.raw_material,
         cp.thickness,
         COUNT(r.id) AS rolls_count,
         COALESCE(SUM(r.weight_kg), 0) AS total_weight_produced,
-        GREATEST(0, COALESCE(po.final_quantity_kg, po.quantity_kg) - COALESCE(po.produced_quantity_kg, 0)) AS remaining_quantity
+        GREATEST(0, COALESCE(po.final_quantity_kg::numeric, po.quantity_kg::numeric) - COALESCE(po.produced_quantity_kg::numeric, 0)) AS remaining_quantity
       FROM production_orders po
       JOIN orders o ON o.id = po.order_id
       JOIN customers c ON c.id = o.customer_id
       LEFT JOIN customer_products cp ON cp.id = po.customer_product_id
+      LEFT JOIN items i ON i.id = cp.item_id
       LEFT JOIN rolls r ON r.production_order_id = po.id AND r.stage != 'done'
       WHERE o.status = 'in_production'
         AND po.status IN ('pending', 'active')
-      GROUP BY po.id, o.id, c.id, cp.id
+      GROUP BY po.id, o.id, c.id, cp.id, i.id
       ORDER BY po.id DESC
     `);
     return result.rows as any[];
