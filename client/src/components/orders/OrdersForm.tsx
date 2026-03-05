@@ -33,11 +33,10 @@ import { Search, Plus, Trash2 } from "lucide-react";
 import { formatNumber, formatWeight, formatPercentage } from "../../lib/formatNumber";
 
 interface MasterBatchColor {
-  id: number;
-  code: string;
+  id: string;
+  name: string;
   name_ar: string;
-  name_en: string;
-  hex_color: string;
+  color_hex: string;
   aliases?: string;
 }
 
@@ -114,8 +113,8 @@ export default function OrdersForm({
     if (!code) return undefined;
     const normalizedCode = code.toUpperCase().trim();
     return masterBatchColors.find((c) => {
-      if (!c || !c.code) return false;
-      if (c.code.toUpperCase() === normalizedCode) return true;
+      if (!c || !c.id) return false;
+      if (c.id.toUpperCase() === normalizedCode) return true;
       if (c.aliases) {
         const aliasArr = c.aliases.split(",").map((a) => a.trim().toUpperCase());
         return aliasArr.includes(normalizedCode);
@@ -128,7 +127,7 @@ export default function OrdersForm({
     if (!masterBatchId) return null;
     const colorData = findColorByCode(masterBatchId);
     if (colorData) {
-      return <ColorBadge color={colorData.hex_color} code={colorData.code} nameAr={colorData.name_ar} />;
+      return <ColorBadge color={colorData.color_hex} code={colorData.id} nameAr={colorData.name_ar} />;
     }
     return <span className="text-purple-600 font-semibold bg-purple-50 px-2 py-0.5 rounded">{masterBatchId}</span>;
   };
