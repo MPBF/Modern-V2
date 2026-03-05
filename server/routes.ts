@@ -100,13 +100,11 @@ const checkOrderNotPaused = async (productionOrderId: number): Promise<{ isPause
       return { isPaused: true, notFound: true, message: "الطلب المرتبط بأمر الإنتاج غير موجود" };
     }
     
-    if (order.status === "paused" || order.status === "on_hold") {
+    if (order.status === "paused") {
       return { 
         isPaused: true, 
         orderStatus: order.status,
-        message: order.status === "paused" 
-          ? "الطلب في حالة إيقاف مؤقت - لا يمكن إضافة إنتاج جديد"
-          : "الطلب معلق - لا يمكن إضافة إنتاج جديد"
+        message: "الطلب معلق مؤقتاً - لا يمكن إضافة إنتاج جديد"
       };
     }
     
@@ -5251,18 +5249,13 @@ Do not include quotes or explanations.`;
             .json({ message: "الحالة مطلوبة", success: false });
         }
 
-        // Enhanced status validation with state transition rules (INVARIANT D)
+        // Status validation - only the 5 valid DB statuses allowed
         const validStatuses = [
           "waiting",
           "in_production",
           "paused",
           "completed",
           "cancelled",
-          "pending",
-          "for_production",
-          "on_hold",
-          "in_progress",
-          "delivered",
         ];
         if (!validStatuses.includes(status)) {
           return res
@@ -5278,22 +5271,17 @@ Do not include quotes or explanations.`;
             .json({ message: "الطلب غير موجود", success: false });
         }
 
-        // STEP 2: INVARIANT D - State transition validation with business rules
+        // STEP 2: State transition validation
         const currentStatus = currentOrder.status;
         const newStatus = status;
 
         // Define valid state transitions based on business logic
         const validTransitions: Record<string, string[]> = {
-          waiting: ["for_production", "in_production", "cancelled", "on_hold"], // بالإنتظار -> جاهز للإنتاج أو بالانتاج أو ملغي أو معلق
-          for_production: ["in_production", "waiting", "cancelled", "on_hold"], // جاهز للإنتاج -> بالانتاج أو بالانتظار أو ملغي
-          in_production: ["paused", "completed", "cancelled", "on_hold"], // بالانتاج -> معلق أو مكتمل أو ملغي
-          paused: ["in_production", "cancelled"], // معلق -> بالانتاج أو ملغي
-          on_hold: ["waiting", "for_production", "in_production", "cancelled"], // في الانتظار -> أي حالة
-          pending: ["waiting", "for_production", "cancelled"], // معلق -> بالانتظار أو جاهز للإنتاج
-          in_progress: ["paused", "completed", "cancelled"], // قيد التنفيذ -> معلق أو مكتمل أو ملغي
-          completed: [], // مكتمل - حالة نهائية
-          cancelled: [], // ملغي - حالة نهائية
-          delivered: [], // تم التسليم - حالة نهائية
+          waiting: ["in_production", "cancelled"],            // جديدة -> تحت الانتاج أو ملغية
+          in_production: ["paused", "completed", "cancelled"], // تحت الانتاج -> معلقة مؤقتاً أو مكتمل أو ملغية
+          paused: ["in_production", "cancelled"],              // معلقة مؤقتاً -> تحت الانتاج أو ملغية
+          completed: [],                                       // مكتمل - حالة نهائية
+          cancelled: [],                                       // ملغية - حالة نهائية
         };
 
         // Check if transition is allowed

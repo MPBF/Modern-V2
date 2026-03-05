@@ -203,37 +203,27 @@ export default function OrdersTabs({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem
-                            onClick={() =>
-                              handleBulkStatusChange("for_production")
-                            }
+                            onClick={() => handleBulkStatusChange("in_production")}
                           >
                             <div className="flex items-center w-full">
                               <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                              {t('orders.toProduction')}
+                              {t('orders.statuses.in_production')}
                             </div>
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleBulkStatusChange("on_hold")}
+                            onClick={() => handleBulkStatusChange("paused")}
+                          >
+                            <div className="flex items-center w-full">
+                              <div className="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
+                              {t('orders.statuses.paused')}
+                            </div>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleBulkStatusChange("cancelled")}
                           >
                             <div className="flex items-center w-full">
                               <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                              {t('orders.statuses.on_hold')}
-                            </div>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleBulkStatusChange("pending")}
-                          >
-                            <div className="flex items-center w-full">
-                              <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-                              {t('orders.statuses.pending')}
-                            </div>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleBulkStatusChange("completed")}
-                          >
-                            <div className="flex items-center w-full">
-                              <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                              {t('orders.statuses.completed')}
+                              {t('orders.statuses.cancelled')}
                             </div>
                           </DropdownMenuItem>
                         </DropdownMenuContent>

@@ -150,16 +150,16 @@
     "printOrder": "Print Order",
     "changeStatus": "Change Status",
     "statuses": {
-      "waiting": "Waiting",
-      "for_production": "Ready for Production",
+      "waiting": "New",
+      "for_production": "In Production",
       "in_production": "In Production",
       "completed": "Completed",
       "cancelled": "Cancelled",
-      "on_hold": "On Hold",
-      "pending": "Pending",
-      "paused": "Paused",
+      "on_hold": "Temporarily Paused",
+      "pending": "New",
+      "paused": "Temporarily Paused",
       "received": "Received",
-      "delivered": "Delivered"
+      "delivered": "Completed"
     },
     "priorities": {
       "normal": "Normal",

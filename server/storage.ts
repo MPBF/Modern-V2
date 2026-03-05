@@ -1021,7 +1021,7 @@ export class DatabaseStorage implements IStorage {
           .from(orders)
           .leftJoin(customers, eq(orders.customer_id, customers.id))
           .leftJoin(customer_products, eq(orders.customer_product_id, customer_products.id))
-          .where(and(ne(orders.status, "completed"), ne(orders.status, "cancelled")))
+          .where(eq(orders.status, "in_production"))
           .orderBy(orders.delivery_date);
         return results;
       },

@@ -137,10 +137,10 @@ export default function OrderPrintTemplate({
     if (!status) return "-";
     const statusMap: Record<string, string> = {
       waiting: t('orders.status.waiting'),
-      for_production: t('orders.status.forProduction'),
+      for_production: t('orders.statuses.in_production'),
       in_production: t('orders.status.inProduction'),
       paused: t('orders.status.paused'),
-      on_hold: t('orders.status.onHold'),
+      on_hold: t('orders.statuses.paused'),
       pending: t('orders.status.pending'),
       in_progress: t('orders.status.inProgress'),
       completed: t('orders.status.completed'),

@@ -107,45 +107,20 @@ export default function OrdersTable({
         variant: "secondary",
         color: "bg-yellow-100 text-yellow-800",
       },
-      pending: {
-        label: t('orders.statuses.pending'),
-        variant: "secondary",
-        color: "bg-yellow-100 text-yellow-800",
-      },
       in_production: {
         label: t('orders.statuses.in_production'),
-        variant: "default",
-        color: "bg-blue-100 text-blue-800",
-      },
-      for_production: {
-        label: t('orders.statuses.for_production'),
         variant: "default",
         color: "bg-blue-100 text-blue-800",
       },
       paused: {
         label: t('orders.statuses.paused'),
         variant: "destructive",
-        color: "bg-red-100 text-red-800",
-      },
-      on_hold: {
-        label: t('orders.statuses.on_hold'),
-        variant: "destructive",
-        color: "bg-red-100 text-red-800",
+        color: "bg-orange-100 text-orange-800",
       },
       completed: {
         label: t('orders.statuses.completed'),
         variant: "default",
         color: "bg-green-100 text-green-800",
-      },
-      received: {
-        label: t('orders.statuses.received'),
-        variant: "default",
-        color: "bg-purple-100 text-purple-800",
-      },
-      delivered: {
-        label: t('orders.statuses.delivered'),
-        variant: "default",
-        color: "bg-gray-100 text-gray-800",
       },
       cancelled: {
         label: t('orders.statuses.cancelled'),
@@ -433,32 +408,25 @@ export default function OrdersTable({
                         {t('orders.changeStatus')}
                       </DropdownMenuLabel>
                       <DropdownMenuItem
-                        onClick={() => onStatusChange(order, "for_production")}
+                        onClick={() => onStatusChange(order, "in_production")}
                         className="cursor-pointer"
                       >
                         <div className="w-2.5 h-2.5 bg-blue-500 rounded-full ml-2"></div>
-                        <span>{t('orders.toProduction')}</span>
+                        <span>{t('orders.statuses.in_production')}</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => onStatusChange(order, "pending")}
+                        onClick={() => onStatusChange(order, "paused")}
                         className="cursor-pointer"
                       >
-                        <div className="w-2.5 h-2.5 bg-yellow-500 rounded-full ml-2"></div>
-                        <span>{t('orders.statuses.pending')}</span>
+                        <div className="w-2.5 h-2.5 bg-orange-500 rounded-full ml-2"></div>
+                        <span>{t('orders.statuses.paused')}</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => onStatusChange(order, "on_hold")}
+                        onClick={() => onStatusChange(order, "cancelled")}
                         className="cursor-pointer"
                       >
                         <div className="w-2.5 h-2.5 bg-red-500 rounded-full ml-2"></div>
-                        <span>{t('orders.statuses.on_hold')}</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => onStatusChange(order, "completed")}
-                        className="cursor-pointer"
-                      >
-                        <div className="w-2.5 h-2.5 bg-green-500 rounded-full ml-2"></div>
-                        <span>{t('orders.statuses.completed')}</span>
+                        <span>{t('orders.statuses.cancelled')}</span>
                       </DropdownMenuItem>
                       
                       {(isAdmin && onEditOrder) || isAdmin ? (
