@@ -2740,8 +2740,49 @@ export class DatabaseStorage implements IStorage {
     return c;
   }
 
-  async completeCutting(data: any): Promise<any> {
-    return data;
+  async completeCutting(rollId: number, netWeight: number, operatorId: number, cuttingMachineId?: string): Promise<any> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [roll] = await db.select().from(rolls).where(eq(rolls.id, rollId));
+        if (!roll) throw new Error(`الرول ${rollId} غير موجود`);
+
+        const grossWeight = parseFloat(roll.weight_kg?.toString() || '0');
+        const wasteKg = Math.max(0, grossWeight - netWeight);
+
+        const updates: any = {
+          stage: 'done',
+          cut_completed_at: new Date(),
+          cut_by: operatorId,
+          cut_weight_total_kg: netWeight.toString(),
+          waste_kg: wasteKg.toString(),
+        };
+        if (cuttingMachineId) updates.cutting_machine_id = cuttingMachineId;
+
+        const [updatedRoll] = await db.update(rolls).set(updates).where(eq(rolls.id, rollId)).returning();
+
+        const remainingRolls = await db.select().from(rolls).where(
+          and(
+            eq(rolls.production_order_id, roll.production_order_id),
+            inArray(rolls.stage as any, ['film', 'printing'])
+          )
+        );
+
+        const isOrderCompleted = remainingRolls.length === 0;
+
+        if (isOrderCompleted) {
+          await db.update(production_orders)
+            .set({ status: 'completed' } as any)
+            .where(eq(production_orders.id, roll.production_order_id));
+          invalidateProductionCache();
+        }
+
+        await this.updateProductionOrderCompletionPercentages(roll.production_order_id);
+
+        return { ...updatedRoll, is_order_completed: isOrderCompleted };
+      },
+      "completeCutting",
+      `إكمال تقطيع الرول ${rollId}`,
+    );
   }
 
   async getCuttingQueue(): Promise<any[]> {
@@ -2841,11 +2882,141 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActivePrintingRollsForOperator(userId: number): Promise<any[]> {
-    return await db.select().from(rolls).where(eq(rolls.stage, 'printing')).orderBy(desc(rolls.created_at));
+    const rows = await db.execute(sql`
+      SELECT
+        r.id AS roll_id,
+        r.roll_number,
+        r.roll_seq,
+        r.weight_kg,
+        r.waste_kg,
+        r.stage,
+        r.roll_created_at,
+        r.printed_at,
+        po.id AS production_order_id,
+        po.production_order_number,
+        po.quantity_kg,
+        po.final_quantity_kg,
+        o.order_number,
+        c.name AS customer_name,
+        c.name_ar AS customer_name_ar,
+        COALESCE(i.name, cp.id::text) AS product_name,
+        i.name_ar AS product_name_ar,
+        cp.printing_cylinder
+      FROM rolls r
+      JOIN production_orders po ON r.production_order_id = po.id
+      JOIN orders o ON po.order_id = o.id
+      JOIN customers c ON o.customer_id = c.id
+      JOIN customer_products cp ON po.customer_product_id = cp.id
+      LEFT JOIN items i ON cp.item_id = i.id
+      WHERE r.stage = 'film'
+        AND po.status IN ('pending', 'active')
+      ORDER BY po.id, r.roll_seq
+    `);
+
+    const grouped = new Map<number, any>();
+    for (const row of rows.rows as any[]) {
+      const poId = Number(row.production_order_id);
+      if (!grouped.has(poId)) {
+        grouped.set(poId, {
+          production_order_id: poId,
+          production_order_number: row.production_order_number,
+          order_number: row.order_number,
+          customer_name: row.customer_name,
+          customer_name_ar: row.customer_name_ar,
+          product_name: row.product_name,
+          product_name_ar: row.product_name_ar,
+          printing_cylinder: row.printing_cylinder,
+          rolls: [],
+          total_rolls: 0,
+          total_weight: 0,
+        });
+      }
+      const po = grouped.get(poId)!;
+      po.rolls.push({
+        roll_id: Number(row.roll_id),
+        roll_number: row.roll_number,
+        roll_seq: row.roll_seq,
+        weight_kg: row.weight_kg,
+        waste_kg: row.waste_kg,
+        stage: row.stage,
+        roll_created_at: row.roll_created_at,
+        printed_at: row.printed_at,
+      });
+      po.total_rolls++;
+      po.total_weight += parseFloat(row.weight_kg || '0');
+    }
+    return Array.from(grouped.values());
   }
 
   async getActiveCuttingRollsForOperator(userId: number): Promise<any[]> {
-    return await db.select().from(rolls).where(eq(rolls.stage, 'cutting')).orderBy(desc(rolls.created_at));
+    const rows = await db.execute(sql`
+      SELECT
+        r.id AS roll_id,
+        r.roll_number,
+        r.roll_seq,
+        r.weight_kg,
+        r.waste_kg,
+        r.stage,
+        r.roll_created_at,
+        r.printed_at,
+        r.cut_completed_at,
+        po.id AS production_order_id,
+        po.production_order_number,
+        po.quantity_kg,
+        po.final_quantity_kg,
+        o.order_number,
+        c.name AS customer_name,
+        c.name_ar AS customer_name_ar,
+        COALESCE(i.name, cp.id::text) AS product_name,
+        i.name_ar AS product_name_ar,
+        cp.cutting_length_cm,
+        cp.punching
+      FROM rolls r
+      JOIN production_orders po ON r.production_order_id = po.id
+      JOIN orders o ON po.order_id = o.id
+      JOIN customers c ON o.customer_id = c.id
+      JOIN customer_products cp ON po.customer_product_id = cp.id
+      LEFT JOIN items i ON cp.item_id = i.id
+      WHERE r.stage = 'printing'
+        AND po.status IN ('pending', 'active')
+      ORDER BY po.id, r.roll_seq
+    `);
+
+    const grouped = new Map<number, any>();
+    for (const row of rows.rows as any[]) {
+      const poId = Number(row.production_order_id);
+      if (!grouped.has(poId)) {
+        grouped.set(poId, {
+          production_order_id: poId,
+          production_order_number: row.production_order_number,
+          order_number: row.order_number,
+          customer_name: row.customer_name,
+          customer_name_ar: row.customer_name_ar,
+          product_name: row.product_name,
+          product_name_ar: row.product_name_ar,
+          cutting_length_cm: row.cutting_length_cm,
+          punching: row.punching,
+          rolls: [],
+          total_rolls: 0,
+          total_weight: 0,
+        });
+      }
+      const po = grouped.get(poId)!;
+      po.rolls.push({
+        roll_id: Number(row.roll_id),
+        roll_number: row.roll_number,
+        roll_seq: row.roll_seq,
+        weight_kg: row.weight_kg,
+        waste_kg: row.waste_kg,
+        stage: row.stage,
+        roll_created_at: row.roll_created_at,
+        printed_at: row.printed_at,
+        cut_completed_at: row.cut_completed_at,
+      });
+      po.total_rolls++;
+      po.total_weight += parseFloat(row.weight_kg || '0');
+    }
+    return Array.from(grouped.values());
   }
 
   async getActiveFactoryLocations(): Promise<FactoryLocation[]> {
