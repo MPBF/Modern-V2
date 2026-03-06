@@ -3082,8 +3082,28 @@ export class DatabaseStorage implements IStorage {
     return this.updateProductionOrder(id, data);
   }
 
-  async updateProductionOrderCompletionPercentages(id: number, data: any): Promise<ProductionOrder> {
-    return this.updateProductionOrder(id, data);
+  async updateProductionOrderCompletionPercentages(id: number, data?: any): Promise<ProductionOrder> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const [result] = await db.execute(sql`
+          SELECT COALESCE(SUM(weight_kg), 0) AS total_weight
+          FROM rolls
+          WHERE production_order_id = ${id}
+        `).then(r => r.rows as any[]);
+
+        const producedQty = parseFloat(result?.total_weight || '0');
+
+        const [updated] = await db
+          .update(production_orders)
+          .set({ produced_quantity_kg: producedQty.toFixed(3) } as any)
+          .where(eq(production_orders.id, id))
+          .returning();
+        invalidateProductionCache();
+        return updated;
+      },
+      "updateProductionOrderCompletionPercentages",
+      `تحديث نسبة اكتمال أمر الإنتاج ${id}`,
+    );
   }
 
   async assignToMachineQueue(machineId: number, productionOrderId: number, data?: any): Promise<any> {
@@ -3297,8 +3317,41 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(production_orders).where(eq(production_orders.section_id, sectionId)).orderBy(desc(production_orders.id));
   }
 
-  async getProductionOrdersForReceipt(orderId: number): Promise<ProductionOrder[]> {
-    return await db.select().from(production_orders).where(eq(production_orders.order_id, orderId));
+  async getProductionOrdersForReceipt(): Promise<any[]> {
+    const rows = await db.execute(sql`
+      SELECT
+        po.id AS production_order_id,
+        po.production_order_number,
+        po.order_id,
+        po.quantity_kg AS quantity_required,
+        po.final_quantity_kg,
+        po.status AS po_status,
+        o.order_number,
+        c.name AS customer_name,
+        c.name_ar AS customer_name_ar,
+        COALESCE(i.name, cp.id::text) AS product_name,
+        i.name_ar AS product_name_ar,
+        COALESCE(SUM(r.weight_kg), 0) AS total_film_weight,
+        COALESCE(SUM(CASE WHEN r.stage IN ('printing','done') THEN r.weight_kg ELSE 0 END), 0) AS total_print_weight,
+        COALESCE(SUM(CASE WHEN r.stage = 'done' THEN r.cut_weight_total_kg ELSE 0 END), 0) AS total_cut_weight,
+        COALESCE(SUM(CASE WHEN r.stage = 'done' THEN r.waste_kg ELSE 0 END), 0) AS waste_weight,
+        0 AS total_received_weight
+      FROM production_orders po
+      JOIN orders o ON po.order_id = o.id
+      JOIN customers c ON o.customer_id = c.id
+      JOIN customer_products cp ON po.customer_product_id = cp.id
+      LEFT JOIN items i ON cp.item_id = i.id
+      LEFT JOIN rolls r ON r.production_order_id = po.id
+      WHERE EXISTS (SELECT 1 FROM rolls r2 WHERE r2.production_order_id = po.id AND r2.stage = 'done')
+      GROUP BY po.id, po.production_order_number, po.order_id, po.quantity_kg, po.final_quantity_kg, po.status,
+               o.order_number, c.name, c.name_ar, i.name, i.name_ar, cp.id
+      ORDER BY po.id
+    `);
+    return (rows.rows as any[]).map(row => ({
+      ...row,
+      production_order_id: Number(row.production_order_id),
+      order_id: Number(row.order_id),
+    }));
   }
 
   async getProductionOrderStats(): Promise<any> {

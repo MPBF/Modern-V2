@@ -2202,9 +2202,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      const isLastRoll = req.body.is_last_roll || false;
+
+      if (!isLastRoll) {
+        const po = await storage.getProductionOrderById(validatedData.production_order_id);
+        if (po) {
+          const targetKg = parseFloat(po.final_quantity_kg?.toString() || po.quantity_kg?.toString() || '0');
+          const overrunPct = parseFloat(po.overrun_percentage?.toString() || '0');
+          const maxAllowed = targetKg * (1 + overrunPct / 100);
+          const existingRolls = await storage.getRollsByProductionOrder(validatedData.production_order_id);
+          const totalProduced = existingRolls.reduce((sum: number, r: any) => sum + parseFloat(r.weight_kg?.toString() || '0'), 0);
+          const newRollWeight = parseFloat(req.body.weight_kg?.toString() || '0');
+
+          if ((totalProduced + newRollWeight) > maxAllowed) {
+            return res.status(400).json({
+              success: false,
+              message: `سيتجاوز الإنتاج الكمية المسموحة (${maxAllowed.toFixed(1)} كجم). الكمية المنتجة حالياً: ${totalProduced.toFixed(1)} كجم + رول جديد: ${newRollWeight.toFixed(1)} كجم = ${(totalProduced + newRollWeight).toFixed(1)} كجم. استخدم "رول نهائي" لإغلاق الأمر.`
+            });
+          }
+        }
+      }
+
       const rollData = {
         ...validatedData,
-        is_last_roll: req.body.is_last_roll || false,
+        is_last_roll: isLastRoll,
       };
 
       const newRoll = await storage.createRollWithTiming(rollData);
