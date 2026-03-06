@@ -2273,6 +2273,7 @@ export class DatabaseStorage implements IStorage {
         };
 
         const [roll] = await db.insert(rolls).values(rollData).returning();
+        await this.updateProductionOrderCompletionPercentages(data.production_order_id);
         return roll;
       },
       "createRoll",
@@ -3087,17 +3088,37 @@ export class DatabaseStorage implements IStorage {
   async updateProductionOrderCompletionPercentages(id: number, data?: any): Promise<ProductionOrder> {
     return withDatabaseErrorHandling(
       async () => {
-        const [result] = await db.execute(sql`
-          SELECT COALESCE(SUM(weight_kg), 0) AS total_weight
+        const [po] = await db.select().from(production_orders).where(eq(production_orders.id, id));
+        if (!po) throw new Error(`أمر الإنتاج ${id} غير موجود`);
+
+        const finalQty = parseFloat(po.final_quantity_kg?.toString() || '0');
+        const targetKg = finalQty > 0 ? finalQty : parseFloat(po.quantity_kg?.toString() || '0');
+
+        const [stats] = await db.execute(sql`
+          SELECT
+            COALESCE(SUM(weight_kg), 0) AS total_weight,
+            COALESCE(SUM(CASE WHEN stage IN ('printing', 'done') THEN weight_kg ELSE 0 END), 0) AS printing_weight,
+            COALESCE(SUM(CASE WHEN stage = 'done' THEN COALESCE(cut_weight_total_kg, weight_kg) ELSE 0 END), 0) AS cutting_weight
           FROM rolls
           WHERE production_order_id = ${id}
         `).then(r => r.rows as any[]);
 
-        const producedQty = parseFloat(result?.total_weight || '0');
+        const totalWeight = parseFloat(stats?.total_weight || '0');
+        const printingWeight = parseFloat(stats?.printing_weight || '0');
+        const cuttingWeight = parseFloat(stats?.cutting_weight || '0');
+
+        const filmPct = targetKg > 0 ? Math.min(100, (totalWeight / targetKg) * 100) : 0;
+        const printPct = targetKg > 0 ? Math.min(100, (printingWeight / targetKg) * 100) : 0;
+        const cutPct = targetKg > 0 ? Math.min(100, (cuttingWeight / targetKg) * 100) : 0;
 
         const [updated] = await db
           .update(production_orders)
-          .set({ produced_quantity_kg: producedQty.toFixed(3) } as any)
+          .set({
+            produced_quantity_kg: totalWeight.toFixed(3),
+            film_completion_percentage: filmPct.toFixed(2),
+            printing_completion_percentage: printPct.toFixed(2),
+            cutting_completion_percentage: cutPct.toFixed(2),
+          } as any)
           .where(eq(production_orders.id, id))
           .returning();
         invalidateProductionCache();

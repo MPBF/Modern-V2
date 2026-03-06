@@ -215,42 +215,35 @@ export default function OrdersTable({
           let avgCuttingPercentage = 0;
           
           if (orderProductionOrders.length > 0) {
-            // حساب الكمية المطلوبة الإجمالية لجميع أوامر الإنتاج
             const totalOrderedQuantity = orderProductionOrders.reduce(
               (sum: number, po: any) => sum + parseFloat(po.quantity_kg || 0),
               0
             );
             
             if (totalOrderedQuantity > 0) {
-              // مرحلة الفيلم: (الكمية المنتجة ÷ الكمية المطلوبة) × 100
               const weightedFilm = orderProductionOrders.reduce(
                 (sum: number, po: any) => {
-                  const producedQty = parseFloat(po.produced_quantity_kg || 0);
                   const orderedQty = parseFloat(po.quantity_kg || 0);
-                  const percentage = orderedQty > 0 ? (producedQty / orderedQty) * 100 : 0;
-                  return sum + (orderedQty * percentage);
+                  const pct = parseFloat(po.film_completion_percentage || 0);
+                  return sum + (orderedQty * pct);
                 },
                 0
               );
               
-              // مرحلة الطباعة: (الكمية المطبوعة ÷ الكمية المطلوبة) × 100
               const weightedPrinting = orderProductionOrders.reduce(
                 (sum: number, po: any) => {
-                  const printedQty = parseFloat(po.printed_quantity_kg || 0);
                   const orderedQty = parseFloat(po.quantity_kg || 0);
-                  const percentage = orderedQty > 0 ? (printedQty / orderedQty) * 100 : 0;
-                  return sum + (orderedQty * percentage);
+                  const pct = parseFloat(po.printing_completion_percentage || 0);
+                  return sum + (orderedQty * pct);
                 },
                 0
               );
               
-              // مرحلة التقطيع: (الكمية الصافية ÷ الكمية المطلوبة) × 100
               const weightedCutting = orderProductionOrders.reduce(
                 (sum: number, po: any) => {
-                  const netQty = parseFloat(po.net_quantity_kg || 0);
                   const orderedQty = parseFloat(po.quantity_kg || 0);
-                  const percentage = orderedQty > 0 ? (netQty / orderedQty) * 100 : 0;
-                  return sum + (orderedQty * percentage);
+                  const pct = parseFloat(po.cutting_completion_percentage || 0);
+                  return sum + (orderedQty * pct);
                 },
                 0
               );
@@ -505,30 +498,27 @@ export default function OrdersTable({
             if (totalOrderedQuantity > 0) {
               const weightedFilm = orderProductionOrders.reduce(
                 (sum: number, po: any) => {
-                  const producedQty = parseFloat(po.produced_quantity_kg || 0);
                   const orderedQty = parseFloat(po.quantity_kg || 0);
-                  const percentage = orderedQty > 0 ? (producedQty / orderedQty) * 100 : 0;
-                  return sum + (orderedQty * percentage);
+                  const pct = parseFloat(po.film_completion_percentage || 0);
+                  return sum + (orderedQty * pct);
                 },
                 0
               );
               
               const weightedPrinting = orderProductionOrders.reduce(
                 (sum: number, po: any) => {
-                  const printedQty = parseFloat(po.printed_quantity_kg || 0);
                   const orderedQty = parseFloat(po.quantity_kg || 0);
-                  const percentage = orderedQty > 0 ? (printedQty / orderedQty) * 100 : 0;
-                  return sum + (orderedQty * percentage);
+                  const pct = parseFloat(po.printing_completion_percentage || 0);
+                  return sum + (orderedQty * pct);
                 },
                 0
               );
               
               const weightedCutting = orderProductionOrders.reduce(
                 (sum: number, po: any) => {
-                  const netQty = parseFloat(po.net_quantity_kg || 0);
                   const orderedQty = parseFloat(po.quantity_kg || 0);
-                  const percentage = orderedQty > 0 ? (netQty / orderedQty) * 100 : 0;
-                  return sum + (orderedQty * percentage);
+                  const pct = parseFloat(po.cutting_completion_percentage || 0);
+                  return sum + (orderedQty * pct);
                 },
                 0
               );
