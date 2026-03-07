@@ -944,11 +944,14 @@
       "noItemsInStock": "No Items In Stock"
     },
     "movements": {
-      "title": "Title",
+      "title": "Movements",
       "addMovement": "Add Movement",
       "addNewMovement": "Add New Movement",
       "addNewMovementDesc": "Add New Movement Desc",
-      "noMovements": "No Movements"
+      "noMovements": "No Movements",
+      "type": "Movement Type",
+      "quantity": "Quantity",
+      "date": "Date"
     },
     "receipts": "Receipts",
     "items": "Items",

@@ -544,7 +544,7 @@ export default function Warehouse() {
   };
 
   return (
-    <PageLayout title={t('warehouse.title')} description={t('warehouse.movements')}>
+    <PageLayout title={t('warehouse.title')} description={t('warehouse.description')}>
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <Card>
@@ -649,7 +649,7 @@ export default function Warehouse() {
             </TabsTrigger>
           ))}
           <TabsTrigger value="movements" className="shrink-0">
-            {t('warehouse.movements')}
+            {t('warehouse.movements.title')}
           </TabsTrigger>
         </TabsList>
 
@@ -990,30 +990,30 @@ export default function Warehouse() {
                       <div className="text-center py-8">{t('warehouse.loading')}</div>
                     ) : (
                       <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                          <thead className="bg-gray-50 dark:bg-gray-700">
                             <tr>
-                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-200 uppercase">
                                 {t('warehouse.labels.item')}
                               </th>
-                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-200 uppercase">
                                 {t('warehouse.labels.category')}
                               </th>
-                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-200 uppercase">
                                 {t('warehouse.labels.currentStock')}
                               </th>
-                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-200 uppercase">
                                 {t('warehouse.labels.actions')}
                               </th>
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
+                          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                             {getInventoryByLocation(location.id.toString())
                               .length === 0 ? (
                               <tr>
                                 <td
                                   colSpan={4}
-                                  className="px-6 py-8 text-center text-gray-500"
+                                  className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                                 >
                                   {searchTerm
                                     ? t('warehouse.inventory.noSearchResults')
@@ -1031,22 +1031,22 @@ export default function Warehouse() {
                                 return (
                                   <tr
                                     key={item.id}
-                                    className="hover:bg-gray-50"
+                                    className="hover:bg-gray-50 dark:hover:bg-gray-800"
                                   >
                                     <td className="px-6 py-4">
                                       <div>
-                                        <div className="text-sm font-medium text-gray-900">
+                                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                           {ln(item.item_name_ar, item.item_name)}
                                         </div>
-                                        <div className="text-sm text-gray-500">
+                                        <div className="text-sm text-gray-500 dark:text-gray-400">
                                           {item.item_code}
                                         </div>
                                       </div>
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-gray-900">
+                                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                                       {ln(item.category_name_ar, item.category_name) || "-"}
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-gray-900">
+                                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                                       {currentStock.toLocaleString("en-US")}{" "}
                                       {item.unit}
                                     </td>
@@ -1090,7 +1090,7 @@ export default function Warehouse() {
                   <div className="flex justify-between items-center">
                     <div>
                       <CardTitle>{t('warehouse.movements.title')}</CardTitle>
-                      <p className="text-sm text-gray-600 mt-1"> </p>
+                      <p className="text-sm text-muted-foreground mt-1"> </p>
                     </div>
                     <Dialog
                       open={isMovementDialogOpen}
@@ -1293,38 +1293,38 @@ export default function Warehouse() {
                     <div className="text-center py-8">{t('warehouse.loading')}</div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-700">
                           <tr>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-200 uppercase">
                               {t('warehouse.labels.item')}
                             </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-200 uppercase">
                               {t('warehouse.labels.movementType')}
                             </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-200 uppercase">
                               {t('warehouse.labels.quantity')}
                             </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-200 uppercase">
                               {t('warehouse.labels.referenceNumber')}
                             </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-200 uppercase">
                               {t('warehouse.labels.date')}
                             </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-200 uppercase">
                               {t('warehouse.labels.user')}
                             </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-200 uppercase">
                               {t('warehouse.labels.actions')}
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                           {movements.length === 0 ? (
                             <tr>
                               <td
                                 colSpan={7}
-                                className="px-6 py-8 text-center text-gray-500"
+                                className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                               >
                                 {t('warehouse.movements.noMovements')}
                               </td>
@@ -1333,14 +1333,14 @@ export default function Warehouse() {
                             movements.map((movement: any) => (
                               <tr
                                 key={movement.id}
-                                className="hover:bg-gray-50"
+                                className="hover:bg-gray-50 dark:hover:bg-gray-800"
                               >
                                 <td className="px-6 py-4">
                                   <div>
-                                    <div className="text-sm font-medium text-gray-900">
-                                      {movement.item_name}
+                                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                      {ln(movement.item_name_ar, movement.item_name)}
                                     </div>
-                                    <div className="text-sm text-gray-500">
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">
                                       {movement.item_code}
                                     </div>
                                   </div>
@@ -1364,20 +1364,20 @@ export default function Warehouse() {
                                           : t('warehouse.movementTypes.adjustment')}
                                   </Badge>
                                 </td>
-                                <td className="px-6 py-4 text-sm text-gray-900">
+                                <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                                   {parseFloat(
                                     movement.quantity,
                                   ).toLocaleString("en-US")}
                                 </td>
-                                <td className="px-6 py-4 text-sm text-gray-900">
+                                <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                                   {movement.reference_number || "-"}
                                 </td>
-                                <td className="px-6 py-4 text-sm text-gray-900">
+                                <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                                   {new Date(
                                     movement.created_at,
                                   ).toLocaleDateString("en-GB")}
                                 </td>
-                                <td className="px-6 py-4 text-sm text-gray-900">
+                                <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                                   {movement.user_name || "-"}
                                 </td>
                                 <td className="px-6 py-4">
@@ -1584,7 +1584,7 @@ function ProductionHallContent() {
                       value={receiptNotes}
                       onChange={(e) => setReceiptNotes(e.target.value)}
                       placeholder={t('warehouse.production.addReceiptNotes')}
-                      className="w-full min-h-[60px] p-2 border rounded-md"
+                      className="w-full min-h-[60px] p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
                     />
                   </div>
                   <div className="flex space-x-2 space-x-reverse">
@@ -1605,8 +1605,8 @@ function ProductionHallContent() {
         {isLoading ? (
           <div className="flex justify-center py-8">{t('warehouse.loading')}</div>
         ) : processedOrders.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Factory className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <Factory className="h-12 w-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
             <p>{t('warehouse.production.noMaterialsReady')}</p>
             <p className="text-sm">{t('warehouse.production.cutOrdersWillAppear')}</p>
           </div>
@@ -1624,7 +1624,7 @@ function ProductionHallContent() {
                   }
                 }}
               />
-              <span className="text-sm text-gray-600">{t('warehouse.production.selectAll')} ({allPoIds.length} {t('warehouse.production.productionOrders')})</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{t('warehouse.production.selectAll')} ({allPoIds.length} {t('warehouse.production.productionOrders')})</span>
             </div>
 
             {groupedByOrder.map((group) => (
@@ -1964,7 +1964,7 @@ function ReceivedQuantitiesContent() {
         <Card>
           <CardContent className="py-12">
             <div
-              className="text-center text-gray-500"
+              className="text-center text-gray-500 dark:text-gray-400"
               data-testid="no-received-quantities"
             >
               <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -2015,7 +2015,7 @@ function ReceivedQuantitiesContent() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div>
-                          <p className="text-sm text-gray-500 mb-1">{t('warehouse.received.customer')}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('warehouse.received.customer')}</p>
                           <p
                             className="font-medium"
                             data-testid={`customer-name-${order.order_number}`}
@@ -2025,7 +2025,7 @@ function ReceivedQuantitiesContent() {
                         </div>
 
                         <div>
-                          <p className="text-sm text-gray-500 mb-1">{t('warehouse.received.product')}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('warehouse.received.product')}</p>
                           <p
                             className="font-medium"
                             data-testid={`item-name-${order.order_number}`}
@@ -2035,7 +2035,7 @@ function ReceivedQuantitiesContent() {
                         </div>
 
                         <div>
-                          <p className="text-sm text-gray-500 mb-1">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
                             {t('warehouse.received.totalWeight')}
                           </p>
                           <p
@@ -2048,7 +2048,7 @@ function ReceivedQuantitiesContent() {
                         </div>
 
                         <div>
-                          <p className="text-sm text-gray-500 mb-1">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
                             {t('warehouse.received.lastReceipt')}
                           </p>
                           <p className="text-sm">
@@ -2162,7 +2162,7 @@ function ReceivedQuantitiesContent() {
                             <div className="space-y-2 text-sm">
                               <div className="flex items-center gap-2">
                                 <Scale className="h-3 w-3 text-green-600" />
-                                <span className="text-gray-600">{t('warehouse.labels.quantity')}:</span>
+                                <span className="text-gray-600 dark:text-gray-400">{t('warehouse.labels.quantity')}:</span>
                                 <span className="font-semibold text-green-600">
                                   {Number(receipt.received_weight_kg).toFixed(
                                     2,
@@ -2173,7 +2173,7 @@ function ReceivedQuantitiesContent() {
 
                               <div className="flex items-center gap-2">
                                 <User className="h-3 w-3 text-blue-600" />
-                                <span className="text-gray-600">{t('warehouse.received.receivedBy')}:</span>
+                                <span className="text-gray-600 dark:text-gray-400">{t('warehouse.received.receivedBy')}:</span>
                                 <span className="font-medium">
                                   {receipt.received_by_name}
                                 </span>
@@ -2182,7 +2182,7 @@ function ReceivedQuantitiesContent() {
                               {receipt.production_order_number && (
                                 <div className="flex items-center gap-2">
                                   <Factory className="h-3 w-3 text-purple-600" />
-                                  <span className="text-gray-600">
+                                  <span className="text-gray-600 dark:text-gray-400">
                                     {t('warehouse.production.productionOrder')}:
                                   </span>
                                   <span className="font-medium">

@@ -565,7 +565,7 @@ export interface IStorage {
   getAllInventory(): Promise<Inventory[]>;
   updateInventory(id: number, inventory: Partial<Inventory>): Promise<Inventory>;
   createInventoryMovement(movement: InsertInventoryMovement): Promise<InventoryMovement>;
-  getInventoryMovements(itemId: number): Promise<InventoryMovement[]>;
+  getInventoryMovements(itemId?: number): Promise<any[]>;
   
   // Warehouse Receipts
   getAllWarehouseReceipts(): Promise<WarehouseReceipt[]>;
@@ -1606,8 +1606,33 @@ export class DatabaseStorage implements IStorage {
     return m;
   }
 
-  async getInventoryMovements(itemId: number): Promise<InventoryMovement[]> {
-    return await db.select().from(inventory_movements).where(eq(inventory_movements.item_id, itemId)).orderBy(desc(inventory_movements.created_at));
+  async getInventoryMovements(itemId?: number): Promise<any[]> {
+    const query = db
+      .select({
+        id: inventory_movements.id,
+        inventory_id: inventory_movements.inventory_id,
+        movement_type: inventory_movements.movement_type,
+        quantity: inventory_movements.quantity,
+        reference_number: inventory_movements.reference_number,
+        reference_type: inventory_movements.reference_type,
+        notes: inventory_movements.notes,
+        created_by: inventory_movements.created_by,
+        created_at: inventory_movements.created_at,
+        item_name: items.name,
+        item_name_ar: items.name_ar,
+        item_code: items.id,
+        user_name: users.display_name_ar,
+      })
+      .from(inventory_movements)
+      .leftJoin(inventory, eq(inventory_movements.inventory_id, inventory.id))
+      .leftJoin(items, eq(inventory.item_id, items.id))
+      .leftJoin(users, eq(inventory_movements.created_by, users.id))
+      .orderBy(desc(inventory_movements.created_at));
+
+    if (itemId) {
+      return await query.where(eq(inventory_movements.inventory_id, itemId));
+    }
+    return await query;
   }
 
   async getAllWarehouseReceipts(): Promise<WarehouseReceipt[]> {
