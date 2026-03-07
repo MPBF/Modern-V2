@@ -173,11 +173,11 @@ export class MetaWhatsAppService {
       throw new Error("Meta WhatsApp API غير مُعد بشكل صحيح");
     }
 
-    const FormData = (await import("form-data")).default;
+    const blob = new Blob([buffer], { type: mimeType });
     const formData = new FormData();
     formData.append("messaging_product", "whatsapp");
     formData.append("type", mimeType);
-    formData.append("file", buffer, { filename, contentType: mimeType });
+    formData.append("file", blob, filename);
 
     const response = await fetch(
       `${this.baseUrl}/${this.config.phoneNumberId}/media`,
@@ -185,9 +185,8 @@ export class MetaWhatsAppService {
         method: "POST",
         headers: {
           Authorization: `Bearer ${this.config.accessToken}`,
-          ...formData.getHeaders(),
         },
-        body: formData as any,
+        body: formData,
       },
     );
 
