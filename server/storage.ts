@@ -784,13 +784,26 @@ export class DatabaseStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     return withDatabaseErrorHandling(
       async () => {
-        // التحقق من صحة البيانات قبل الحفظ
         const validation = await this.dataValidator.validateData("users", insertUser);
         if (!validation.isValid) {
           throw new Error(`خطأ في البيانات: ${validation.errors.map(e => e.message_ar).join(', ')}`);
         }
 
-        const [user] = await db.insert(users).values(insertUser).returning();
+        const dataToInsert = { ...insertUser };
+        if (dataToInsert.password) {
+          let isAlreadyHashed = false;
+          try {
+            bcrypt.getRounds(dataToInsert.password);
+            isAlreadyHashed = true;
+          } catch {
+            isAlreadyHashed = false;
+          }
+          if (!isAlreadyHashed) {
+            dataToInsert.password = await bcrypt.hash(dataToInsert.password, 10);
+          }
+        }
+
+        const [user] = await db.insert(users).values(dataToInsert).returning();
         return user;
       },
       "createUser",
@@ -2231,7 +2244,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: number, data: any): Promise<User> {
-    const [u] = await db.update(users).set({ ...data, updated_at: new Date() }).where(eq(users.id, id)).returning();
+    const processedData = { ...data, updated_at: new Date() };
+    if (processedData.password) {
+      let isAlreadyHashed = false;
+      try {
+        bcrypt.getRounds(processedData.password);
+        isAlreadyHashed = true;
+      } catch {
+        isAlreadyHashed = false;
+      }
+      if (!isAlreadyHashed) {
+        processedData.password = await bcrypt.hash(processedData.password, 10);
+      }
+    } else {
+      delete processedData.password;
+    }
+    const [u] = await db.update(users).set(processedData).where(eq(users.id, id)).returning();
     return u;
   }
 
