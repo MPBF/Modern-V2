@@ -43,6 +43,32 @@ The system is built with a modern stack emphasizing efficiency and scalability, 
 
 ## Recent Changes
 
+### Adobe PDF Generation Service (March 7, 2026)
+
+**Integration:**
+- Installed `@adobe/pdfservices-node-sdk` (v4.1.0) for Adobe Document Generation API
+- Created PDF service module at `server/services/adobe-pdf/pdf-service.ts`
+- Templates directory: `server/services/adobe-pdf/templates/` (place .docx templates here)
+- Sample template and data extracted from Adobe SDK samples
+
+**Environment Variables:**
+- `ADOBE_CLIENT_ID` - Adobe API Key
+- `ADOBE_CLIENT_SECRET` - Adobe Client Secret (stored as secret)
+- `ADOBE_ORGANIZATION_ID` - Adobe Organization ID
+
+**API Endpoints:**
+- `POST /api/pdf/generate` - Generate PDF/DOCX from template + JSON data
+  - Body: `{ templateName, jsonData, outputFormat: "pdf"|"docx" }`
+- `GET /api/pdf/status` - Check if Adobe PDF service is configured
+- `GET /api/pdf/templates` - List available .docx templates
+
+**Usage:** Place Word (.docx) templates with merge fields in the templates directory. Send JSON data matching the template fields to generate PDFs.
+
+### Password Hashing Fix (March 7, 2026)
+- Fixed `createUser` and `updateUser` in `server/storage.ts` to hash passwords with bcrypt before storing
+- Previously passwords were stored as plaintext, causing login failures for newly created users
+- Uses `bcrypt.getRounds()` to detect already-hashed passwords and avoid double-hashing
+
 ### Dark Mode Toggle Feature (March 7, 2026)
 
 **Implementation:**

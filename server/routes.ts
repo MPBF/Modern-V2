@@ -2803,6 +2803,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Adobe PDF Generation API
+  app.post("/api/pdf/generate", requireAuth, async (req, res) => {
+    try {
+      const { isAdobePDFConfigured, mergeDocumentToPDF, generatePDFFromTemplate } = await import("./services/adobe-pdf/pdf-service");
+      
+      if (!isAdobePDFConfigured()) {
+        return res.status(503).json({ message: "خدمة Adobe PDF غير مهيأة", success: false });
+      }
+
+      const { templateName, templatePath, jsonData, outputFormat = "pdf" } = req.body;
+
+      if (!jsonData || typeof jsonData !== "object") {
+        return res.status(400).json({ message: "بيانات JSON مطلوبة", success: false });
+      }
+
+      let pdfBuffer: Buffer;
+
+      if (templateName) {
+        pdfBuffer = await generatePDFFromTemplate(templateName, jsonData, outputFormat);
+      } else if (templatePath) {
+        pdfBuffer = await mergeDocumentToPDF({ templatePath, jsonData, outputFormat });
+      } else {
+        return res.status(400).json({ message: "اسم القالب أو مسار القالب مطلوب", success: false });
+      }
+
+      const contentType = outputFormat === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      const ext = outputFormat === "pdf" ? "pdf" : "docx";
+
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Content-Disposition", `attachment; filename="document.${ext}"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      res.status(500).json({
+        message: "خطأ في إنشاء ملف PDF",
+        error: error instanceof Error ? error.message : "Unknown error",
+        success: false,
+      });
+    }
+  });
+
+  app.get("/api/pdf/status", requireAuth, async (req, res) => {
+    try {
+      const { isAdobePDFConfigured } = await import("./services/adobe-pdf/pdf-service");
+      res.json({
+        configured: isAdobePDFConfigured(),
+        service: "Adobe Document Generation API",
+        success: true,
+      });
+    } catch (error) {
+      res.json({ configured: false, success: false });
+    }
+  });
+
+  app.get("/api/pdf/templates", requireAuth, async (req, res) => {
+    try {
+      const fs = await import("fs");
+      const path = await import("path");
+      const templatesDir = path.join(process.cwd(), "server", "services", "adobe-pdf", "templates");
+      
+      if (!fs.existsSync(templatesDir)) {
+        return res.json({ templates: [], success: true });
+      }
+
+      const files = fs.readdirSync(templatesDir).filter((f: string) => f.endsWith(".docx"));
+      res.json({ templates: files, success: true });
+    } catch (error) {
+      res.status(500).json({ message: "خطأ في جلب القوالب", success: false });
+    }
+  });
+
   // Base API endpoint - return 404 instead of serving HTML
   app.get("/api", (req, res) => {
     res.status(404).json({
