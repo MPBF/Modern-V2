@@ -140,7 +140,7 @@
   .status-warning { background-color: hsl(var(--warning-50)); color: hsl(var(--warning-600)); border: 2px solid hsl(var(--warning-600) / 0.4); }
   .status-danger { background-color: hsl(var(--danger-50)); color: hsl(var(--danger-600)); border: 2px solid hsl(var(--danger-600) / 0.4); }
 
-  .nav-item { @apply flex items-center text-gray-700 hover:bg-gray-50 rounded-lg p-3 cursor-pointer transition-colors; }
+  .nav-item { @apply flex items-center text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg p-3 cursor-pointer transition-colors; }
   .nav-item-active { background-color: hsl(var(--primary-50)); border: 1px solid hsl(var(--primary-600) / 0.2); color: hsl(var(--primary-700)); }
 
   .progress-primary .progress-indicator { background-color: hsl(var(--primary-600)); }
@@ -160,9 +160,9 @@
   .input-rtl { @apply text-right; }
   .input-rtl::placeholder { text-align: right; }
 
-  .table-header { @apply bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wider; }
-  .table-row { @apply hover:bg-gray-50 transition-colors; }
-  .table-cell { @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900; }
+  .table-header { @apply bg-gray-50 dark:bg-gray-800 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider; }
+  .table-row { @apply hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors; }
+  .table-cell { @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100; }
 
   .chat-bubble-user { @apply bg-primary text-primary-foreground rounded-lg p-3 max-w-xs; }
   .chat-bubble-assistant { @apply bg-muted text-foreground rounded-lg p-3 max-w-xs; }
@@ -270,19 +270,19 @@
 .notification-warning { background-color: hsl(var(--warning-50)); border: 1px solid hsl(var(--warning-600) / 0.2); color: hsl(var(--warning-600)); }
 .notification-info { background-color: hsl(var(--primary-50)); border: 1px solid hsl(var(--primary-600) / 0.2); color: hsl(var(--primary-600)); }
 
-.table-container { @apply overflow-x-auto shadow-md border-2 border-gray-400 rounded-lg; }
-.table { @apply min-w-full divide-y-2 divide-gray-300; }
-.table thead { @apply bg-gray-100 border-b-2 border-gray-400; }
-.table tbody { @apply bg-white divide-y divide-gray-300; }
-.table th { @apply px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider border-b-2 border-gray-300; }
-.table td { @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b border-gray-200; }
+.table-container { @apply overflow-x-auto shadow-md border-2 border-gray-400 dark:border-gray-600 rounded-lg; }
+.table { @apply min-w-full divide-y-2 divide-gray-300 dark:divide-gray-600; }
+.table thead { @apply bg-gray-100 dark:bg-gray-800 border-b-2 border-gray-400 dark:border-gray-600; }
+.table tbody { @apply bg-white dark:bg-gray-900 divide-y divide-gray-300 dark:divide-gray-700; }
+.table th { @apply px-6 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-b-2 border-gray-300 dark:border-gray-600; }
+.table td { @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700; }
 
 .status-badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium; }
 .status-badge.active { background-color: hsl(var(--success-50)); color: hsl(var(--success-600)); border: 1px solid hsl(var(--success-600) / 0.2); }
 .status-badge.warning { background-color: hsl(var(--warning-50)); color: hsl(var(--warning-600)); border: 1px solid hsl(var(--warning-600) / 0.2); }
 .status-badge.danger { background-color: hsl(var(--danger-50)); color: hsl(var(--danger-600)); border: 1px solid hsl(var(--danger-600) / 0.2); }
 
-.dashboard-card { @apply bg-white rounded-lg shadow-md border-2 border-gray-300 p-6 transition-all duration-200 hover:shadow-lg hover:border-gray-400; }
+.dashboard-card { @apply bg-white dark:bg-gray-900 rounded-lg shadow-md border-2 border-gray-300 dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-lg hover:border-gray-400 dark:hover:border-gray-600; }
 .dashboard-card-icon { @apply p-3 rounded-full; }
 .dashboard-card-icon.primary { background-color: hsl(var(--primary-50)); color: hsl(var(--primary-600)); }
 .dashboard-card-icon.success { background-color: hsl(var(--success-50)); color: hsl(var(--success-600)); }
@@ -295,17 +295,17 @@
 .machine-indicator.down { @apply machine-status-down; }
 
 .ai-assistant-toggle { @apply bg-primary hover:bg-primary-700 text-white p-4 rounded-full shadow-lg transition-all duration-200 hover:scale-105; }
-.ai-chat-interface { @apply absolute bottom-16 left-0 w-80 bg-white rounded-lg shadow-xl border border-gray-200 max-h-96 flex flex-col; }
+.ai-chat-interface { @apply absolute bottom-16 left-0 w-80 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 max-h-96 flex flex-col; }
 .ai-message-user { @apply bg-primary text-white rounded-lg p-3 max-w-xs; }
-.ai-message-assistant { @apply bg-gray-100 text-gray-900 rounded-lg p-3 max-w-xs; }
+.ai-message-assistant { @apply bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg p-3 max-w-xs; }
 
-.sidebar { @apply bg-white shadow-md border-l-2 border-gray-300 w-64 hidden lg:block; }
+.sidebar { @apply bg-white dark:bg-gray-900 shadow-md border-l-2 border-gray-300 dark:border-gray-700 w-64 hidden lg:block; }
 .sidebar-nav { @apply p-4; }
 .sidebar-item { @apply nav-item; }
 .sidebar-item.active { background-color: hsl(var(--primary-50)); border: 1px solid hsl(var(--primary-600) / 0.2); color: hsl(var(--primary-700)); }
 .sidebar-subitem { @apply block text-sm text-primary hover:text-primary-700 py-1 transition-colors; }
 
-.mobile-nav { @apply lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40; }
+.mobile-nav { @apply lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 z-40; }
 .mobile-nav-item { @apply flex flex-col items-center p-2 transition-colors; }
 .mobile-nav-item.active { @apply text-primary; }
 .mobile-nav-item:not(.active) { @apply text-gray-600; }
@@ -318,11 +318,11 @@
 .form-input { @apply w-full border-2 border-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-gray-500; }
 .form-input.rtl { @apply text-right; }
 .form-input.rtl::placeholder { text-align: right; }
-.form-label { @apply block text-sm font-medium text-gray-700 mb-2; }
+.form-label { @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2; }
 .form-select { @apply form-input appearance-none; }
 
 .modal-overlay { @apply fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50; }
-.modal-content { @apply bg-white rounded-lg shadow-xl max-w-md w-full mx-4; }
+.modal-content { @apply bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4; }
 .modal-header { @apply px-6 py-4 border-b border-gray-200; }
 .modal-body { @apply p-6; }
 .modal-footer { @apply px-6 py-4 border-t border-gray-200 flex justify-end; }
@@ -366,6 +366,7 @@
 .production-roll-card.selected { border-color: rgb(34, 197, 94); background-color: rgb(240, 253, 244); border-width: 3px; }
 
 .roll-list-item { border: 2px solid rgb(229, 231, 235); padding: 1rem; margin-bottom: 0.75rem; border-radius: 0.5rem; background: white; transition: all 0.2s; }
+.dark .roll-list-item { border-color: rgb(75, 85, 99); background: rgb(17, 24, 39); }
 .roll-list-item:hover { border-color: rgb(59, 130, 246); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
 
 .btn-mobile-friendly { min-height: 48px; font-size: 1.1rem; font-weight: 600; padding: 0.875rem 1.25rem; border-width: 2px; }

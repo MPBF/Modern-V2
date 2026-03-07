@@ -43,6 +43,33 @@ The system is built with a modern stack emphasizing efficiency and scalability, 
 
 ## Recent Changes
 
+### Dark Mode Toggle Feature (March 7, 2026)
+
+**Implementation:**
+- Added `ThemeProvider` context (`client/src/contexts/ThemeContext.tsx`) managing theme state with `localStorage` persistence (`mpbf_theme` key)
+- Theme toggle button (Moon/Sun icon) added to Header for quick access
+- Dark mode toggle also available in MobileShell drawer menu
+- UserProfile dark mode switch now immediately applies theme via ThemeContext
+- Server-synced theme settings applied on load via `applyTheme` in UserProfile useEffect
+
+**Files Added:**
+- `client/src/contexts/ThemeContext.tsx` - Theme state management with `useTheme` hook
+
+**Files Modified:**
+- `client/src/main.tsx` - Wrapped app with `ThemeProvider`
+- `client/src/components/layout/Header.tsx` - Added dark mode toggle button + dark: CSS variants
+- `client/src/components/layout/Sidebar.tsx` - Added dark: CSS variants
+- `client/src/components/layout/MobileShell.tsx` - Added theme toggle in drawer
+- `client/src/components/dashboard/UserProfile.tsx` - Connected switch to ThemeContext
+- `client/src/index.css` - Added dark: variants for nav-item, tables, dashboard-card, sidebar, mobile-nav, modals, forms, AI chat
+- `client/index.html` - Dark mode styles for initial loading screen, removed hardcoded background on loader
+
+**Technical Details:**
+- Uses `darkMode: ["class"]` in Tailwind config (already existed)
+- CSS variables for dark theme defined in `.dark` block in `index.css` (already existed)
+- `index.html` script detects stored theme on page load to prevent flicker
+- Theme persisted to `localStorage` under key `mpbf_theme`
+
 ### AI Agent Major Enhancement (February 25, 2026)
 
 **New Tools Added to AI Agent (server/ai-agent-routes.ts):**

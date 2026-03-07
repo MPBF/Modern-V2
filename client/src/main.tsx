@@ -8,6 +8,7 @@ import "./i18n/config";
 import { ToastProvider } from "./hooks/use-toast";
 import { queryClient } from "./lib/queryClient";
 import { LanguageProvider } from "./contexts/LanguageContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 // Targeted error suppression for React Query AbortErrors only
 // ضع هذا المستمع قبل أي رندر
@@ -51,9 +52,11 @@ createRoot(container).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
-        <ToastProvider>
-          <App />
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <App />
+          </ToastProvider>
+        </ThemeProvider>
       </LanguageProvider>
     </QueryClientProvider>
   </React.StrictMode>

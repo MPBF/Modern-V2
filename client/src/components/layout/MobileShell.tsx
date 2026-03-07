@@ -23,12 +23,15 @@ import { navigationItems, getQuickAccessItems, groupNavigationItems, getLocalize
 import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { useTheme } from "../../contexts/ThemeContext";
+import { Sun, Moon } from "lucide-react";
 
 export default function MobileShell() {
   const [location] = useLocation();
   const { user } = useAuth();
   const { t } = useTranslation();
   const { language } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
@@ -161,8 +164,17 @@ export default function MobileShell() {
                   )}
                 </div>
 
-                {/* Language Switcher */}
+                {/* Theme & Language */}
                 <div className="mt-4 pt-4 border-t">
+                  <div className="px-4 py-2 flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                      {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                      {t('dashboard.profile.darkMode', 'الوضع المظلم')}
+                    </span>
+                    <Button variant="outline" size="sm" onClick={toggleTheme}>
+                      {theme === "light" ? t('dashboard.profile.darkMode', 'مظلم') : t('dashboard.profile.lightMode', 'فاتح')}
+                    </Button>
+                  </div>
                   <div className="px-4 py-2 flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       {t('common.language')}

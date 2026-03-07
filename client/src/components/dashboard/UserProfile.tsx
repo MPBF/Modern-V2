@@ -34,12 +34,14 @@ import {
   Phone,
   Globe,
 } from "lucide-react";
+import { useTheme } from "../../contexts/ThemeContext";
 
 export default function UserProfile() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { setTheme: applyTheme } = useTheme();
 
   const { data: userSettingsData } = useQuery({
     queryKey: ["/api/settings/user", user?.id],
@@ -72,13 +74,14 @@ export default function UserProfile() {
         return acc;
       }, {});
 
+      const serverTheme = settingsMap.theme || "light";
       setUserSettings((prev) => ({
         ...prev,
         displayName: user?.display_name_ar || settingsMap.displayName || "",
         email: settingsMap.email || "",
         phone: settingsMap.phone || "",
         language: settingsMap.language || "ar",
-        theme: settingsMap.theme || "light",
+        theme: serverTheme,
         notifications: {
           email: settingsMap.notificationsEmail === "true",
           sms: settingsMap.notificationsSms === "true",
@@ -91,6 +94,7 @@ export default function UserProfile() {
           compactView: settingsMap.dashboardCompactView === "true",
         },
       }));
+      applyTheme(serverTheme as "light" | "dark");
     }
   }, [userSettingsData, user]);
 
@@ -248,12 +252,14 @@ export default function UserProfile() {
               </div>
               <Switch
                 checked={userSettings.theme === "dark"}
-                onCheckedChange={(checked) =>
+                onCheckedChange={(checked) => {
+                  const newTheme = checked ? "dark" : "light";
                   setUserSettings((prev) => ({
                     ...prev,
-                    theme: checked ? "dark" : "light",
-                  }))
-                }
+                    theme: newTheme,
+                  }));
+                  applyTheme(newTheme);
+                }}
                 data-testid="switch-dark-mode"
               />
             </div>
