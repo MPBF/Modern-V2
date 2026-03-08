@@ -49,6 +49,8 @@ import {
   insertFactorySnapshotSchema,
   notifications as notificationsTable,
   insertDisplaySlideSchema,
+  user_settings,
+  roles,
 } from "@shared/schema";
 import { eq, sql, and, gte, lte } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -468,6 +470,144 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     } catch (error) {
       logger.error("Dashboard stats error", error);
       res.status(500).json({ message: "خطأ في جلب الإحصائيات" });
+    }
+  });
+
+  // Dashboard config - per-user widget configuration
+  app.get("/api/dashboard/config", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const setting = await db
+        .select()
+        .from(user_settings)
+        .where(
+          and(
+            eq(user_settings.user_id, String(userId)),
+            eq(user_settings.setting_key, "dashboard_config")
+          )
+        )
+        .limit(1);
+
+      const VALID_WIDGET_IDS = new Set([
+        "dashboard_stats", "machine_status", "recent_rolls", "attendance_stats",
+        "quick_notes", "shortcuts", "inventory_widget", "quotes_widget",
+        "attendance_widget", "recent_orders_widget", "production_progress_widget",
+        "maintenance_widget"
+      ]);
+
+      if (setting.length > 0 && setting[0].setting_value) {
+        try {
+          const config = JSON.parse(setting[0].setting_value);
+          if (Array.isArray(config.widgets)) {
+            config.widgets = config.widgets.filter((w: string) => VALID_WIDGET_IDS.has(w));
+          }
+          return res.json(config);
+        } catch {
+          // Invalid JSON, return default
+        }
+      }
+
+      // Return default config based on user role
+      const userResult = await db
+        .select({ role_id: users.role_id, permissions: roles.permissions })
+        .from(users)
+        .leftJoin(roles, eq(users.role_id, roles.id))
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      const userPerms: string[] = (userResult[0]?.permissions as string[]) || [];
+      const roleId = userResult[0]?.role_id;
+      const isAdmin = roleId === 1 || userPerms.includes("admin");
+
+      let defaultWidgets: string[];
+
+      if (isAdmin) {
+        defaultWidgets = [
+          "dashboard_stats", "recent_orders_widget", "production_progress_widget",
+          "machine_status", "inventory_widget", "attendance_widget",
+          "maintenance_widget", "shortcuts", "quick_notes"
+        ];
+      } else if (userPerms.includes("manage_production") || userPerms.includes("view_production")) {
+        defaultWidgets = [
+          "dashboard_stats", "recent_orders_widget", "production_progress_widget",
+          "machine_status", "recent_rolls", "shortcuts"
+        ];
+      } else if (userPerms.includes("manage_hr") || userPerms.includes("view_hr")) {
+        defaultWidgets = [
+          "attendance_stats", "attendance_widget", "shortcuts", "quick_notes"
+        ];
+      } else if (userPerms.includes("manage_warehouse") || userPerms.includes("view_warehouse")) {
+        defaultWidgets = [
+          "inventory_widget", "recent_orders_widget", "shortcuts", "quick_notes"
+        ];
+      } else if (userPerms.includes("manage_orders") || userPerms.includes("manage_customers")) {
+        defaultWidgets = [
+          "recent_orders_widget", "quotes_widget", "dashboard_stats", "shortcuts"
+        ];
+      } else {
+        defaultWidgets = [
+          "dashboard_stats", "shortcuts", "quick_notes"
+        ];
+      }
+
+      res.json({ widgets: defaultWidgets });
+    } catch (error) {
+      logger.error("Dashboard config error", error);
+      res.status(500).json({ message: "خطأ في جلب إعدادات لوحة التحكم" });
+    }
+  });
+
+  app.put("/api/dashboard/config", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const { widgets } = req.body;
+      if (!Array.isArray(widgets)) {
+        return res.status(400).json({ message: "widgets must be an array" });
+      }
+
+      const VALID_WIDGET_IDS = new Set([
+        "dashboard_stats", "machine_status", "recent_rolls", "attendance_stats",
+        "quick_notes", "shortcuts", "inventory_widget", "quotes_widget",
+        "attendance_widget", "recent_orders_widget", "production_progress_widget",
+        "maintenance_widget"
+      ]);
+      const validWidgets = widgets.filter((w: string) => typeof w === "string" && VALID_WIDGET_IDS.has(w));
+
+      const configJson = JSON.stringify({ widgets: validWidgets });
+
+      const existing = await db
+        .select()
+        .from(user_settings)
+        .where(
+          and(
+            eq(user_settings.user_id, String(userId)),
+            eq(user_settings.setting_key, "dashboard_config")
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        await db
+          .update(user_settings)
+          .set({ setting_value: configJson, setting_type: "json", updated_at: new Date() })
+          .where(eq(user_settings.id, existing[0].id));
+      } else {
+        await db.insert(user_settings).values({
+          user_id: String(userId),
+          setting_key: "dashboard_config",
+          setting_value: configJson,
+          setting_type: "json",
+        });
+      }
+
+      res.json({ success: true, widgets: validWidgets });
+    } catch (error) {
+      logger.error("Dashboard config save error", error);
+      res.status(500).json({ message: "خطأ في حفظ إعدادات لوحة التحكم" });
     }
   });
 

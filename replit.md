@@ -43,6 +43,37 @@ The system is built with a modern stack emphasizing efficiency and scalability, 
 
 ## Recent Changes
 
+### Customizable Role-Based Dashboard (March 8, 2026)
+
+**Dashboard Configuration API:**
+- GET/PUT `/api/dashboard/config` endpoints for per-user widget configuration
+- Stored in `user_settings` table (setting_key: `dashboard_config`, setting_type: `json`)
+- Server-side validation against known widget IDs
+- Role-based default widget sets (admin, production, HR, warehouse, sales, default)
+
+**Widget Registry:**
+- `client/src/lib/dashboard-widgets.ts` - Central registry of all dashboard widgets with metadata
+- Maps widget IDs to display names (EN/AR), categories, required permissions, and default sizes
+- Role category detection via `getRoleCategoryFromPermissions()`
+
+**New Widget Components** (`client/src/components/dashboard/widgets/`):
+- `InventoryWidget` - Warehouse stock summary with low-stock alerts
+- `QuotesWidget` - Recent quotes and status breakdown
+- `AttendanceWidget` - Today's attendance overview with progress bar
+- `RecentOrdersWidget` - Latest orders list with status badges
+- `ProductionProgressWidget` - Active production progress bars
+- `MaintenanceWidget` - Pending maintenance alerts with priority badges
+
+**Dashboard Customizer:**
+- `client/src/components/dashboard/DashboardCustomizer.tsx` - Dialog for adding/removing/reordering widgets
+- Toggle switches per widget, organized by category
+- Up/down reorder controls for active widgets
+- Reset to role defaults button
+- Persists config to server via PUT API
+
+**PageLayout Enhancement:**
+- Added optional `actions` prop to `PageLayout` component for header-level action buttons
+
 ### Adobe PDF Generation Service (March 7, 2026)
 
 **Integration:**
