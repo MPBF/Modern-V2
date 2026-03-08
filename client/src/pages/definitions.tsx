@@ -826,6 +826,7 @@ export default function Definitions() {
       textColor: color.text_color,
       brand: color.brand || "-",
       aliases: color.aliases ? color.aliases.split(",") : [color.id],
+      is_active: color.is_active,
     }));
   }, [masterBatchColorsData]);
 
@@ -4759,7 +4760,8 @@ export default function Definitions() {
                                     color.id &&
                                     color.id !== "" &&
                                     color.id !== null &&
-                                    color.id !== undefined,
+                                    color.id !== undefined &&
+                                    color.is_active !== false,
                                 )
                                 .map((color) => (
                                   <SelectItem
