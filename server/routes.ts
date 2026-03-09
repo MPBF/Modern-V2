@@ -1666,7 +1666,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const validatedData =
         insertProductionOrderSchema.parse(productionOrderData);
       const productionOrder =
-        await storage.createProductionOrder(validatedData);
+        await storage.createProductionOrder(validatedData, { final_quantity_kg: quantityCalculation.finalQuantityKg });
       res.status(201).json(productionOrder);
     } catch (error) {
       console.error("Error creating production order:", error);
@@ -1724,6 +1724,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           processedOrders.push({
             success: true,
             data: validatedData,
+            finalQuantityKg: quantityCalculation.finalQuantityKg,
           });
         } catch (validationError) {
           processedOrders.push({
@@ -1744,8 +1745,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         });
       }
 
-      const result = await storage.createProductionOrdersBatch(
-        validOrders.map((po) => po.data!),
+      const result = await storage.createProductionOrdersBatchWithFinalQty(
+        validOrders.map((po) => ({ data: po.data!, finalQuantityKg: po.finalQuantityKg! })),
       );
 
       res.status(201).json({

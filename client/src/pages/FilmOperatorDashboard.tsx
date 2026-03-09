@@ -56,6 +56,9 @@ interface ActiveProductionOrderDetails {
   size_caption?: string;
   raw_material?: string;
   thickness?: string;
+  master_batch_id?: string;
+  master_batch_name?: string;
+  overrun_percentage?: string | number;
 }
 
 interface Roll {
@@ -80,7 +83,8 @@ interface FilmOperatorDashboardProps {
 }
 
 export default function FilmOperatorDashboard({ hideLayout = false }: FilmOperatorDashboardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language === "ar";
   const ln = useLocalizedName();
   const [selectedProductionOrder, setSelectedProductionOrder] = useState<ActiveProductionOrderDetails | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -327,12 +331,25 @@ export default function FilmOperatorDashboard({ hideLayout = false }: FilmOperat
                             <p className="font-medium" data-testid={`text-thickness-${order.id}`}>{order.thickness}</p>
                           </div>
                         )}
+                        {order.master_batch_id && (
+                          <div>
+                            <p className="text-gray-500 dark:text-gray-400">{isArabic ? "لون الماستر باتش" : "Masterbatch Color"}</p>
+                            <p className="font-medium" data-testid={`text-masterbatch-${order.id}`}>{order.master_batch_name || order.master_batch_id}</p>
+                          </div>
+                        )}
                       </div>
 
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600 dark:text-gray-400">{t('operators.common.requiredQuantity')}</span>
-                          <span className="font-medium" data-testid={`text-required-qty-${order.id}`}>{formatNumberAr(Number(order.final_quantity_kg))} {t('operators.common.kg')}</span>
+                          <span className="font-medium" data-testid={`text-required-qty-${order.id}`}>
+                            {formatNumberAr(Number(order.final_quantity_kg))} {t('operators.common.kg')}
+                            {order.overrun_percentage && Number(order.overrun_percentage) > 0 && (
+                              <span className="text-xs text-blue-600 dark:text-blue-400 mr-1 ml-1">
+                                ({isArabic ? "شامل" : "incl."} {formatNumberAr(Number(order.overrun_percentage))}%)
+                              </span>
+                            )}
+                          </span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600 dark:text-gray-400">{t('operators.common.producedQuantity')}</span>

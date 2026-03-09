@@ -1083,7 +1083,7 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
-  async createProductionOrder(po: InsertProductionOrder): Promise<ProductionOrder> {
+  async createProductionOrder(po: InsertProductionOrder, extra?: { final_quantity_kg?: number }): Promise<ProductionOrder> {
     return withDatabaseErrorHandling(
       async () => {
         const validation = await this.dataValidator.validateData("production_orders", po);
@@ -1100,10 +1100,15 @@ export class DatabaseStorage implements IStorage {
         const nextNumber = maxNum + 1;
         const productionOrderNumber = `PO${nextNumber.toString().padStart(3, "0")}`;
 
-        const [newPo] = await db.insert(production_orders).values({
+        const insertValues: any = {
           ...po,
           production_order_number: productionOrderNumber,
-        }).returning();
+        };
+        if (extra?.final_quantity_kg !== undefined) {
+          insertValues.final_quantity_kg = extra.final_quantity_kg.toString();
+        }
+
+        const [newPo] = await db.insert(production_orders).values(insertValues).returning();
         invalidateProductionCache();
         return newPo;
       },
@@ -1128,6 +1133,25 @@ export class DatabaseStorage implements IStorage {
       },
       "createProductionOrdersBatch",
       "إنشاء دفعة أوامر إنتاج",
+    );
+  }
+
+  async createProductionOrdersBatchWithFinalQty(batch: Array<{ data: InsertProductionOrder; finalQuantityKg: number }>): Promise<any> {
+    return withDatabaseErrorHandling(
+      async () => {
+        const results = { successful: [] as ProductionOrder[], failed: [] as Array<{ order: InsertProductionOrder; error: string }> };
+        for (const { data, finalQuantityKg } of batch) {
+          try {
+            const created = await this.createProductionOrder(data, { final_quantity_kg: finalQuantityKg });
+            results.successful.push(created);
+          } catch (e: any) {
+            results.failed.push({ order: data, error: e.message });
+          }
+        }
+        return results;
+      },
+      "createProductionOrdersBatchWithFinalQty",
+      "إنشاء دفعة أوامر إنتاج مع الكمية النهائية",
     );
   }
 
@@ -2959,6 +2983,8 @@ export class DatabaseStorage implements IStorage {
         cp.size_caption,
         cp.raw_material,
         cp.thickness,
+        cp.master_batch_id,
+        COALESCE(mb.name_ar, mb.name, cp.master_batch_id) AS master_batch_name,
         COUNT(r.id) AS rolls_count,
         COALESCE(SUM(r.weight_kg), 0) AS total_weight_produced,
         GREATEST(0, (CASE WHEN po.final_quantity_kg IS NOT NULL AND po.final_quantity_kg > 0 THEN po.final_quantity_kg ELSE po.quantity_kg END)::numeric - COALESCE(SUM(r.weight_kg), 0)) AS remaining_quantity
@@ -2967,11 +2993,12 @@ export class DatabaseStorage implements IStorage {
       JOIN customers c ON c.id = o.customer_id
       LEFT JOIN customer_products cp ON cp.id = po.customer_product_id
       LEFT JOIN items i ON i.id = cp.item_id
+      LEFT JOIN master_batch_colors mb ON mb.id = cp.master_batch_id
       LEFT JOIN rolls r ON r.production_order_id = po.id
       WHERE o.status = 'in_production'
         AND po.status IN ('pending', 'active')
         AND po.film_completed = false
-      GROUP BY po.id, o.id, c.id, cp.id, i.id
+      GROUP BY po.id, o.id, c.id, cp.id, i.id, mb.id
       HAVING COALESCE(SUM(r.weight_kg), 0) < (CASE WHEN po.final_quantity_kg IS NOT NULL AND po.final_quantity_kg > 0 THEN po.final_quantity_kg ELSE po.quantity_kg END)::numeric
       ORDER BY po.id DESC
     `);
