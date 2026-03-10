@@ -2652,8 +2652,87 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(rolls).where(eq(rolls.stage, stage)).orderBy(desc(rolls.created_at));
   }
 
-  async searchRolls(query: string): Promise<Roll[]> {
-    return await db.select().from(rolls).where(sql`${rolls.roll_number} ILIKE ${`%${query}%`}`).orderBy(desc(rolls.created_at)).limit(50);
+  async searchRolls(query: string, filters?: any): Promise<any[]> {
+    const createdByUser = alias(users, 'created_by_user');
+    const printedByUser = alias(users, 'printed_by_user');
+    const cutByUser = alias(users, 'cut_by_user');
+    const filmMachine = alias(machines, 'film_machine');
+    const printingMachine = alias(machines, 'printing_machine');
+    const cuttingMachine = alias(machines, 'cutting_machine');
+
+    const conditions: any[] = [];
+    if (query) {
+      conditions.push(sql`${rolls.roll_number} ILIKE ${`%${query}%`}`);
+    }
+    if (filters?.stage) {
+      conditions.push(eq(rolls.stage, filters.stage));
+    }
+    if (filters?.productionOrderId) {
+      conditions.push(eq(rolls.production_order_id, filters.productionOrderId));
+    }
+    if (filters?.machineId) {
+      conditions.push(eq(rolls.film_machine_id, filters.machineId));
+    }
+    if (filters?.operatorId) {
+      conditions.push(eq(rolls.created_by, filters.operatorId));
+    }
+    if (filters?.orderId) {
+      conditions.push(sql`${rolls.production_order_id} IN (SELECT id FROM production_orders WHERE order_id = ${filters.orderId})`);
+    }
+    if (filters?.startDate) {
+      conditions.push(sql`${rolls.created_at} >= ${filters.startDate}::timestamp`);
+    }
+    if (filters?.endDate) {
+      conditions.push(sql`${rolls.created_at} <= ${filters.endDate}::timestamp`);
+    }
+    if (filters?.minWeight) {
+      conditions.push(sql`${rolls.weight_kg} >= ${filters.minWeight}`);
+    }
+    if (filters?.maxWeight) {
+      conditions.push(sql`${rolls.weight_kg} <= ${filters.maxWeight}`);
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const results = await db
+      .select({
+        id: rolls.id,
+        roll_seq: rolls.roll_seq,
+        roll_number: rolls.roll_number,
+        production_order_id: rolls.production_order_id,
+        stage: rolls.stage,
+        weight_kg: rolls.weight_kg,
+        cut_weight_total_kg: rolls.cut_weight_total_kg,
+        waste_kg: rolls.waste_kg,
+        qr_code_text: rolls.qr_code_text,
+        film_machine_id: rolls.film_machine_id,
+        printing_machine_id: rolls.printing_machine_id,
+        cutting_machine_id: rolls.cutting_machine_id,
+        created_by: rolls.created_by,
+        printed_by: rolls.printed_by,
+        cut_by: rolls.cut_by,
+        printed_at: rolls.printed_at,
+        cut_completed_at: rolls.cut_completed_at,
+        created_at: rolls.created_at,
+        created_by_name: createdByUser.display_name_ar,
+        printed_by_name: printedByUser.display_name_ar,
+        cut_by_name: cutByUser.display_name_ar,
+        film_machine_name: filmMachine.name_ar,
+        printing_machine_name: printingMachine.name_ar,
+        cutting_machine_name: cuttingMachine.name_ar,
+      })
+      .from(rolls)
+      .leftJoin(createdByUser, eq(rolls.created_by, createdByUser.id))
+      .leftJoin(printedByUser, eq(rolls.printed_by, printedByUser.id))
+      .leftJoin(cutByUser, eq(rolls.cut_by, cutByUser.id))
+      .leftJoin(filmMachine, eq(rolls.film_machine_id, filmMachine.id))
+      .leftJoin(printingMachine, eq(rolls.printing_machine_id, printingMachine.id))
+      .leftJoin(cuttingMachine, eq(rolls.cutting_machine_id, cuttingMachine.id))
+      .where(whereClause)
+      .orderBy(desc(rolls.created_at))
+      .limit(200);
+
+    return results;
   }
 
   async getRollFullDetails(id: number): Promise<any> {
@@ -3863,10 +3942,52 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getProductionOrderStats(): Promise<any> {
-    const [total] = await db.select({ count: count() }).from(production_orders);
-    const [active] = await db.select({ count: count() }).from(production_orders).where(eq(production_orders.status, 'in_progress'));
-    return { total: total?.count || 0, active: active?.count || 0 };
+  async getProductionOrderStats(productionOrderId?: number): Promise<any> {
+    if (!productionOrderId) {
+      const [total] = await db.select({ count: count() }).from(production_orders);
+      const [active] = await db.select({ count: count() }).from(production_orders).where(eq(production_orders.status, 'in_progress'));
+      return { total: total?.count || 0, active: active?.count || 0 };
+    }
+
+    const [po] = await db.select().from(production_orders).where(eq(production_orders.id, productionOrderId));
+    if (!po) throw new Error("أمر الإنتاج غير موجود");
+
+    const orderRolls = await db.select().from(rolls).where(eq(rolls.production_order_id, productionOrderId));
+
+    const totalRolls = orderRolls.length;
+    const totalWeight = orderRolls.reduce((sum, r) => sum + parseFloat(String(r.weight_kg || 0)), 0);
+    const filmRolls = orderRolls.filter(r => r.stage === 'film').length;
+    const printingRolls = orderRolls.filter(r => r.stage === 'printing').length;
+    const cuttingRolls = orderRolls.filter(r => r.stage === 'cutting').length;
+    const doneRolls = orderRolls.filter(r => r.stage === 'done' || r.stage === 'archived').length;
+
+    const targetQuantity = parseFloat(String(po.quantity_kg || 0));
+    const completionPercentage = targetQuantity > 0 ? Math.min(100, (totalWeight / targetQuantity) * 100) : 0;
+    const remainingQuantity = Math.max(0, targetQuantity - totalWeight);
+
+    const wasteRecords = await db.select({ total: sql<string>`COALESCE(SUM(quantity_wasted), 0)` }).from(waste).where(eq(waste.production_order_id, productionOrderId));
+    const totalWaste = parseFloat(wasteRecords[0]?.total || '0');
+
+    const productionStartTime = po.production_start_time || po.created_at;
+    const productionEndTime = po.production_end_time || null;
+    let productionTimeHours = 0;
+    if (productionStartTime && productionEndTime) {
+      productionTimeHours = Math.round((new Date(productionEndTime).getTime() - new Date(productionStartTime).getTime()) / 3600000 * 10) / 10;
+    }
+
+    return {
+      production_order: po,
+      total_rolls: totalRolls,
+      total_weight: totalWeight.toFixed(2),
+      film_rolls: filmRolls,
+      printing_rolls: printingRolls,
+      cutting_rolls: cuttingRolls,
+      done_rolls: doneRolls,
+      completion_percentage: completionPercentage.toFixed(1),
+      remaining_quantity: remainingQuantity.toFixed(2),
+      total_waste: totalWaste.toFixed(2),
+      production_time_hours: productionTimeHours,
+    };
   }
 
   async getProductionOrdersWithDetails(): Promise<any[]> {
@@ -3890,6 +4011,8 @@ export class DatabaseStorage implements IStorage {
         customer_name_ar: customers.name_ar,
         size_caption: customer_products.size_caption,
         is_printed: customer_products.is_printed,
+        item_name: items.name,
+        item_name_ar: items.name_ar,
         machine_name: machines.name,
         machine_name_ar: machines.name_ar,
         operator_name: users.display_name,
@@ -3899,6 +4022,7 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(orders, eq(production_orders.order_id, orders.id))
       .innerJoin(customers, eq(orders.customer_id, customers.id))
       .leftJoin(customer_products, eq(production_orders.customer_product_id, customer_products.id))
+      .leftJoin(items, eq(customer_products.item_id, items.id))
       .leftJoin(machines, eq(production_orders.assigned_machine_id, machines.id))
       .leftJoin(users, eq(production_orders.assigned_operator_id, users.id))
       .orderBy(desc(production_orders.id));
