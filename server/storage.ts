@@ -1047,6 +1047,22 @@ export class DatabaseStorage implements IStorage {
     return withDatabaseErrorHandling(
       async () => {
         await db.transaction(async (tx) => {
+          const relatedPOs = await tx
+            .select({ id: production_orders.id })
+            .from(production_orders)
+            .where(eq(production_orders.order_id, id));
+          const poIds = relatedPOs.map(po => po.id);
+
+          if (poIds.length > 0) {
+            await tx.delete(waste).where(inArray(waste.production_order_id, poIds));
+            await tx.delete(machine_queues).where(inArray(machine_queues.production_order_id, poIds));
+            await tx.delete(mixing_batches).where(inArray(mixing_batches.production_order_id, poIds));
+            await tx.delete(warehouse_receipts).where(inArray(warehouse_receipts.production_order_id, poIds));
+            await tx.delete(finished_goods_vouchers_in).where(inArray(finished_goods_vouchers_in.production_order_id, poIds));
+            await tx.delete(raw_material_vouchers_out).where(inArray(raw_material_vouchers_out.production_order_id, poIds));
+            await tx.delete(rolls).where(inArray(rolls.production_order_id, poIds));
+          }
+
           await tx.delete(production_orders).where(eq(production_orders.order_id, id));
           await tx.delete(orders).where(eq(orders.id, id));
         });
