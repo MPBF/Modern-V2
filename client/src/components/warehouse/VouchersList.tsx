@@ -26,9 +26,10 @@ interface VouchersListProps {
 
 export function VouchersList({ type, title, onView }: VouchersListProps) {
   const { t } = useTranslation();
-  const { data: vouchers = [], isLoading } = useQuery<any[]>({
+  const { data: rawData, isLoading } = useQuery<any>({
     queryKey: ["/api/warehouse/vouchers", type],
   });
+  const vouchers: any[] = Array.isArray(rawData) ? rawData : (rawData?.data ?? []);
 
   const getVoucherTypeLabel = (voucherType: string) => {
     const labels: Record<string, string> = {
