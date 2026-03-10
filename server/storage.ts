@@ -727,6 +727,10 @@ export interface IStorage {
   getFinishedGoodsVouchersOut(): Promise<FinishedGoodsVoucherOut[]>;
   getFinishedGoodsVoucherOutById(id: number): Promise<FinishedGoodsVoucherOut | undefined>;
   createFinishedGoodsVoucherOut(voucher: any): Promise<FinishedGoodsVoucherOut>;
+  getProductionOrdersForReceipt(): Promise<any[]>;
+  updateProductionOrderReceivedKg(id: number, additionalKg: number): Promise<void>;
+  getFinishedGoodsStock(): Promise<any[]>;
+  updateFinishedGoodsStock(itemId: string, quantityChange: number, locationId?: number): Promise<void>;
   
   // Warehouse Stats
   getWarehouseVouchersStats(): Promise<any>;
@@ -2233,8 +2237,141 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createFinishedGoodsVoucherIn(data: any): Promise<FinishedGoodsVoucherIn> {
-    const [v] = await db.insert(finished_goods_vouchers_in).values(data).returning();
-    return v;
+    const poId = data.production_order_id
+      ? (typeof data.production_order_id === 'string' ? parseInt(data.production_order_id) : data.production_order_id)
+      : null;
+
+    if (poId) {
+      const [po] = await db.select().from(production_orders).where(eq(production_orders.id, poId));
+      if (!po) {
+        throw new Error("أمر الإنتاج غير موجود");
+      }
+      const targetQty = parseFloat(String(po.quantity_kg));
+      const alreadyReceived = parseFloat(String(po.warehouse_received_kg || '0'));
+      const remaining = targetQty - alreadyReceived;
+      const receiveQty = parseFloat(String(data.weight_kg || data.quantity || '0'));
+
+      if (remaining <= 0) {
+        throw new Error("تم استلام كامل الكمية لهذا الأمر مسبقاً");
+      }
+      if (receiveQty > remaining) {
+        throw new Error(`الكمية المطلوبة (${receiveQty} كجم) تتجاوز الكمية المتبقية (${remaining} كجم)`);
+      }
+
+      data.production_order_id = poId;
+    }
+
+    return await db.transaction(async (tx) => {
+      const [v] = await tx.insert(finished_goods_vouchers_in).values(data).returning();
+
+      if (poId) {
+        const receiveQty = parseFloat(String(data.weight_kg || data.quantity || '0'));
+        await tx
+          .update(production_orders)
+          .set({
+            warehouse_received_kg: sql`CAST(${production_orders.warehouse_received_kg} AS NUMERIC) + ${receiveQty}`,
+          })
+          .where(eq(production_orders.id, poId));
+      }
+
+      if (data.item_id) {
+        const qty = parseFloat(String(data.weight_kg || data.quantity || '0'));
+        const locId = data.location_id ? (typeof data.location_id === 'string' ? parseInt(data.location_id) : data.location_id) : null;
+        const conditions = locId
+          ? and(eq(inventory.item_id, data.item_id), eq(inventory.location_id, locId))
+          : eq(inventory.item_id, data.item_id);
+        const existing = await tx.select().from(inventory).where(conditions as any);
+
+        if (existing.length > 0) {
+          await tx
+            .update(inventory)
+            .set({
+              current_stock: sql`CAST(${inventory.current_stock} AS NUMERIC) + ${qty}`,
+              last_updated: new Date(),
+            })
+            .where(eq(inventory.id, existing[0].id));
+        } else {
+          await tx.insert(inventory).values({
+            item_id: data.item_id,
+            location_id: locId,
+            current_stock: String(qty),
+            unit: 'كيلو',
+          } as any);
+        }
+      }
+
+      return v;
+    });
+  }
+
+  async getProductionOrdersForReceipt(): Promise<any[]> {
+    const orders = await db
+      .select({
+        id: production_orders.id,
+        production_order_number: production_orders.production_order_number,
+        order_id: production_orders.order_id,
+        quantity_kg: production_orders.quantity_kg,
+        warehouse_received_kg: production_orders.warehouse_received_kg,
+        net_quantity_kg: production_orders.net_quantity_kg,
+        status: production_orders.status,
+        customer_product_id: production_orders.customer_product_id,
+      })
+      .from(production_orders)
+      .where(
+        and(
+          or(
+            eq(production_orders.status, 'completed'),
+            eq(production_orders.status, 'active'),
+            eq(production_orders.status, 'cutting')
+          ),
+          sql`CAST(${production_orders.warehouse_received_kg} AS NUMERIC) < CAST(${production_orders.quantity_kg} AS NUMERIC)`
+        )
+      )
+      .orderBy(desc(production_orders.id));
+
+    return orders.map(o => ({
+      ...o,
+      remaining_kg: parseFloat(String(o.quantity_kg)) - parseFloat(String(o.warehouse_received_kg || '0')),
+    }));
+  }
+
+  async updateProductionOrderReceivedKg(id: number, additionalKg: number): Promise<void> {
+    await db
+      .update(production_orders)
+      .set({
+        warehouse_received_kg: sql`CAST(${production_orders.warehouse_received_kg} AS NUMERIC) + ${additionalKg}`,
+      })
+      .where(eq(production_orders.id, id));
+  }
+
+  async getFinishedGoodsStock(): Promise<any[]> {
+    return await db.select().from(inventory).orderBy(desc(inventory.id));
+  }
+
+  async updateFinishedGoodsStock(itemId: string, quantityChange: number, locationId?: number): Promise<void> {
+    const locId = locationId ? (typeof locationId === 'string' ? parseInt(locationId) : locationId) : null;
+    const conditions = locId
+      ? and(eq(inventory.item_id, itemId), eq(inventory.location_id, locId))
+      : eq(inventory.item_id, itemId);
+
+    const existing = await db.select().from(inventory).where(conditions as any);
+
+    if (existing.length > 0) {
+      await db
+        .update(inventory)
+        .set({
+          current_stock: sql`CAST(${inventory.current_stock} AS NUMERIC) + ${quantityChange}`,
+          last_updated: new Date(),
+        })
+        .where(eq(inventory.id, existing[0].id));
+    } else {
+      await db.insert(inventory).values({
+        item_id: itemId,
+        location_id: locId,
+        current_stock: String(quantityChange),
+        unit: 'كيلو',
+      } as any);
+    }
   }
 
   async getFinishedGoodsVouchersOut(): Promise<FinishedGoodsVoucherOut[]> {
@@ -2247,8 +2384,44 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createFinishedGoodsVoucherOut(data: any): Promise<FinishedGoodsVoucherOut> {
-    const [v] = await db.insert(finished_goods_vouchers_out).values(data).returning();
-    return v;
+    return await db.transaction(async (tx) => {
+      if (data.item_id) {
+        const qty = parseFloat(String(data.weight_kg || data.quantity || '0'));
+        const locId = data.location_id ? (typeof data.location_id === 'string' ? parseInt(data.location_id) : data.location_id) : null;
+        const conditions = locId
+          ? and(eq(inventory.item_id, data.item_id), eq(inventory.location_id, locId))
+          : eq(inventory.item_id, data.item_id);
+        const existing = await tx.select().from(inventory).where(conditions as any);
+        const currentStock = existing.length > 0 ? parseFloat(String(existing[0].current_stock || '0')) : 0;
+
+        if (qty > currentStock) {
+          throw new Error(`الكمية المطلوبة (${qty} كجم) تتجاوز المخزون المتاح (${currentStock} كجم)`);
+        }
+      }
+
+      const [v] = await tx.insert(finished_goods_vouchers_out).values(data).returning();
+
+      if (data.item_id) {
+        const qty = parseFloat(String(data.weight_kg || data.quantity || '0'));
+        const locId = data.location_id ? (typeof data.location_id === 'string' ? parseInt(data.location_id) : data.location_id) : null;
+        const conditions = locId
+          ? and(eq(inventory.item_id, data.item_id), eq(inventory.location_id, locId))
+          : eq(inventory.item_id, data.item_id);
+        const existing = await tx.select().from(inventory).where(conditions as any);
+
+        if (existing.length > 0) {
+          await tx
+            .update(inventory)
+            .set({
+              current_stock: sql`CAST(${inventory.current_stock} AS NUMERIC) - ${qty}`,
+              last_updated: new Date(),
+            })
+            .where(eq(inventory.id, existing[0].id));
+        }
+      }
+
+      return v;
+    });
   }
 
   async getWarehouseVouchersStats(): Promise<any> {
@@ -3633,43 +3806,6 @@ export class DatabaseStorage implements IStorage {
 
   async getProductionOrdersBySection(sectionId: number): Promise<ProductionOrder[]> {
     return await db.select().from(production_orders).orderBy(desc(production_orders.id));
-  }
-
-  async getProductionOrdersForReceipt(): Promise<any[]> {
-    const rows = await db.execute(sql`
-      SELECT
-        po.id AS production_order_id,
-        po.production_order_number,
-        po.order_id,
-        po.quantity_kg AS quantity_required,
-        po.final_quantity_kg,
-        po.status AS po_status,
-        o.order_number,
-        c.name AS customer_name,
-        c.name_ar AS customer_name_ar,
-        COALESCE(i.name, cp.id::text) AS product_name,
-        i.name_ar AS product_name_ar,
-        COALESCE(SUM(r.weight_kg), 0) AS total_film_weight,
-        COALESCE(SUM(CASE WHEN r.stage IN ('printing','done') THEN r.weight_kg ELSE 0 END), 0) AS total_print_weight,
-        COALESCE(SUM(CASE WHEN r.stage = 'done' THEN r.cut_weight_total_kg ELSE 0 END), 0) AS total_cut_weight,
-        COALESCE(SUM(CASE WHEN r.stage = 'done' THEN r.waste_kg ELSE 0 END), 0) AS waste_weight,
-        0 AS total_received_weight
-      FROM production_orders po
-      JOIN orders o ON po.order_id = o.id
-      JOIN customers c ON o.customer_id = c.id
-      JOIN customer_products cp ON po.customer_product_id = cp.id
-      LEFT JOIN items i ON cp.item_id = i.id
-      LEFT JOIN rolls r ON r.production_order_id = po.id
-      WHERE EXISTS (SELECT 1 FROM rolls r2 WHERE r2.production_order_id = po.id AND r2.stage = 'done')
-      GROUP BY po.id, po.production_order_number, po.order_id, po.quantity_kg, po.final_quantity_kg, po.status,
-               o.order_number, c.name, c.name_ar, i.name, i.name_ar, cp.id
-      ORDER BY po.id
-    `);
-    return (rows.rows as any[]).map(row => ({
-      ...row,
-      production_order_id: Number(row.production_order_id),
-      order_id: Number(row.order_id),
-    }));
   }
 
   async getProductionOrderStats(): Promise<any> {

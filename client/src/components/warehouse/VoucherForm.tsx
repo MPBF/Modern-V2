@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +30,8 @@ import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Button } from "../ui/button";
 import { useToast } from "../../hooks/use-toast";
-import { Scan } from "lucide-react";
+import { Scan, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "../ui/alert";
 
 type VoucherType = "raw-material-in" | "raw-material-out" | "finished-goods-in" | "finished-goods-out";
 
@@ -45,7 +47,7 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
   const queryClient = useQueryClient();
 
   const baseSchema = z.object({
-    item_id: z.string().min(1, t('warehouse.validation.itemRequired')),
+    item_id: type === "finished-goods-in" ? z.string().optional() : z.string().min(1, t('warehouse.validation.itemRequired')),
     quantity: z.string().refine(val => parseFloat(val) > 0, t('warehouse.validation.quantityPositive')),
     unit: z.string().default("كيلو"),
     barcode: z.string().optional(),
@@ -71,7 +73,7 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
   const finishedGoodsInSchema = baseSchema.extend({
     voucher_type: z.enum(["production_receipt", "customer_return", "adjustment"]).default("production_receipt"),
     customer_id: z.string().optional(),
-    production_order_id: z.string().optional(),
+    production_order_id: z.string().min(1, "يجب اختيار أمر الإنتاج"),
     weight_kg: z.string().optional(),
     pieces_count: z.string().optional(),
     from_production_line: z.string().optional(),
@@ -124,6 +126,8 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
                     type === "finished-goods-in" ? "production_receipt" : "customer_delivery",
       supplier_id: "",
       customer_id: "",
+      production_order_id: "",
+      weight_kg: "",
       driver_name: "",
       driver_phone: "",
       vehicle_number: "",
@@ -164,6 +168,25 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
     },
   });
 
+  const { data: productionOrders = [] } = useQuery({
+    queryKey: ["/api/warehouse/production-orders-for-receipt"],
+    enabled: type === "finished-goods-in",
+    queryFn: async () => {
+      const res = await fetch("/api/warehouse/production-orders-for-receipt");
+      return res.json();
+    },
+  });
+
+  const [selectedPO, setSelectedPO] = useState<any>(null);
+  const [remainingKg, setRemainingKg] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setSelectedPO(null);
+      setRemainingKg(null);
+    }
+  }, [open]);
+
   const getVoucherPrefix = (vType: VoucherType) => {
     switch (vType) {
       case "raw-material-in": return "RM-Rec";
@@ -179,29 +202,40 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
       const numRes = await fetch(`/api/warehouse/vouchers/next-number/${prefix}`);
       const { next_number } = await numRes.json();
 
+      const submitData = { ...data, voucher_number: next_number };
+      if (type === "finished-goods-in" && data.weight_kg) {
+        submitData.weight_kg = data.weight_kg;
+      }
+
       const response = await fetch(`/api/warehouse/vouchers/${type}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, voucher_number: next_number }),
+        body: JSON.stringify(submitData),
       });
-      if (!response.ok) throw new Error("فشل في إنشاء السند");
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || "فشل في إنشاء السند");
+      }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/warehouse/vouchers", type] });
       queryClient.invalidateQueries({ queryKey: ["/api/warehouse/vouchers/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/warehouse/production-orders-for-receipt"] });
       toast({
         title: t('warehouse.toast.savedSuccess'),
         description: t('warehouse.toast.voucherCreated'),
       });
       onOpenChange(false);
       form.reset();
+      setSelectedPO(null);
+      setRemainingKg(null);
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: t('warehouse.toast.error'),
-        description: t('warehouse.toast.voucherCreateFailed'),
+        description: error.message || t('warehouse.toast.voucherCreateFailed'),
         variant: "destructive",
       });
     },
@@ -389,13 +423,67 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
               />
             )}
 
-            {(type === "finished-goods-in" || type === "finished-goods-out") && (
+            {type === "finished-goods-in" && (
+              <div className="space-y-3">
+                <FormField
+                  control={form.control}
+                  name="production_order_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>أمر الإنتاج *</FormLabel>
+                      <Select
+                        onValueChange={(val) => {
+                          field.onChange(val);
+                          const po = (Array.isArray(productionOrders) ? productionOrders : []).find((o: any) => String(o.id) === val);
+                          setSelectedPO(po);
+                          if (po) {
+                            setRemainingKg(po.remaining_kg);
+                            form.setValue("weight_kg", String(po.remaining_kg));
+                            form.setValue("quantity", String(po.remaining_kg));
+                            form.setValue("notes", `استلام من صالة الإنتاج - أمر إنتاج ${po.production_order_number}`);
+                          }
+                        }}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="اختر أمر الإنتاج" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {(Array.isArray(productionOrders) ? productionOrders : []).map((po: any) => (
+                            <SelectItem key={po.id} value={String(po.id)}>
+                              {po.production_order_number} - المتبقي: {po.remaining_kg} كجم (من {po.quantity_kg} كجم)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {selectedPO && remainingKg !== null && (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      <div className="flex justify-between">
+                        <span>الكمية الإجمالية: <strong>{selectedPO.quantity_kg} كجم</strong></span>
+                        <span>تم استلام: <strong>{selectedPO.warehouse_received_kg} كجم</strong></span>
+                        <span>المتبقي: <strong>{remainingKg} كجم</strong></span>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
+
+            {type === "finished-goods-out" && (
               <FormField
                 control={form.control}
                 name="customer_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('warehouse.labels.customer')} {type === "finished-goods-out" && "*"}</FormLabel>
+                    <FormLabel>{t('warehouse.labels.customer')} *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>

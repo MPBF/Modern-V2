@@ -43,6 +43,18 @@ The system is built with a modern stack emphasizing efficiency and scalability, 
 
 ## Recent Changes
 
+### Warehouse Quantity Tracking & Validation (March 10, 2026)
+
+**Production Order → Warehouse Receipt Flow:**
+- Added `warehouse_received_kg` column to `production_orders` to track received quantities
+- When creating a finished goods receipt (FP-Rec), the system validates:
+  - The quantity does not exceed the remaining amount on the production order
+  - Once fully received, the production order disappears from the receipt dropdown
+- Receipt and delivery operations run inside database transactions for data integrity
+- Finished goods receipts automatically update inventory stock
+- Finished goods deliveries validate against available stock before allowing deduction
+- API endpoint: `GET /api/warehouse/production-orders-for-receipt` returns orders with remaining quantities
+
 ### Warehouse Module Reorganization - 4-Voucher System (March 10, 2026)
 
 **Voucher Types:**

@@ -9091,6 +9091,17 @@ Do not include quotes or explanations.`;
     }
   });
 
+  // أوامر الإنتاج المتاحة للاستلام في المستودع
+  app.get("/api/warehouse/production-orders-for-receipt", requireAuth, async (req, res) => {
+    try {
+      const orders = await storage.getProductionOrdersForReceipt();
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching production orders for receipt:", error);
+      res.status(500).json({ message: "خطأ في جلب أوامر الإنتاج" });
+    }
+  });
+
   // سندات استلام المواد التامة
   app.get("/api/warehouse/vouchers/finished-goods-in", requireAuth, async (req, res) => {
     try {
@@ -9118,7 +9129,8 @@ Do not include quotes or explanations.`;
       res.status(201).json(voucher);
     } catch (error: any) {
       console.error("Error creating finished goods in voucher:", error);
-      res.status(500).json({ message: "خطأ في إنشاء سند استلام المواد التامة", error: error.message });
+      const isValidation = error.message?.includes("تتجاوز") || error.message?.includes("تم استلام كامل") || error.message?.includes("غير موجود");
+      res.status(isValidation ? 400 : 500).json({ message: error.message || "خطأ في إنشاء سند استلام المواد التامة" });
     }
   });
 
@@ -9163,7 +9175,8 @@ Do not include quotes or explanations.`;
       res.status(201).json(voucher);
     } catch (error: any) {
       console.error("Error creating finished goods out voucher:", error);
-      res.status(500).json({ message: "خطأ في إنشاء سند إخراج المواد التامة", error: error.message });
+      const isValidation = error.message?.includes("تتجاوز");
+      res.status(isValidation ? 400 : 500).json({ message: error.message || "خطأ في إنشاء سند إخراج المواد التامة" });
     }
   });
 

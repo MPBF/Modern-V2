@@ -454,6 +454,11 @@ export const production_orders = pgTable(
     cutting_completed: boolean("cutting_completed").default(false), // علامة اكتمال التقطيع
     is_final_roll_created: boolean("is_final_roll_created").default(false), // علامة إنشاء آخر رول
 
+    // الكمية المستلمة في المستودع من صالة الإنتاج
+    warehouse_received_kg: decimal("warehouse_received_kg", { precision: 10, scale: 2 })
+      .notNull()
+      .default("0"),
+
     status: varchar("status", { length: 30 }).notNull().default("pending"),
     created_at: timestamp("created_at").notNull().defaultNow(),
   },
