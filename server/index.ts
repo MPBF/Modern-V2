@@ -16,15 +16,16 @@ import monitoringRoutes from "./routes/monitoring";
 
 const app = express();
 
-// Early healthcheck for production deployments - MUST be before any middleware
-if (process.env.NODE_ENV === "production") {
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path === "/" && !(app as any).__routesReady) {
-      return res.status(200).send("OK");
-    }
-    next();
-  });
+// Early healthcheck - MUST be before any middleware
+// Returns 200 immediately while the app finishes loading
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if ((req.path === "/" || req.path === "/api/health") && !(app as any).__routesReady) {
+    return res.status(200).send("OK");
+  }
+  next();
+});
 
+if (process.env.NODE_ENV === "production") {
   const port = parseInt(process.env.PORT || "5000", 10);
   const earlyServer = http.createServer(app);
   earlyServer.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
@@ -381,6 +382,21 @@ function sanitizeResponseForLogging(response: any): any {
 (async () => {
   const earlyServer = (app as any).__earlyServer || null;
 
+  // In development, start listening IMMEDIATELY so port detection works
+  // Vite and routes will be set up after the port is open
+  let devServer: import("http").Server | null = null;
+  if (app.get("env") !== "production") {
+    const http = await import("http");
+    devServer = http.createServer(app);
+    const port = parseInt(process.env.PORT || "5000", 10);
+    await new Promise<void>((resolve) => {
+      devServer!.listen(port, "0.0.0.0", () => {
+        log(`serving on port ${port}`);
+        resolve();
+      });
+    });
+  }
+
   // Enhanced database initialization for production deployment
   if (app.get("env") === "production") {
     try {
@@ -720,7 +736,7 @@ function sanitizeResponseForLogging(response: any): any {
   // 🔧 Register monitoring routes
   app.use(monitoringRoutes);
 
-  const server = await registerRoutes(app, earlyServer || undefined);
+  const server = await registerRoutes(app, devServer || earlyServer || undefined);
 
   // 404 handler for unmatched API routes (MUST be after routes)
   app.use("/api/*", (req: Request, res: Response, next: NextFunction) => {
@@ -755,20 +771,17 @@ function sanitizeResponseForLogging(response: any): any {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
-  } else {
+    (app as any).__routesReady = true;
+    log(`development server fully initialized`);
+  } else if (app.get("env") === "production" && earlyServer) {
     serveStatic(app);
-  }
-
-  (app as any).__routesReady = true;
-
-  if (app.get("env") === "production" && earlyServer) {
+    (app as any).__routesReady = true;
     log(`production server fully initialized`);
   } else {
+    serveStatic(app);
+    (app as any).__routesReady = true;
     const port = parseInt(process.env.PORT || "5000", 10);
     server.listen(port, "0.0.0.0", () => {
       log(`serving on port ${port}`);
