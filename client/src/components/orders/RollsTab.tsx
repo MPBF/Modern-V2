@@ -232,6 +232,8 @@ export default function RollsTab({ customers = [], productionOrders = [] }: Roll
 
     const stageConfig = getStageConfig(roll.stage);
 
+    const formatDate = (d: string | undefined | null) => d ? format(new Date(d), 'dd/MM/yyyy HH:mm') : '-';
+
     const labelHTML = `
       <html dir="rtl">
         <head>
@@ -240,19 +242,25 @@ export default function RollsTab({ customers = [], productionOrders = [] }: Roll
           <style>
             @page { size: 4in 6in; margin: 0; }
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: 'Arial', sans-serif; direction: rtl; width: 4in; height: 6in; padding: 3mm; }
-            .label { width: 100%; height: 100%; border: 2px solid #000; display: flex; flex-direction: column; padding: 3mm; }
-            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 2mm; margin-bottom: 2mm; }
-            .company { font-size: 10pt; font-weight: bold; }
-            .roll-num { font-size: 16pt; font-weight: bold; background: #000; color: #fff; padding: 2mm 4mm; margin-top: 1mm; display: inline-block; }
-            .content { flex: 1; display: flex; flex-direction: column; gap: 2mm; }
+            body { font-family: 'Arial', sans-serif; direction: rtl; width: 4in; height: 6in; padding: 2mm; }
+            .label { width: 100%; height: 100%; border: 2px solid #000; display: flex; flex-direction: column; padding: 2mm; }
+            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 1.5mm; margin-bottom: 1.5mm; }
+            .company { font-size: 9pt; font-weight: bold; }
+            .roll-num { font-size: 14pt; font-weight: bold; background: #000; color: #fff; padding: 1.5mm 4mm; margin-top: 1mm; display: inline-block; }
+            .content { flex: 1; display: flex; flex-direction: column; gap: 1.5mm; }
             .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1mm; }
-            .box { border: 1px solid #333; padding: 2mm; }
+            .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1mm; }
+            .box { border: 1px solid #333; padding: 1.5mm; }
             .box.full { grid-column: 1 / -1; }
             .box.highlight { background: #ffe; border: 2px solid #c90; }
-            .lbl { font-size: 7pt; color: #666; font-weight: 600; }
-            .val { font-size: 9pt; font-weight: bold; }
-            .footer { border-top: 1px solid #333; padding-top: 1mm; text-align: center; font-size: 6pt; color: #666; }
+            .lbl { font-size: 6pt; color: #666; font-weight: 600; }
+            .val { font-size: 8pt; font-weight: bold; }
+            .stage-section { border: 1px solid #999; border-radius: 1mm; padding: 1.5mm; }
+            .stage-title { font-size: 7pt; font-weight: bold; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 1mm; margin-bottom: 1mm; }
+            .stage-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1mm; }
+            .stage-item .lbl { font-size: 5.5pt; }
+            .stage-item .val { font-size: 7pt; }
+            .footer { border-top: 1px solid #333; padding-top: 1mm; text-align: center; font-size: 5.5pt; color: #666; }
           </style>
         </head>
         <body>
@@ -262,7 +270,10 @@ export default function RollsTab({ customers = [], productionOrders = [] }: Roll
               <div class="roll-num">${roll.roll_number}</div>
             </div>
             <div class="content">
-              <div class="box full"><div class="lbl">${t('orders.customer')}</div><div class="val">${roll.customer_name_ar || roll.customer_name || '-'}</div></div>
+              <div class="row">
+                <div class="box"><div class="lbl">${t('orders.customer')}</div><div class="val">${roll.customer_name_ar || roll.customer_name || '-'}</div></div>
+                <div class="box"><div class="lbl">${t('orders.rolls.product')}</div><div class="val">${roll.item_name_ar || roll.item_name || '-'}</div></div>
+              </div>
               <div class="row">
                 <div class="box"><div class="lbl">${t('orders.rolls.productionOrder')}</div><div class="val">${roll.production_order_number}</div></div>
                 <div class="box"><div class="lbl">${t('orders.orderNumber')}</div><div class="val">${roll.order_number}</div></div>
@@ -272,7 +283,26 @@ export default function RollsTab({ customers = [], productionOrders = [] }: Roll
                 <div class="box"><div class="lbl">${t('orders.rolls.stage')}</div><div class="val">${stageConfig.label}</div></div>
               </div>
               <div class="box highlight full"><div class="lbl">${t('orders.rolls.weight')}</div><div class="val">${parseFloat(roll.weight_kg).toFixed(2)} ${t('common.kg')}</div></div>
-              <div class="box full"><div class="lbl">${t('orders.rolls.productionDate')}</div><div class="val">${format(new Date(roll.created_at), 'dd/MM/yyyy HH:mm')}</div></div>
+              <div class="stage-section">
+                <div class="stage-title">مراحل الإنتاج</div>
+                <div class="row3">
+                  <div class="stage-item">
+                    <div class="lbl">🎬 فيلم</div>
+                    <div class="val">${formatDate(roll.created_at)}</div>
+                    <div class="lbl">العامل: <span style="font-weight:bold;color:#000">${roll.created_by_name || '-'}</span></div>
+                  </div>
+                  <div class="stage-item">
+                    <div class="lbl">🖨️ طباعة</div>
+                    <div class="val">${formatDate(roll.printed_at)}</div>
+                    <div class="lbl">العامل: <span style="font-weight:bold;color:#000">${roll.printed_by_name || '-'}</span></div>
+                  </div>
+                  <div class="stage-item">
+                    <div class="lbl">✂️ تقطيع</div>
+                    <div class="val">${formatDate(roll.cut_completed_at)}</div>
+                    <div class="lbl">العامل: <span style="font-weight:bold;color:#000">${roll.cut_by_name || '-'}</span></div>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="footer">${t('orders.rolls.printed')}: ${format(new Date(), 'dd/MM/yyyy HH:mm')}</div>
           </div>
