@@ -7931,7 +7931,9 @@ Do not include quotes or explanations.`;
   // Production hall - get production orders ready for warehouse receipt
   app.get("/api/warehouse/production-hall", requireAuth, async (req, res) => {
     try {
-      const productionOrders = await storage.getProductionOrdersForReceipt();
+      const productionOrders = (storage as any).getProductionHallOrders
+        ? await (storage as any).getProductionHallOrders()
+        : await storage.getProductionOrdersForReceipt();
       res.json(productionOrders);
     } catch (error) {
       console.error("Error fetching production hall data:", error);
