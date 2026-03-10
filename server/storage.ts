@@ -2119,7 +2119,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWarehouseVouchersStats(): Promise<any> {
-    return { total: 0 };
+    try {
+      const [rmIn] = await db.select({ count: count() }).from(raw_material_vouchers_in);
+      const [rmOut] = await db.select({ count: count() }).from(raw_material_vouchers_out);
+      const [fpIn] = await db.select({ count: count() }).from(finished_goods_vouchers_in);
+      const [fpOut] = await db.select({ count: count() }).from(finished_goods_vouchers_out);
+      return {
+        rm_in: rmIn?.count || 0,
+        rm_out: rmOut?.count || 0,
+        fp_in: fpIn?.count || 0,
+        fp_out: fpOut?.count || 0,
+        total: (rmIn?.count || 0) + (rmOut?.count || 0) + (fpIn?.count || 0) + (fpOut?.count || 0),
+      };
+    } catch {
+      return { rm_in: 0, rm_out: 0, fp_in: 0, fp_out: 0, total: 0 };
+    }
   }
 
   async getInventoryCounts(): Promise<InventoryCount[]> {
@@ -3385,6 +3399,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNextVoucherNumber(prefix: string): Promise<string> {
+    const prefixMap: Record<string, { table: string; prefix: string }> = {
+      'RM-Rec': { table: 'raw_material_vouchers_in', prefix: 'RM-Rec.' },
+      'RM-Del': { table: 'raw_material_vouchers_out', prefix: 'RM-Del.' },
+      'FP-Rec': { table: 'finished_goods_vouchers_in', prefix: 'FP-Rec.' },
+      'FP-Del': { table: 'finished_goods_vouchers_out', prefix: 'FP-Del.' },
+      'RMI': { table: 'raw_material_vouchers_in', prefix: 'RM-Rec.' },
+      'RMO': { table: 'raw_material_vouchers_out', prefix: 'RM-Del.' },
+      'FGI': { table: 'finished_goods_vouchers_in', prefix: 'FP-Rec.' },
+      'FGO': { table: 'finished_goods_vouchers_out', prefix: 'FP-Del.' },
+    };
+
+    const mapping = prefixMap[prefix];
+    if (mapping) {
+      const result = await pool.query(
+        `SELECT COUNT(*) + 1 AS next FROM ${mapping.table}`
+      );
+      const num = parseInt(result.rows[0]?.next || '1');
+      return `${mapping.prefix}${String(num).padStart(4, '0')}`;
+    }
+
     const result = await pool.query(
       `SELECT COUNT(*) + 1 AS next FROM (
         SELECT voucher_number FROM raw_material_vouchers_in WHERE voucher_number LIKE $1

@@ -9223,7 +9223,7 @@ Do not include quotes or explanations.`;
   // توليد رقم سند جديد
   app.get("/api/warehouse/vouchers/next-number/:type", requireAuth, async (req, res) => {
     try {
-      const type = req.params.type as "RMI" | "RMO" | "FGI" | "FGO" | "IC";
+      const type = req.params.type as "RM-Rec" | "RM-Del" | "FP-Rec" | "FP-Del" | "RMI" | "RMO" | "FGI" | "FGO" | "IC";
       const nextNumber = await storage.getNextVoucherNumber(type);
       res.json({ next_number: nextNumber });
     } catch (error) {

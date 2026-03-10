@@ -159,12 +159,25 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
     },
   });
 
+  const getVoucherPrefix = (vType: VoucherType) => {
+    switch (vType) {
+      case "raw-material-in": return "RM-Rec";
+      case "raw-material-out": return "RM-Del";
+      case "finished-goods-in": return "FP-Rec";
+      case "finished-goods-out": return "FP-Del";
+    }
+  };
+
   const mutation = useMutation({
     mutationFn: async (data: any) => {
+      const prefix = getVoucherPrefix(type);
+      const numRes = await fetch(`/api/warehouse/vouchers/next-number/${prefix}`);
+      const { next_number } = await numRes.json();
+
       const response = await fetch(`/api/warehouse/vouchers/${type}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, voucher_number: next_number }),
       });
       if (!response.ok) throw new Error("فشل في إنشاء السند");
       return response.json();

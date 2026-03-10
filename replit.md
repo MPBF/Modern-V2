@@ -43,6 +43,41 @@ The system is built with a modern stack emphasizing efficiency and scalability, 
 
 ## Recent Changes
 
+### Warehouse Module Reorganization - 4-Voucher System (March 10, 2026)
+
+**Voucher Types:**
+- `FP-Rec.XXXX` - Finished goods receipt from production hall (سند استلام مواد تامة من صالة الإنتاج)
+- `FP-Del.XXXX` - Finished goods delivery to customer (سند تسليم مواد تامة للعميل)
+- `RM-Rec.XXXX` - Raw material receipt from supplier (سند استلام مواد خام من المورد)
+- `RM-Del.XXXX` - Raw material issue to production hall (سند إخراج مواد خام لصالة الإنتاج)
+
+**Workflow:**
+1. After cutting, quantities appear cumulatively in Production Hall → Warehouse keeper verifies and receives (partial or full) → Creates FP-Rec voucher → Enters finished goods warehouse
+2. For customer delivery → Creates FP-Del voucher → Exits finished goods warehouse
+3. When receiving from supplier → Creates RM-Rec voucher → Enters raw materials warehouse
+4. When needed for production → Creates RM-Del voucher → Exits to production hall
+
+**UI Structure (5 tabs):**
+- Production Hall (صالة الإنتاج) - Shows completed cutting quantities for receipt
+- Finished Goods Warehouse (مستودع المواد التامة) - FP-Rec and FP-Del vouchers
+- Raw Materials Warehouse (مستودع المواد الخام) - RM-Rec and RM-Del vouchers
+- Definitions (التعريفات) - Items, suppliers, units
+- Reports (التقارير) - Movement and balance reports
+
+**Files Modified:**
+- `shared/schema.ts` - Updated voucher table comments for new numbering format
+- `server/storage.ts` - Updated `getNextVoucherNumber()` for new prefixes, `getWarehouseVouchersStats()` returns per-type counts
+- `server/routes.ts` - Updated voucher routes for new prefix types
+- `client/src/pages/warehouse.tsx` - Complete rebuild with 5-tab layout, production hall receipt system
+- `client/src/components/warehouse/VoucherForm.tsx` - Auto-generates correct voucher numbers
+- `client/src/i18n/locales/ar.json` - Updated warehouse translations for new voucher system
+- `client/src/i18n/locales/en.json` - Updated warehouse translations for new voucher system
+
+**API Endpoints:**
+- `GET /api/warehouse/vouchers/next-number/:type` - Accepts FP-Rec, FP-Del, RM-Rec, RM-Del prefixes
+- `POST /api/warehouse/vouchers/finished-goods-in` - Creates FP-Rec voucher from production hall
+- `GET /api/warehouse/vouchers/stats` - Returns counts per voucher type (rm_in, rm_out, fp_in, fp_out)
+
 ### Customizable Role-Based Dashboard (March 8, 2026)
 
 **Dashboard Configuration API:**

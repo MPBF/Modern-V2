@@ -3250,7 +3250,7 @@ export * from "./models/chat";
 // 📋 جدول سندات إدخال المواد الخام (من الموردين أو رصيد افتتاحي)
 export const raw_material_vouchers_in = pgTable("raw_material_vouchers_in", {
   id: serial("id").primaryKey(),
-  voucher_number: varchar("voucher_number", { length: 50 }).notNull().unique(), // رقم السند التسلسلي RMI-001
+  voucher_number: varchar("voucher_number", { length: 50 }).notNull().unique(), // رقم السند التسلسلي RM-Rec.0001
   voucher_type: varchar("voucher_type", { length: 30 }).notNull().default("purchase"), // purchase / opening_balance / return
   supplier_id: integer("supplier_id").references(() => suppliers.id), // المورد (اختياري للرصيد الافتتاحي)
   item_id: varchar("item_id", { length: 20 }).notNull().references(() => items.id), // الصنف
@@ -3273,7 +3273,7 @@ export const raw_material_vouchers_in = pgTable("raw_material_vouchers_in", {
 // 📋 جدول سندات إخراج المواد الخام (تحويل لصالة الإنتاج)
 export const raw_material_vouchers_out = pgTable("raw_material_vouchers_out", {
   id: serial("id").primaryKey(),
-  voucher_number: varchar("voucher_number", { length: 50 }).notNull().unique(), // رقم السند التسلسلي RMO-001
+  voucher_number: varchar("voucher_number", { length: 50 }).notNull().unique(), // رقم السند التسلسلي RM-Del.0001
   voucher_type: varchar("voucher_type", { length: 30 }).notNull().default("production_transfer"), // production_transfer / return_to_supplier / adjustment
   production_order_id: integer("production_order_id").references(() => production_orders.id), // أمر الإنتاج المرتبط (اختياري)
   item_id: varchar("item_id", { length: 20 }).notNull().references(() => items.id), // الصنف
@@ -3295,7 +3295,7 @@ export const raw_material_vouchers_out = pgTable("raw_material_vouchers_out", {
 // 📋 جدول سندات استلام المواد التامة (من صالة الإنتاج)
 export const finished_goods_vouchers_in = pgTable("finished_goods_vouchers_in", {
   id: serial("id").primaryKey(),
-  voucher_number: varchar("voucher_number", { length: 50 }).notNull().unique(), // رقم السند التسلسلي FGI-001
+  voucher_number: varchar("voucher_number", { length: 50 }).notNull().unique(), // رقم السند التسلسلي FP-Rec.0001
   voucher_type: varchar("voucher_type", { length: 30 }).notNull().default("production_receipt"), // production_receipt / customer_return / adjustment
   production_order_id: integer("production_order_id").references(() => production_orders.id), // أمر الإنتاج المرتبط
   roll_id: integer("roll_id").references(() => rolls.id), // الرول المرتبط (اختياري)
@@ -3325,7 +3325,7 @@ export const finished_goods_vouchers_in = pgTable("finished_goods_vouchers_in", 
 // 📋 جدول سندات إخراج المواد التامة (تسليم للعملاء)
 export const finished_goods_vouchers_out = pgTable("finished_goods_vouchers_out", {
   id: serial("id").primaryKey(),
-  voucher_number: varchar("voucher_number", { length: 50 }).notNull().unique(), // رقم السند التسلسلي FGO-001
+  voucher_number: varchar("voucher_number", { length: 50 }).notNull().unique(), // رقم السند التسلسلي FP-Del.0001
   voucher_type: varchar("voucher_type", { length: 30 }).notNull().default("customer_delivery"), // customer_delivery / sample / adjustment
   order_id: integer("order_id").references(() => orders.id), // الطلب المرتبط
   production_order_id: integer("production_order_id").references(() => production_orders.id), // أمر الإنتاج المرتبط
