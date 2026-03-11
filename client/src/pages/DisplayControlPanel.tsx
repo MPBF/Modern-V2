@@ -49,6 +49,10 @@ import {
   Trophy,
   Upload,
   Loader2,
+  Scissors,
+  Printer,
+  Film,
+  Sparkles,
 } from "lucide-react";
 
 interface SlideData {
@@ -743,6 +747,130 @@ export default function DisplayControlPanel() {
             })}
           </div>
         )}
+
+        <Card className="border-2 border-dashed border-emerald-300 dark:border-emerald-700">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Sparkles className="w-5 h-5 text-emerald-600" />
+              {t('display.tutorials.title')}
+            </CardTitle>
+            <p className="text-sm text-gray-500">{t('display.tutorials.description')}</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                {
+                  key: "film",
+                  icon: Film,
+                  color: "blue",
+                  bgColor: "bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800",
+                  iconColor: "text-blue-600",
+                  btnClass: "bg-blue-600 hover:bg-blue-700",
+                  titleKey: "display.tutorials.film.title",
+                  descKey: "display.tutorials.film.description",
+                  slideTitle: t('display.tutorials.film.slideTitle'),
+                  items: [
+                    t('display.tutorials.film.step1'),
+                    t('display.tutorials.film.step2'),
+                    t('display.tutorials.film.step3'),
+                    t('display.tutorials.film.step4'),
+                    t('display.tutorials.film.step5'),
+                    t('display.tutorials.film.step6'),
+                    t('display.tutorials.film.step7'),
+                  ],
+                },
+                {
+                  key: "printing",
+                  icon: Printer,
+                  color: "purple",
+                  bgColor: "bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800",
+                  iconColor: "text-purple-600",
+                  btnClass: "bg-purple-600 hover:bg-purple-700",
+                  titleKey: "display.tutorials.printing.title",
+                  descKey: "display.tutorials.printing.description",
+                  slideTitle: t('display.tutorials.printing.slideTitle'),
+                  items: [
+                    t('display.tutorials.printing.step1'),
+                    t('display.tutorials.printing.step2'),
+                    t('display.tutorials.printing.step3'),
+                    t('display.tutorials.printing.step4'),
+                    t('display.tutorials.printing.step5'),
+                  ],
+                },
+                {
+                  key: "cutting",
+                  icon: Scissors,
+                  color: "green",
+                  bgColor: "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800",
+                  iconColor: "text-green-600",
+                  btnClass: "bg-green-600 hover:bg-green-700",
+                  titleKey: "display.tutorials.cutting.title",
+                  descKey: "display.tutorials.cutting.description",
+                  slideTitle: t('display.tutorials.cutting.slideTitle'),
+                  items: [
+                    t('display.tutorials.cutting.step1'),
+                    t('display.tutorials.cutting.step2'),
+                    t('display.tutorials.cutting.step3'),
+                    t('display.tutorials.cutting.step4'),
+                    t('display.tutorials.cutting.step5'),
+                    t('display.tutorials.cutting.step6'),
+                  ],
+                },
+              ].map((tutorial) => {
+                const TIcon = tutorial.icon;
+                return (
+                  <div key={tutorial.key} className={`rounded-xl border p-4 ${tutorial.bgColor}`}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`w-10 h-10 rounded-lg bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm`}>
+                        <TIcon className={`w-5 h-5 ${tutorial.iconColor}`} />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm">{t(tutorial.titleKey)}</h4>
+                        <p className="text-xs text-gray-500">{t(tutorial.descKey)}</p>
+                      </div>
+                    </div>
+                    <ul className="space-y-1.5 mb-4">
+                      {tutorial.items.slice(0, 3).map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs text-gray-600 dark:text-gray-400">
+                          <span className={`w-4 h-4 rounded-full ${tutorial.btnClass} text-white flex items-center justify-center flex-shrink-0 mt-0.5 text-[10px] font-bold`}>
+                            {i + 1}
+                          </span>
+                          <span className="line-clamp-1">{item}</span>
+                        </li>
+                      ))}
+                      {tutorial.items.length > 3 && (
+                        <li className="text-xs text-gray-400 pr-6">
+                          +{tutorial.items.length - 3} {t('display.tutorials.moreSteps')}
+                        </li>
+                      )}
+                    </ul>
+                    <Button
+                      size="sm"
+                      className={`w-full ${tutorial.btnClass} text-white`}
+                      onClick={() => {
+                        createMutation.mutate({
+                          title: tutorial.slideTitle,
+                          slide_type: "instructions",
+                          duration_seconds: 30,
+                          content: { items: tutorial.items },
+                          sort_order: slides.length,
+                        });
+                      }}
+                      disabled={createMutation.isPending}
+                    >
+                      {createMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin ml-2" />
+                      ) : (
+                        <Plus className="w-4 h-4 ml-2" />
+                      )}
+                      {t('display.tutorials.addToDisplay')}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
           <CardContent className="py-4 px-5">
