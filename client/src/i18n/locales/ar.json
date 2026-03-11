@@ -5136,6 +5136,13 @@
   "reports": {
     "title": "التقارير",
     "description": "عرض وإنشاء تقارير النظام",
+    "types": {
+      "production": "الإنتاج",
+      "quality": "الجودة",
+      "maintenance": "الصيانة",
+      "hr": "الموارد البشرية",
+      "financial": "المالية"
+    },
     "production": {
       "totalProduction": "إجمالي الإنتاج",
       "kilograms": "كيلوجرام",
