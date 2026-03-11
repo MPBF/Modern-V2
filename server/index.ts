@@ -391,6 +391,13 @@ function sanitizeResponseForLogging(response: any): any {
         resolve();
       });
     });
+
+    const altPort = 8000;
+    const altServer = http.createServer(app);
+    altServer.on("error", () => {});
+    altServer.listen(altPort, "0.0.0.0", () => {
+      log(`also serving on port ${altPort}`);
+    });
   }
 
   // Enhanced database initialization for production deployment
