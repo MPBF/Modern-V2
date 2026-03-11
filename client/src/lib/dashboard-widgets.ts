@@ -231,7 +231,7 @@ export function getRoleCategoryFromPermissions(
 ): RoleCategory {
   if (!permissions) return "default";
 
-  if (roleId === 1 || permissions.includes("admin")) return "admin";
+  if (permissions.includes("admin")) return "admin";
 
   const hasAny = (perms: string[]) => perms.some((p) => permissions.includes(p));
 

@@ -353,12 +353,7 @@ export async function requireAdmin(
 
     const user = userWithRole[0];
 
-    // Check if user has admin role or admin permissions
     const isAdmin =
-      user.role_name === "admin" ||
-      user.role_name === "مدير النظام" ||
-      user.role_name === "administrator" ||
-      user.user_role_id === 1 || // Assume role ID 1 is admin
       (user.role_permissions &&
         Array.isArray(user.role_permissions) &&
         user.role_permissions.includes("admin"));

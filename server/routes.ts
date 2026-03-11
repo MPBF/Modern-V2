@@ -523,8 +523,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         .limit(1);
 
       const userPerms: string[] = (userResult[0]?.permissions as string[]) || [];
-      const roleId = userResult[0]?.role_id;
-      const isAdmin = roleId === 1 || userPerms.includes("admin");
+      const isAdmin = userPerms.includes("admin");
 
       let defaultWidgets: string[];
 

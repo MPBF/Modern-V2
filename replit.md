@@ -43,20 +43,15 @@ The system is built with a modern stack emphasizing efficiency and scalability, 
 
 ## Recent Changes
 
-### Roles & Permissions System Hardening (March 11, 2026)
-- **Backend middleware fix**: `requireAdmin` and `requirePermission` now check `permissions` array for `'admin'` instead of checking role name string — consistent with frontend behavior
-- **Admin compatibility**: Session population (`session-auth.ts`) auto-injects `'admin'` permission for role_id 1 or role named 'admin', preventing lockouts for legacy admin roles
-- **Backend route enforcement**: Added `requirePermission(...)` to ~60 write/delete API routes across all modules:
-  - Orders: `manage_orders` for POST/PUT customers and POST orders
-  - Production: `manage_production` for POST production orders (single + batch)
-  - Quality: `manage_quality` for all quality issue CRUD, responsibles, actions
-  - Maintenance: `manage_maintenance` for requests, actions, reports, spare parts, consumable parts
-  - Warehouse: `manage_warehouse` for items, inventory, inventory movements, warehouse transactions, suppliers
-  - HR: `manage_hr` for training programs, materials, enrollments, evaluations, performance reviews, leave requests
-  - Definitions: `manage_definitions` for machines CRUD
-  - Users: `manage_users` for user CRUD
-- **Route permissions**: Added `/factory-floor` to `ROUTE_PERMISSIONS` in `shared/permissions.ts`
-- **Frontend sidebar filtering**: Already uses `canAccessRoute()` → `ROUTE_PERMISSIONS` to show/hide menu items per user permissions
+### Roles & Permissions System Fix (March 11, 2026)
+- **Root cause fixed**: `isUserAdmin()` was incorrectly treating `role_id === 1` (Management User) as admin — the actual admin role is role_id 10 (Admin/مدير النظام) which has `'admin'` in its permissions array. All admin checks now use `permissions.includes('admin')` only.
+- **Deny-by-default**: `canAccessRoute()` and `canAccessSettingsTab()` now return `false` when a route/tab has no entry in `ROUTE_PERMISSIONS`/`SETTINGS_TAB_PERMISSIONS` (previously returned `true`, allowing unrestricted access).
+- **Eliminated all `role_id === 1` references**: Removed from `roleUtils.ts`, `dashboard-widgets.ts`, `QuickNotes.tsx`, `validation.ts`, and `routes.ts`. All admin checks now use permission-based logic.
+- **Backend middleware**: `requireAdmin` and `requirePermission` check `permissions` array for `'admin'` instead of role name string.
+- **Admin compatibility**: Session population (`session-auth.ts`) auto-injects `'admin'` permission if role name is 'admin' (case-insensitive).
+- **Backend route enforcement**: Added `requirePermission(...)` to ~60 write/delete API routes across all modules (orders, production, quality, maintenance, warehouse, HR, definitions, users).
+- **Route permissions**: Added `/factory-floor` to `ROUTE_PERMISSIONS` in `shared/permissions.ts`.
+- **Important**: Admin role (role_id 10, name "Admin") must have `'admin'` in its permissions array to bypass all permission checks. This is already the case in the database.
 
 ### Quality Management System (March 11, 2026)
 - **New tables**: `quality_issues`, `quality_issue_responsibles`, `quality_issue_actions`

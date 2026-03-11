@@ -397,7 +397,7 @@ export default function QuickNotes() {
                         <Eye className="w-4 h-4" />
                       </Button>
                     )}
-                    {(note.created_by === user?.id || user?.role_id === 1) && (
+                    {(note.created_by === user?.id || user?.permissions?.includes('admin')) && (
                       <Button
                         size="sm"
                         variant="ghost"

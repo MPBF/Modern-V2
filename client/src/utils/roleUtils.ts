@@ -6,14 +6,9 @@ import {
   type PermissionKey 
 } from "../../../shared/permissions";
 
-// Check if user has admin role
 export function isUserAdmin(user: AuthUser | null): boolean {
   if (!user) return false;
   
-  // Check if user has admin role (role_id 1 is typically admin)
-  if (user.role_id === 1) return true;
-  
-  // Check if user has admin permission
   return hasPermission(user.permissions, 'admin');
 }
 
@@ -96,8 +91,7 @@ export function canAccessRoute(
   
   const requiredPermissions = ROUTE_PERMISSIONS[route];
   if (!requiredPermissions || requiredPermissions.length === 0) {
-    // No specific permission required, allow access
-    return true;
+    return false;
   }
   
   return hasPermission(user.permissions, requiredPermissions, false);
@@ -116,8 +110,7 @@ export function canAccessSettingsTab(
   
   const requiredPermissions = SETTINGS_TAB_PERMISSIONS[tabName];
   if (!requiredPermissions || requiredPermissions.length === 0) {
-    // No specific permission required, allow access
-    return true;
+    return false;
   }
   
   return hasPermission(user.permissions, requiredPermissions, false);
@@ -129,7 +122,6 @@ export function getUserRoleName(user: AuthUser | null): string {
   
   if (user.role_name_ar) return user.role_name_ar;
   if (user.role_name) return user.role_name;
-  if (user.role_id === 1) return 'مدير النظام';
   
   return 'مستخدم';
 }
