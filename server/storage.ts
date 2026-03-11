@@ -916,10 +916,18 @@ export class DatabaseStorage implements IStorage {
             username: users.username,
             display_name: users.display_name,
             display_name_ar: users.display_name_ar,
+            full_name: users.full_name,
+            phone: users.phone,
+            email: users.email,
             role_id: users.role_id,
+            section_id: users.section_id,
             status: users.status,
             replit_user_id: users.replit_user_id,
+            first_name: users.first_name,
+            last_name: users.last_name,
+            profile_image_url: users.profile_image_url,
             created_at: users.created_at,
+            updated_at: users.updated_at,
           })
           .from(users)
           .where(eq(users.id, id));
@@ -939,10 +947,18 @@ export class DatabaseStorage implements IStorage {
             username: users.username,
             display_name: users.display_name,
             display_name_ar: users.display_name_ar,
+            full_name: users.full_name,
+            phone: users.phone,
+            email: users.email,
             role_id: users.role_id,
+            section_id: users.section_id,
             status: users.status,
             replit_user_id: users.replit_user_id,
+            first_name: users.first_name,
+            last_name: users.last_name,
+            profile_image_url: users.profile_image_url,
             created_at: users.created_at,
+            updated_at: users.updated_at,
           })
           .from(users)
           .orderBy(users.username);
@@ -961,10 +977,18 @@ export class DatabaseStorage implements IStorage {
             username: users.username,
             display_name: users.display_name,
             display_name_ar: users.display_name_ar,
+            full_name: users.full_name,
+            phone: users.phone,
+            email: users.email,
             role_id: users.role_id,
+            section_id: users.section_id,
             status: users.status,
             replit_user_id: users.replit_user_id,
+            first_name: users.first_name,
+            last_name: users.last_name,
+            profile_image_url: users.profile_image_url,
             created_at: users.created_at,
+            updated_at: users.updated_at,
           })
           .from(users)
           .where(eq(users.role_id, roleId));
@@ -3386,7 +3410,7 @@ export class DatabaseStorage implements IStorage {
     return {};
   }
 
-  async getWasteAnalysis(): Promise<any> {
+  async getWasteAnalysis(filters?: any): Promise<any> {
     return { totalWaste: 0, byType: {} };
   }
 
@@ -3872,8 +3896,8 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(operator_negligence_reports).where(eq(operator_negligence_reports.operator_id, operatorId));
   }
 
-  async getOperatorPerformance(operatorId?: number): Promise<any> {
-    return { operatorId, performance: 0 };
+  async getOperatorPerformance(filters?: any): Promise<any> {
+    return { performance: 0 };
   }
 
   async getOrderProgress(orderId: number): Promise<any> {
@@ -3913,11 +3937,11 @@ export class DatabaseStorage implements IStorage {
     return [];
   }
 
-  async getProductionByDate(date?: string): Promise<any[]> {
+  async getProductionByDate(filters?: any): Promise<any[]> {
     return [];
   }
 
-  async getProductionByProduct(productId?: number): Promise<any[]> {
+  async getProductionByProduct(filters?: any): Promise<any[]> {
     return [];
   }
 
@@ -4300,8 +4324,8 @@ export class DatabaseStorage implements IStorage {
     return { machine, queue };
   }
 
-  async getMachinePerformance(machineId?: number): Promise<any> {
-    return { machineId, performance: 0, uptime: 0 };
+  async getMachinePerformance(filters?: any): Promise<any> {
+    return { performance: 0, uptime: 0 };
   }
 
   async getMachineQueues(): Promise<any[]> {

@@ -1958,8 +1958,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
         const activatedOrder = await storage.activateProductionOrder(
           id,
-          machineId,
-          operatorId
+          { machine_id: machineId, operator_id: operatorId }
         );
 
         res.json({
@@ -2000,8 +1999,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
         const updatedOrder = await storage.updateProductionOrderAssignment(
           id,
-          machineId,
-          operatorId
+          { machine_id: machineId, operator_id: operatorId }
         );
 
         res.json({
@@ -2089,13 +2087,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       };
 
       if (stage) {
-        const rolls = await storage.getRollsByStage(stage as string, {
-          limit: options.limit,
-          offset: options.offset,
-        });
+        const rolls = await storage.getRollsByStage(stage as string);
         res.json(rolls);
       } else {
-        const rolls = await storage.getRolls(options);
+        const rolls = await storage.getRolls();
         res.json(rolls);
       }
     } catch (error) {
@@ -2231,7 +2226,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.get("/api/printing/stats", requireAuth, async (req: AuthRequest, res) => {
     try {
       const user = req.user;
-      const stats = await storage.getPrintingStats(user?.id);
+      const stats = await storage.getPrintingStats();
       
       res.json(stats);
     } catch (error) {
@@ -2297,10 +2292,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.get("/api/reports/orders", requireAuth, async (req, res) => {
     try {
       const { date_from, date_to } = req.query;
-      const reports = await storage.getOrderReports(
-        date_from as string,
-        date_to as string,
-      );
+      const reports = await storage.getOrderReports({ dateFrom: date_from as string, dateTo: date_to as string });
       res.json({
         success: true,
         data: reports,
@@ -2483,10 +2475,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.get("/api/reports/advanced-metrics", requireAuth, async (req, res) => {
     try {
       const { date_from, date_to } = req.query;
-      const metrics = await storage.getAdvancedMetrics(
-        date_from as string,
-        date_to as string,
-      );
+      const metrics = await storage.getAdvancedMetrics();
       res.json({
         success: true,
         data: metrics,
@@ -2504,10 +2493,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.get("/api/reports/hr", requireAuth, async (req, res) => {
     try {
       const { date_from, date_to } = req.query;
-      const reports = await storage.getHRReports(
-        date_from as string,
-        date_to as string,
-      );
+      const reports = await storage.getHRReports({ dateFrom: date_from as string, dateTo: date_to as string });
       res.json({
         success: true,
         data: reports,
@@ -2525,10 +2511,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.get("/api/reports/maintenance", requireAuth, async (req, res) => {
     try {
       const { date_from, date_to } = req.query;
-      const reports = await storage.getMaintenanceReports(
-        date_from as string,
-        date_to as string,
-      );
+      const reports = await storage.getMaintenanceReports();
       res.json({
         success: true,
         data: reports,
@@ -2554,31 +2537,17 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         hrReports,
         maintenanceReports,
         realTimeStats,
-        userPerformance,
-        rolePerformance,
         machineUtilization,
         productionEfficiency,
         productionAlerts,
       ] = await Promise.all([
-        storage.getOrderReports(date_from as string, date_to as string),
-        storage.getAdvancedMetrics(date_from as string, date_to as string),
-        storage.getHRReports(date_from as string, date_to as string),
-        storage.getMaintenanceReports(date_from as string, date_to as string),
+        storage.getOrderReports({ dateFrom: date_from as string, dateTo: date_to as string }),
+        storage.getAdvancedMetrics(),
+        storage.getHRReports({ dateFrom: date_from as string, dateTo: date_to as string }),
+        storage.getMaintenanceReports(),
         storage.getRealTimeProductionStats(),
-        storage.getUserPerformanceStats(
-          undefined,
-          date_from as string,
-          date_to as string,
-        ),
-        storage.getRolePerformanceStats(date_from as string, date_to as string),
-        storage.getMachineUtilizationStats(
-          date_from as string,
-          date_to as string,
-        ),
-        storage.getProductionEfficiencyMetrics(
-          date_from as string,
-          date_to as string,
-        ),
+        storage.getMachineUtilizationStats(),
+        storage.getProductionEfficiencyMetrics(),
         storage.getProductionAlerts(),
       ]);
 
@@ -2590,8 +2559,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           hr: hrReports,
           maintenance: maintenanceReports,
           realTime: realTimeStats,
-          userPerformance,
-          rolePerformance,
           machineUtilization,
           productionEfficiency,
           alerts: productionAlerts,
@@ -2732,19 +2699,19 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       let reportTitle = "";
       switch (report_type) {
         case "orders":
-          reportData = await storage.getOrderReports(date_from, date_to);
+          reportData = await storage.getOrderReports({ dateFrom: date_from, dateTo: date_to });
           reportTitle = "تقرير الطلبات";
           break;
         case "advanced-metrics":
-          reportData = await storage.getAdvancedMetrics(date_from, date_to);
+          reportData = await storage.getAdvancedMetrics();
           reportTitle = "تقرير المقاييس المتقدمة";
           break;
         case "hr":
-          reportData = await storage.getHRReports(date_from, date_to);
+          reportData = await storage.getHRReports({ dateFrom: date_from, dateTo: date_to });
           reportTitle = "تقرير الموارد البشرية";
           break;
         case "maintenance":
-          reportData = await storage.getMaintenanceReports(date_from, date_to);
+          reportData = await storage.getMaintenanceReports();
           reportTitle = "تقرير الصيانة";
           break;
         default:
@@ -3345,12 +3312,8 @@ Do not include quotes or explanations.`;
         return res.status(400).json({ message: "معرف الحركة غير صحيح" });
       }
 
-      const success = await storage.deleteInventoryMovement(id);
-      if (success) {
-        res.json({ message: "تم حذف الحركة بنجاح" });
-      } else {
-        res.status(404).json({ message: "الحركة غير موجودة" });
-      }
+      await storage.deleteInventoryMovement(id);
+      res.json({ message: "تم حذف الحركة بنجاح" });
     } catch (error) {
       console.error("Inventory movement deletion error:", error);
       res.status(500).json({ message: "خطأ في حذف الحركة" });
@@ -4098,11 +4061,16 @@ Do not include quotes or explanations.`;
     }
   });
 
-  // Consumable Parts Transactions routes
+  // Consumable Parts Transactions routes - list all
   app.get("/api/consumable-parts-transactions", requireAuth, async (req, res) => {
     try {
-      const transactions = await storage.getConsumablePartTransactions();
-      res.json(transactions);
+      const allParts = await storage.getConsumableParts();
+      const allTransactions = [];
+      for (const part of allParts) {
+        const transactions = await storage.getConsumablePartTransactions(part.id);
+        allTransactions.push(...transactions);
+      }
+      res.json(allTransactions);
     } catch (error) {
       console.error("Error fetching consumable parts transactions:", error);
       res
@@ -7424,7 +7392,7 @@ Do not include quotes or explanations.`;
 
         const attendanceData = {
           user_id: userId,
-          date: new Date(date),
+          date: typeof date === 'string' ? date : new Date(date).toISOString().split('T')[0],
           status: status || 'غائب',
           check_in_time: checkInTime,
           check_out_time: checkOutTime,
