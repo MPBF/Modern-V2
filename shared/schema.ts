@@ -3571,3 +3571,65 @@ export const display_slides = pgTable("display_slides", {
 export const insertDisplaySlideSchema = createInsertSchema(display_slides).omit({ id: true, created_at: true, updated_at: true });
 export type InsertDisplaySlide = z.infer<typeof insertDisplaySlideSchema>;
 export type DisplaySlide = typeof display_slides.$inferSelect;
+
+export const quality_issues = pgTable("quality_issues", {
+  id: serial("id").primaryKey(),
+  issue_number: varchar("issue_number", { length: 50 }).notNull().unique(),
+  source: varchar("source", { length: 30 }).notNull(),
+  severity: varchar("severity", { length: 20 }).notNull().default("medium"),
+  status: varchar("status", { length: 20 }).notNull().default("open"),
+  category: varchar("category", { length: 50 }).notNull(),
+  stage: varchar("stage", { length: 30 }),
+  production_order_id: integer("production_order_id").references(() => production_orders.id),
+  order_id: integer("order_id").references(() => orders.id),
+  roll_id: integer("roll_id").references(() => rolls.id),
+  customer_id: varchar("customer_id", { length: 20 }).references(() => customers.id),
+  description: text("description").notNull(),
+  customer_complaint_details: text("customer_complaint_details"),
+  customer_action_taken: text("customer_action_taken"),
+  root_cause: text("root_cause"),
+  corrective_action: text("corrective_action"),
+  preventive_action: text("preventive_action"),
+  detected_by: integer("detected_by").references(() => users.id),
+  resolved_by: integer("resolved_by").references(() => users.id),
+  detected_at: timestamp("detected_at").defaultNow(),
+  resolved_at: timestamp("resolved_at"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export const quality_issue_responsibles = pgTable("quality_issue_responsibles", {
+  id: serial("id").primaryKey(),
+  quality_issue_id: integer("quality_issue_id").notNull().references(() => quality_issues.id, { onDelete: "cascade" }),
+  user_id: integer("user_id").notNull().references(() => users.id),
+  department: varchar("department", { length: 30 }).notNull(),
+  responsibility_type: varchar("responsibility_type", { length: 20 }).notNull().default("primary"),
+  action_taken: text("action_taken"),
+  penalty_type: varchar("penalty_type", { length: 30 }),
+  notes: text("notes"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const quality_issue_actions = pgTable("quality_issue_actions", {
+  id: serial("id").primaryKey(),
+  quality_issue_id: integer("quality_issue_id").notNull().references(() => quality_issues.id, { onDelete: "cascade" }),
+  action_type: varchar("action_type", { length: 30 }).notNull(),
+  description: text("description").notNull(),
+  performed_by: integer("performed_by").references(() => users.id),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  due_date: timestamp("due_date"),
+  completed_at: timestamp("completed_at"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const insertQualityIssueSchema = createInsertSchema(quality_issues).omit({ id: true, created_at: true, updated_at: true });
+export type InsertQualityIssue = z.infer<typeof insertQualityIssueSchema>;
+export type QualityIssue = typeof quality_issues.$inferSelect;
+
+export const insertQualityIssueResponsibleSchema = createInsertSchema(quality_issue_responsibles).omit({ id: true, created_at: true });
+export type InsertQualityIssueResponsible = z.infer<typeof insertQualityIssueResponsibleSchema>;
+export type QualityIssueResponsible = typeof quality_issue_responsibles.$inferSelect;
+
+export const insertQualityIssueActionSchema = createInsertSchema(quality_issue_actions).omit({ id: true, created_at: true });
+export type InsertQualityIssueAction = z.infer<typeof insertQualityIssueActionSchema>;
+export type QualityIssueAction = typeof quality_issue_actions.$inferSelect;

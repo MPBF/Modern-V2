@@ -67,6 +67,16 @@ import {
   type MachineQueue,
   type InsertMachineQueue,
   
+  quality_issues,
+  quality_issue_responsibles,
+  quality_issue_actions,
+  type QualityIssue,
+  type InsertQualityIssue,
+  type QualityIssueResponsible,
+  type InsertQualityIssueResponsible,
+  type QualityIssueAction,
+  type InsertQualityIssueAction,
+
   // نظام الخلط المبسط
   mixing_batches,
   batch_ingredients,
@@ -4301,6 +4311,222 @@ export class DatabaseStorage implements IStorage {
 
   async getMachineUtilizationStats(): Promise<any> {
     return { utilization: 0, machines: [] };
+  }
+
+  async getQualityIssues(filters?: { status?: string; source?: string; severity?: string; customer_id?: string; dateFrom?: string; dateTo?: string }): Promise<any[]> {
+    const conditions: any[] = [];
+    if (filters?.status) conditions.push(eq(quality_issues.status, filters.status));
+    if (filters?.source) conditions.push(eq(quality_issues.source, filters.source));
+    if (filters?.severity) conditions.push(eq(quality_issues.severity, filters.severity));
+    if (filters?.customer_id) conditions.push(eq(quality_issues.customer_id, filters.customer_id));
+    if (filters?.dateFrom) conditions.push(sql`${quality_issues.created_at} >= ${filters.dateFrom}::timestamp`);
+    if (filters?.dateTo) conditions.push(sql`${quality_issues.created_at} <= (${filters.dateTo}::date + interval '1 day')`);
+
+    const detectedByUser = alias(users, "detected_by_user");
+    const resolvedByUser = alias(users, "resolved_by_user");
+
+    const results = await db
+      .select({
+        id: quality_issues.id,
+        issue_number: quality_issues.issue_number,
+        source: quality_issues.source,
+        severity: quality_issues.severity,
+        status: quality_issues.status,
+        category: quality_issues.category,
+        stage: quality_issues.stage,
+        production_order_id: quality_issues.production_order_id,
+        order_id: quality_issues.order_id,
+        roll_id: quality_issues.roll_id,
+        customer_id: quality_issues.customer_id,
+        description: quality_issues.description,
+        customer_complaint_details: quality_issues.customer_complaint_details,
+        customer_action_taken: quality_issues.customer_action_taken,
+        root_cause: quality_issues.root_cause,
+        corrective_action: quality_issues.corrective_action,
+        preventive_action: quality_issues.preventive_action,
+        detected_by: quality_issues.detected_by,
+        resolved_by: quality_issues.resolved_by,
+        detected_at: quality_issues.detected_at,
+        resolved_at: quality_issues.resolved_at,
+        created_at: quality_issues.created_at,
+        updated_at: quality_issues.updated_at,
+        customer_name: customers.name,
+        customer_name_ar: customers.name_ar,
+        detected_by_name: detectedByUser.display_name,
+        detected_by_name_ar: detectedByUser.display_name_ar,
+        resolved_by_name: resolvedByUser.display_name,
+        resolved_by_name_ar: resolvedByUser.display_name_ar,
+        production_order_number: production_orders.production_order_number,
+        order_number: orders.order_number,
+      })
+      .from(quality_issues)
+      .leftJoin(customers, eq(quality_issues.customer_id, customers.id))
+      .leftJoin(detectedByUser, eq(quality_issues.detected_by, detectedByUser.id))
+      .leftJoin(resolvedByUser, eq(quality_issues.resolved_by, resolvedByUser.id))
+      .leftJoin(production_orders, eq(quality_issues.production_order_id, production_orders.id))
+      .leftJoin(orders, eq(quality_issues.order_id, orders.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(quality_issues.created_at));
+
+    return results;
+  }
+
+  async getQualityIssueById(id: number): Promise<any> {
+    const detectedByUser = alias(users, "detected_by_user");
+    const resolvedByUser = alias(users, "resolved_by_user");
+
+    const [issue] = await db
+      .select({
+        id: quality_issues.id,
+        issue_number: quality_issues.issue_number,
+        source: quality_issues.source,
+        severity: quality_issues.severity,
+        status: quality_issues.status,
+        category: quality_issues.category,
+        stage: quality_issues.stage,
+        production_order_id: quality_issues.production_order_id,
+        order_id: quality_issues.order_id,
+        roll_id: quality_issues.roll_id,
+        customer_id: quality_issues.customer_id,
+        description: quality_issues.description,
+        customer_complaint_details: quality_issues.customer_complaint_details,
+        customer_action_taken: quality_issues.customer_action_taken,
+        root_cause: quality_issues.root_cause,
+        corrective_action: quality_issues.corrective_action,
+        preventive_action: quality_issues.preventive_action,
+        detected_by: quality_issues.detected_by,
+        resolved_by: quality_issues.resolved_by,
+        detected_at: quality_issues.detected_at,
+        resolved_at: quality_issues.resolved_at,
+        created_at: quality_issues.created_at,
+        updated_at: quality_issues.updated_at,
+        customer_name: customers.name,
+        customer_name_ar: customers.name_ar,
+        detected_by_name: detectedByUser.display_name,
+        detected_by_name_ar: detectedByUser.display_name_ar,
+        resolved_by_name: resolvedByUser.display_name,
+        resolved_by_name_ar: resolvedByUser.display_name_ar,
+        production_order_number: production_orders.production_order_number,
+        order_number: orders.order_number,
+      })
+      .from(quality_issues)
+      .leftJoin(customers, eq(quality_issues.customer_id, customers.id))
+      .leftJoin(detectedByUser, eq(quality_issues.detected_by, detectedByUser.id))
+      .leftJoin(resolvedByUser, eq(quality_issues.resolved_by, resolvedByUser.id))
+      .leftJoin(production_orders, eq(quality_issues.production_order_id, production_orders.id))
+      .leftJoin(orders, eq(quality_issues.order_id, orders.id))
+      .where(eq(quality_issues.id, id));
+
+    if (!issue) return null;
+
+    const responsibles = await db
+      .select({
+        id: quality_issue_responsibles.id,
+        quality_issue_id: quality_issue_responsibles.quality_issue_id,
+        user_id: quality_issue_responsibles.user_id,
+        department: quality_issue_responsibles.department,
+        responsibility_type: quality_issue_responsibles.responsibility_type,
+        action_taken: quality_issue_responsibles.action_taken,
+        penalty_type: quality_issue_responsibles.penalty_type,
+        notes: quality_issue_responsibles.notes,
+        created_at: quality_issue_responsibles.created_at,
+        user_name: users.display_name,
+        user_name_ar: users.display_name_ar,
+      })
+      .from(quality_issue_responsibles)
+      .leftJoin(users, eq(quality_issue_responsibles.user_id, users.id))
+      .where(eq(quality_issue_responsibles.quality_issue_id, id));
+
+    const actionPerformer = alias(users, "action_performer");
+    const actions = await db
+      .select({
+        id: quality_issue_actions.id,
+        quality_issue_id: quality_issue_actions.quality_issue_id,
+        action_type: quality_issue_actions.action_type,
+        description: quality_issue_actions.description,
+        performed_by: quality_issue_actions.performed_by,
+        status: quality_issue_actions.status,
+        due_date: quality_issue_actions.due_date,
+        completed_at: quality_issue_actions.completed_at,
+        created_at: quality_issue_actions.created_at,
+        performed_by_name: actionPerformer.display_name,
+        performed_by_name_ar: actionPerformer.display_name_ar,
+      })
+      .from(quality_issue_actions)
+      .leftJoin(actionPerformer, eq(quality_issue_actions.performed_by, actionPerformer.id))
+      .where(eq(quality_issue_actions.quality_issue_id, id))
+      .orderBy(desc(quality_issue_actions.created_at));
+
+    return { ...issue, responsibles, actions };
+  }
+
+  async createQualityIssue(data: InsertQualityIssue): Promise<QualityIssue> {
+    const [maxId] = await db.select({ max: sql<number>`COALESCE(MAX(id), 0)` }).from(quality_issues);
+    const nextNum = (maxId?.max || 0) + 1;
+    const issueNumber = `QI-${String(nextNum).padStart(4, '0')}`;
+
+    const [issue] = await db.insert(quality_issues).values({
+      ...data,
+      issue_number: issueNumber,
+    }).returning();
+    return issue;
+  }
+
+  async updateQualityIssue(id: number, data: Partial<InsertQualityIssue>): Promise<QualityIssue | null> {
+    const [issue] = await db.update(quality_issues).set({
+      ...data,
+      updated_at: new Date(),
+    }).where(eq(quality_issues.id, id)).returning();
+    return issue || null;
+  }
+
+  async addQualityIssueResponsible(data: InsertQualityIssueResponsible): Promise<QualityIssueResponsible> {
+    const [resp] = await db.insert(quality_issue_responsibles).values(data).returning();
+    return resp;
+  }
+
+  async updateQualityIssueResponsible(id: number, data: Partial<InsertQualityIssueResponsible>): Promise<QualityIssueResponsible | null> {
+    const [resp] = await db.update(quality_issue_responsibles).set(data).where(eq(quality_issue_responsibles.id, id)).returning();
+    return resp || null;
+  }
+
+  async deleteQualityIssueResponsible(id: number): Promise<boolean> {
+    const result = await db.delete(quality_issue_responsibles).where(eq(quality_issue_responsibles.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async addQualityIssueAction(data: InsertQualityIssueAction): Promise<QualityIssueAction> {
+    const [action] = await db.insert(quality_issue_actions).values(data).returning();
+    return action;
+  }
+
+  async updateQualityIssueAction(id: number, data: Partial<InsertQualityIssueAction>): Promise<QualityIssueAction | null> {
+    const [action] = await db.update(quality_issue_actions).set(data).where(eq(quality_issue_actions.id, id)).returning();
+    return action || null;
+  }
+
+  async getQualityIssueStats(): Promise<any> {
+    const allIssues = await db.select({
+      status: quality_issues.status,
+      severity: quality_issues.severity,
+      source: quality_issues.source,
+      category: quality_issues.category,
+    }).from(quality_issues);
+
+    const total = allIssues.length;
+    const byStatus: Record<string, number> = {};
+    const bySeverity: Record<string, number> = {};
+    const bySource: Record<string, number> = {};
+    const byCategory: Record<string, number> = {};
+
+    for (const i of allIssues) {
+      byStatus[i.status || 'unknown'] = (byStatus[i.status || 'unknown'] || 0) + 1;
+      bySeverity[i.severity || 'unknown'] = (bySeverity[i.severity || 'unknown'] || 0) + 1;
+      bySource[i.source || 'unknown'] = (bySource[i.source || 'unknown'] || 0) + 1;
+      byCategory[i.category || 'unknown'] = (byCategory[i.category || 'unknown'] || 0) + 1;
+    }
+
+    return { total, byStatus, bySeverity, bySource, byCategory };
   }
 }
 

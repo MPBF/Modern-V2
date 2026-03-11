@@ -43,6 +43,19 @@ The system is built with a modern stack emphasizing efficiency and scalability, 
 
 ## Recent Changes
 
+### Quality Management System (March 11, 2026)
+- **New tables**: `quality_issues`, `quality_issue_responsibles`, `quality_issue_actions`
+- **Quality Issues**: Track production problems from inspections, customer complaints, or internal reports
+  - Source types: inspection, customer_complaint, internal_report
+  - Categories: film_error, printing_error, cutting_error, color_mismatch, size_error, material_defect, contamination, packaging_error, weight_error, other
+  - Severity levels: low, medium, high, critical
+  - Status flow: open → investigating → resolved → closed
+  - Links to orders, production orders, rolls, and customers
+- **Responsibles**: Track workers responsible for each issue by department, with penalty types and action taken
+- **Actions**: Track corrective, preventive, customer compensation, investigation, follow-up, and rework actions
+- **Frontend**: Full quality management page at `/quality` with issue listing, creation dialog, detail view with tabs (details, responsibles, actions, customer), filters, and analytics dashboard
+- **API endpoints**: GET/POST/PATCH quality issues, POST/PATCH/DELETE responsibles, POST/PATCH actions, GET stats
+
 ### Warehouse Quantity Tracking & Validation (March 10, 2026)
 
 **Production Order → Warehouse Receipt Flow:**

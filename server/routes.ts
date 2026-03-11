@@ -3691,6 +3691,125 @@ Do not include quotes or explanations.`;
     }
   });
 
+  app.get("/api/quality-issues", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const filters: any = {};
+      if (req.query.status) filters.status = req.query.status;
+      if (req.query.source) filters.source = req.query.source;
+      if (req.query.severity) filters.severity = req.query.severity;
+      if (req.query.customer_id) filters.customer_id = req.query.customer_id;
+      if (req.query.dateFrom) filters.dateFrom = req.query.dateFrom;
+      if (req.query.dateTo) filters.dateTo = req.query.dateTo;
+      const issues = await storage.getQualityIssues(filters);
+      res.json({ success: true, data: issues });
+    } catch (error: any) {
+      console.error("Error fetching quality issues:", error);
+      res.status(500).json({ message: "خطأ في جلب مشاكل الجودة", error: error.message });
+    }
+  });
+
+  app.get("/api/quality-issues/stats", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const stats = await storage.getQualityIssueStats();
+      res.json({ success: true, data: stats });
+    } catch (error: any) {
+      console.error("Error fetching quality stats:", error);
+      res.status(500).json({ message: "خطأ في جلب إحصائيات الجودة", error: error.message });
+    }
+  });
+
+  app.get("/api/quality-issues/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const issue = await storage.getQualityIssueById(id);
+      if (!issue) return res.status(404).json({ message: "لم يتم العثور على المشكلة" });
+      res.json({ success: true, data: issue });
+    } catch (error: any) {
+      console.error("Error fetching quality issue:", error);
+      res.status(500).json({ message: "خطأ في جلب بيانات المشكلة", error: error.message });
+    }
+  });
+
+  app.post("/api/quality-issues", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const issue = await storage.createQualityIssue(req.body);
+      res.status(201).json({ success: true, data: issue });
+    } catch (error: any) {
+      console.error("Error creating quality issue:", error);
+      res.status(500).json({ message: "خطأ في إنشاء مشكلة الجودة", error: error.message });
+    }
+  });
+
+  app.patch("/api/quality-issues/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const issue = await storage.updateQualityIssue(id, req.body);
+      if (!issue) return res.status(404).json({ message: "لم يتم العثور على المشكلة" });
+      res.json({ success: true, data: issue });
+    } catch (error: any) {
+      console.error("Error updating quality issue:", error);
+      res.status(500).json({ message: "خطأ في تحديث مشكلة الجودة", error: error.message });
+    }
+  });
+
+  app.post("/api/quality-issues/:id/responsibles", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const issueId = parseInt(req.params.id);
+      const resp = await storage.addQualityIssueResponsible({ ...req.body, quality_issue_id: issueId });
+      res.status(201).json({ success: true, data: resp });
+    } catch (error: any) {
+      console.error("Error adding responsible:", error);
+      res.status(500).json({ message: "خطأ في إضافة المتسبب", error: error.message });
+    }
+  });
+
+  app.patch("/api/quality-issues/responsibles/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const resp = await storage.updateQualityIssueResponsible(id, req.body);
+      if (!resp) return res.status(404).json({ message: "لم يتم العثور على السجل" });
+      res.json({ success: true, data: resp });
+    } catch (error: any) {
+      console.error("Error updating responsible:", error);
+      res.status(500).json({ message: "خطأ في تحديث بيانات المتسبب", error: error.message });
+    }
+  });
+
+  app.delete("/api/quality-issues/responsibles/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteQualityIssueResponsible(id);
+      if (!deleted) return res.status(404).json({ message: "لم يتم العثور على السجل" });
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting responsible:", error);
+      res.status(500).json({ message: "خطأ في حذف المتسبب", error: error.message });
+    }
+  });
+
+  app.post("/api/quality-issues/:id/actions", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const issueId = parseInt(req.params.id);
+      const action = await storage.addQualityIssueAction({ ...req.body, quality_issue_id: issueId });
+      res.status(201).json({ success: true, data: action });
+    } catch (error: any) {
+      console.error("Error adding action:", error);
+      res.status(500).json({ message: "خطأ في إضافة الإجراء", error: error.message });
+    }
+  });
+
+  app.patch("/api/quality-issues/actions/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const action = await storage.updateQualityIssueAction(id, req.body);
+      if (!action) return res.status(404).json({ message: "لم يتم العثور على الإجراء" });
+      res.json({ success: true, data: action });
+    } catch (error: any) {
+      console.error("Error updating action:", error);
+      res.status(500).json({ message: "خطأ في تحديث الإجراء", error: error.message });
+    }
+  });
+
   // Maintenance requests routes
   app.get("/api/maintenance-requests", requireAuth, async (req, res) => {
     try {
