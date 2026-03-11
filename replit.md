@@ -43,6 +43,17 @@ The system is built with a modern stack emphasizing efficiency and scalability, 
 
 ## Recent Changes
 
+### Mobile API - Token-Based Authentication (March 11, 2026)
+- **Token auth**: `server/middleware/session-auth.ts` now supports `Authorization: Bearer <token>` header alongside session cookies
+- **In-memory token store**: `generateMobileToken()` / `revokeMobileToken()` with 30-day expiry
+- **Endpoints**:
+  - `POST /api/mobile/login` — accepts `{ username, password }`, returns `{ token, user }` with role/permissions
+  - `POST /api/mobile/logout` — revokes the Bearer token (requires auth)
+  - `GET /api/mobile/status` — public health-check returning server status and feature list
+- **CORS updated**: `server/index.ts` allows Expo dev origins (`localhost:8081`, `localhost:19006`), Replit deployment domains (`*.replit.app`, `*.replit.dev`), and requests without Origin header (mobile apps)
+- **Shared auth flow**: `resolveUserById()` extracted as shared helper used by both session and token auth paths — ensures identical permission resolution
+- **All existing `/api/*` routes work with Bearer token**: Once authenticated via `/api/mobile/login`, the mobile app can call any existing API endpoint using `Authorization: Bearer <token>` header
+
 ### Roles & Permissions System Fix (March 11, 2026)
 - **Root cause fixed**: `isUserAdmin()` was incorrectly treating `role_id === 1` (Management User) as admin — the actual admin role is role_id 10 (Admin/مدير النظام) which has `'admin'` in its permissions array. All admin checks now use `permissions.includes('admin')` only.
 - **Deny-by-default**: `canAccessRoute()` and `canAccessSettingsTab()` now return `false` when a route/tab has no entry in `ROUTE_PERMISSIONS`/`SETTINGS_TAB_PERMISSIONS` (previously returned `true`, allowing unrestricted access).

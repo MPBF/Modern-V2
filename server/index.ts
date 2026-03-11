@@ -139,8 +139,9 @@ app.use((req, res, next) => {
     "https://localhost:5000",
     "http://127.0.0.1:5000",
     "https://127.0.0.1:5000",
-    // Add specific Replit deployment URLs here - replace with actual URLs
-    // Example: 'https://your-app-name.replit.app'
+    "http://localhost:8081",
+    "http://localhost:19006",
+    "exp://localhost:8081",
   ];
 
   // Add current host for same-origin requests
@@ -152,16 +153,14 @@ app.use((req, res, next) => {
 
   if (origin && allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Credentials", "true");
   } else if (!origin) {
-    // For same-origin requests (no origin header), allow the request
     res.header(
       "Access-Control-Allow-Origin",
       currentHost ? `https://${currentHost}` : "https://localhost:5000",
     );
+    res.header("Access-Control-Allow-Credentials", "true");
   }
-  // Explicitly reject unauthorized origins - no wildcard '*' when credentials are enabled
-
-  res.header("Access-Control-Allow-Credentials", "true");
   res.header(
     "Access-Control-Allow-Methods",
     "GET,PUT,POST,DELETE,OPTIONS,PATCH",

@@ -4,10 +4,15 @@ import bcrypt from "bcrypt";
 import multer from "multer";
 import * as XLSX from "xlsx";
 import { requireAuth, requirePermission, requireAdmin, type AuthRequest } from "./middleware/auth";
+import { generateMobileToken, revokeMobileToken } from "./middleware/session-auth";
 import { logger } from "./lib/logger";
 
 // Configure multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
+
+function getAuthUserId(req: any): number | undefined {
+  return req.user?.id ?? req.session?.userId;
+}
 
 // Extend Express Request type to include session
 declare module "express-serve-static-core" {
@@ -1462,7 +1467,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     async (req, res) => {
       try {
         // Session is already validated by requireAuth middleware
-        const userId = req.session.userId;
+        const userId = getAuthUserId(req);
         if (!userId || typeof userId !== "number") {
           return res.status(401).json({
             message: "معرف المستخدم غير صحيح",
@@ -2110,7 +2115,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       // Handle stage transitions securely with employee tracking
       if (stage) {
         safeUpdates.stage = stage;
-        const userId = req.session.userId;
+        const userId = getAuthUserId(req);
 
         if (userId) {
           if (stage === "printing") {
@@ -2314,7 +2319,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // Get active production orders for film operator
   app.get("/api/production-orders/active-for-operator", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const userId = req.session.userId;
+      const userId = getAuthUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "غير مصرح" });
       }
@@ -2330,7 +2335,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // Create roll with timing calculation
   app.post("/api/rolls/create-with-timing", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const userId = req.session.userId;
+      const userId = getAuthUserId(req);
       
       if (!userId) {
         return res.status(401).json({ message: "غير مصرح" });
@@ -2399,7 +2404,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // Create final roll and complete film production
   app.post("/api/rolls/create-final", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const userId = req.session.userId;
+      const userId = getAuthUserId(req);
       
       if (!userId) {
         return res.status(401).json({ message: "غير مصرح" });
@@ -2443,7 +2448,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // Get active rolls for printing operator
   app.get("/api/rolls/active-for-printing", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const userId = req.session.userId;
+      const userId = getAuthUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "غير مصرح" });
       }
@@ -2461,7 +2466,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // Get active rolls for cutting operator
   app.get("/api/rolls/active-for-cutting", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const userId = req.session.userId;
+      const userId = getAuthUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "غير مصرح" });
       }
@@ -4175,7 +4180,7 @@ Do not include quotes or explanations.`;
         manual_entry,
       } = req.body;
 
-      if (!req.session.userId) {
+      if (!getAuthUserId(req)) {
         return res.status(401).json({ message: "يجب تسجيل الدخول لإجراء حركة مخزنية" });
       }
 
@@ -4202,7 +4207,7 @@ Do not include quotes or explanations.`;
         manual_entry: manual_entry || false,
         transaction_reason: transaction_reason || "",
         notes: notes || "",
-        performed_by: req.session.userId,
+        performed_by: getAuthUserId(req),
       };
 
       const transaction =
@@ -5431,7 +5436,7 @@ Do not include quotes or explanations.`;
         productionOrderId, 
         machineId, 
         position,
-        req.session.userId
+        getAuthUserId(req)
       );
       
       res.json({ 
@@ -5529,7 +5534,7 @@ Do not include quotes or explanations.`;
       }
       const result = await storage.smartDistributeOrders(algorithm, {
         ...params,
-        userId: req.session.userId
+        userId: getAuthUserId(req)
       });
       
       res.json({
@@ -7601,10 +7606,10 @@ Do not include quotes or explanations.`;
   app.put("/api/system-settings/:key", requireAuth, async (req, res) => {
     try {
       const { setting_value } = req.body;
-      if (!req.session.userId) {
+      if (!getAuthUserId(req)) {
         return res.status(401).json({ message: "يجب تسجيل الدخول لتحديث الإعدادات" });
       }
-      const updated = await storage.updateSystemSetting(req.params.key, setting_value, req.session.userId);
+      const updated = await storage.updateSystemSetting(req.params.key, setting_value, getAuthUserId(req));
       res.json(updated);
     } catch (error) {
       console.error("Error updating system setting:", error);
@@ -7667,7 +7672,7 @@ Do not include quotes or explanations.`;
     try {
       const location = await storage.createFactoryLocation({
         ...req.body,
-        created_by: req.session.userId,
+        created_by: getAuthUserId(req),
       });
       res.status(201).json(location);
     } catch (error) {
@@ -7759,7 +7764,7 @@ Do not include quotes or explanations.`;
     async (req, res) => {
       try {
         // Ensure session userId is valid
-        if (!req.session.userId || typeof req.session.userId !== "number") {
+        if (!getAuthUserId(req) || typeof getAuthUserId(req) !== "number") {
           return res.status(401).json({ message: "معرف المستخدم غير صحيح" });
         }
 
@@ -7769,7 +7774,7 @@ Do not include quotes or explanations.`;
         // Add created_by from session and validate the complete data
         const rollData = {
           ...req.body,
-          created_by: Number(req.session.userId),
+          created_by: Number(getAuthUserId(req)),
         };
 
         // Validate with insertRollSchema AFTER adding created_by
@@ -7863,7 +7868,7 @@ Do not include quotes or explanations.`;
   app.patch("/api/rolls/:id/print", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      if (!req.session.userId) {
+      if (!getAuthUserId(req)) {
         return res.status(401).json({ message: "غير مسجل الدخول" });
       }
       
@@ -7896,7 +7901,7 @@ Do not include quotes or explanations.`;
         }
       }
       
-      const roll = await storage.markRollPrinted(id, req.session.userId, printing_machine_id);
+      const roll = await storage.markRollPrinted(id, getAuthUserId(req), printing_machine_id);
       res.json(roll);
     } catch (error) {
       console.error("Error marking roll printed:", error);
@@ -7918,7 +7923,7 @@ Do not include quotes or explanations.`;
       });
 
       const validated = validationSchema.parse(req.body);
-      if (!req.session.userId) {
+      if (!getAuthUserId(req)) {
         return res.status(401).json({ message: "غير مسجل الدخول" });
       }
       
@@ -7952,7 +7957,7 @@ Do not include quotes or explanations.`;
       
       const cut = await storage.createCut({
         ...validated,
-        performed_by: req.session.userId,
+        performed_by: getAuthUserId(req),
       });
       res.status(201).json(cut);
     } catch (error) {
@@ -7980,12 +7985,12 @@ Do not include quotes or explanations.`;
       });
 
       const validated = validationSchema.parse(req.body);
-      if (!req.session.userId) {
+      if (!getAuthUserId(req)) {
         return res.status(401).json({ message: "غير مسجل الدخول" });
       }
       const receipt = await storage.createWarehouseReceipt({
         ...validated,
-        received_by: req.session.userId,
+        received_by: getAuthUserId(req),
       });
       res.status(201).json(receipt);
     } catch (error) {
@@ -9067,7 +9072,7 @@ Do not include quotes or explanations.`;
   app.post("/api/inventory/consumption", requireAuth, async (req: AuthRequest, res) => {
     try {
       const { batchId, consumptions } = req.body;
-      const userId = req.session.userId;
+      const userId = getAuthUserId(req);
 
       if (!userId) {
         return res.status(401).json({ message: "غير مصرح" });
@@ -9146,7 +9151,7 @@ Do not include quotes or explanations.`;
 
   app.post("/api/warehouse/vouchers/raw-material-in", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const userId = req.session.userId;
+      const userId = getAuthUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "غير مصرح" });
       }
@@ -9191,7 +9196,7 @@ Do not include quotes or explanations.`;
 
   app.post("/api/warehouse/vouchers/raw-material-out", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const userId = req.session.userId;
+      const userId = getAuthUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "غير مصرح" });
       }
@@ -9247,7 +9252,7 @@ Do not include quotes or explanations.`;
 
   app.post("/api/warehouse/vouchers/finished-goods-in", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const userId = req.session.userId;
+      const userId = getAuthUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "غير مصرح" });
       }
@@ -9293,7 +9298,7 @@ Do not include quotes or explanations.`;
 
   app.post("/api/warehouse/vouchers/finished-goods-out", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const userId = req.session.userId;
+      const userId = getAuthUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "غير مصرح" });
       }
@@ -9351,7 +9356,7 @@ Do not include quotes or explanations.`;
 
   app.post("/api/warehouse/inventory-counts", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const userId = req.session.userId;
+      const userId = getAuthUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "غير مصرح" });
       }
@@ -9401,7 +9406,7 @@ Do not include quotes or explanations.`;
 
   app.post("/api/warehouse/inventory-counts/:id/complete", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const userId = req.session.userId;
+      const userId = getAuthUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "غير مصرح" });
       }
@@ -10561,7 +10566,7 @@ Do not include quotes or explanations.`;
     try {
       const slide = await storage.createDisplaySlide({
         ...req.body,
-        created_by: req.session.userId,
+        created_by: getAuthUserId(req),
       });
       res.json(slide);
     } catch (error) {
@@ -10759,6 +10764,101 @@ Do not include quotes or explanations.`;
       console.error("Error uploading image:", error);
       res.status(500).json({ message: "خطأ في رفع الصورة" });
     }
+  });
+
+  // ==========================================
+  // Mobile API - Token-based Authentication
+  // ==========================================
+
+  app.post("/api/mobile/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      if (!username?.trim() || !password?.trim()) {
+        return res.status(400).json({ message: "اسم المستخدم وكلمة المرور مطلوبان" });
+      }
+
+      const user = await storage.getUserByUsername(username.trim());
+      if (!user || !user.password) {
+        return res.status(401).json({ message: "بيانات تسجيل الدخول غير صحيحة" });
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid || user.status !== "active") {
+        return res.status(401).json({ message: "بيانات تسجيل الدخول غير صحيحة" });
+      }
+
+      let roleName = "user";
+      let roleNameAr = "مستخدم";
+      let permissions: string[] = [];
+
+      if (user.role_id) {
+        const roles = await storage.getRoles();
+        const userRole = roles.find(r => r.id === user.role_id);
+        if (userRole) {
+          roleName = userRole.name || "user";
+          roleNameAr = userRole.name_ar || "مستخدم";
+          if (userRole.permissions) {
+            try {
+              if (Array.isArray(userRole.permissions)) {
+                permissions = userRole.permissions;
+              } else if (typeof userRole.permissions === "string") {
+                const parsed = JSON.parse(userRole.permissions);
+                permissions = Array.isArray(parsed) ? parsed : [];
+              }
+            } catch {
+              permissions = [];
+            }
+          }
+        }
+      }
+
+      if (roleName.toLowerCase() === "admin" && !permissions.includes("admin")) {
+        permissions.push("admin");
+      }
+
+      const token = generateMobileToken(user.id);
+
+      res.json({
+        token,
+        user: {
+          id: user.id,
+          username: user.username ?? "",
+          display_name: user.display_name ?? "",
+          display_name_ar: user.display_name_ar ?? "",
+          role_id: user.role_id ?? null,
+          role_name: roleName,
+          role_name_ar: roleNameAr,
+          section_id: user.section_id ?? null,
+          permissions,
+        },
+      });
+    } catch (error) {
+      logger.error("Mobile login error", error);
+      res.status(500).json({ message: "خطأ في تسجيل الدخول" });
+    }
+  });
+
+  app.post("/api/mobile/logout", requireAuth, (req: AuthRequest, res) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      revokeMobileToken(authHeader.slice(7));
+    }
+    res.json({ message: "تم تسجيل الخروج بنجاح" });
+  });
+
+  app.get("/api/mobile/status", (_req, res) => {
+    res.json({
+      status: "online",
+      version: "1.0.0",
+      features: [
+        "production_monitoring",
+        "orders",
+        "quality_control",
+        "maintenance",
+        "attendance",
+        "notifications",
+      ],
+    });
   });
 
   const httpServer = existingServer || createServer(app);
