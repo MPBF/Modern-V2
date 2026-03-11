@@ -549,35 +549,10 @@ function CreateIssueDialog({ open, onClose, customers, users, prodOrders, orders
 
           <Separator />
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>الطلبية</Label>
-              <Select value={form.order_id} onValueChange={v => setForm({ ...form, order_id: v })}>
-                <SelectTrigger><SelectValue placeholder="اختر الطلبية" /></SelectTrigger>
-                <SelectContent>
-                  {orders.map((o: any) => (
-                    <SelectItem key={o.id} value={String(o.id)}>{o.order_number}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>أمر الإنتاج</Label>
-              <Select value={form.production_order_id} onValueChange={v => setForm({ ...form, production_order_id: v })}>
-                <SelectTrigger><SelectValue placeholder="اختر أمر الإنتاج" /></SelectTrigger>
-                <SelectContent>
-                  {prodOrders.map((po: any) => (
-                    <SelectItem key={po.id} value={String(po.id)}>{po.production_order_number}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>العميل</Label>
-              <Select value={form.customer_id} onValueChange={v => setForm({ ...form, customer_id: v })}>
+              <Select value={form.customer_id} onValueChange={v => setForm({ ...form, customer_id: v, order_id: "", production_order_id: "" })}>
                 <SelectTrigger><SelectValue placeholder="اختر العميل" /></SelectTrigger>
                 <SelectContent>
                   {customers.map((c: any) => (
@@ -587,16 +562,53 @@ function CreateIssueDialog({ open, onClose, customers, users, prodOrders, orders
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>تم الكشف بواسطة</Label>
-              <Select value={form.detected_by} onValueChange={v => setForm({ ...form, detected_by: v })}>
-                <SelectTrigger><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
+              <Label>الطلبية</Label>
+              <Select
+                value={form.order_id}
+                onValueChange={v => setForm({ ...form, order_id: v, production_order_id: "" })}
+                disabled={!form.customer_id}
+              >
+                <SelectTrigger><SelectValue placeholder={form.customer_id ? "اختر الطلبية" : "اختر العميل أولاً"} /></SelectTrigger>
                 <SelectContent>
-                  {users.map((u: any) => (
-                    <SelectItem key={u.id} value={String(u.id)}>{ln(u.display_name_ar, u.display_name)}</SelectItem>
-                  ))}
+                  {orders
+                    .filter((o: any) => o.customer_id === form.customer_id)
+                    .map((o: any) => (
+                      <SelectItem key={o.id} value={String(o.id)}>{o.order_number}</SelectItem>
+                    ))
+                  }
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>أمر الإنتاج</Label>
+              <Select
+                value={form.production_order_id}
+                onValueChange={v => setForm({ ...form, production_order_id: v })}
+                disabled={!form.order_id}
+              >
+                <SelectTrigger><SelectValue placeholder={form.order_id ? "اختر أمر الإنتاج" : "اختر الطلبية أولاً"} /></SelectTrigger>
+                <SelectContent>
+                  {prodOrders
+                    .filter((po: any) => String(po.order_id) === form.order_id)
+                    .map((po: any) => (
+                      <SelectItem key={po.id} value={String(po.id)}>{po.production_order_number}</SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>تم الكشف بواسطة</Label>
+            <Select value={form.detected_by} onValueChange={v => setForm({ ...form, detected_by: v })}>
+              <SelectTrigger><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
+              <SelectContent>
+                {users.map((u: any) => (
+                  <SelectItem key={u.id} value={String(u.id)}>{ln(u.display_name_ar, u.display_name)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <Separator />
