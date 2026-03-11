@@ -78,7 +78,7 @@ export async function populateUserFromSession(req: Request, res: Response, next:
       }
     }
 
-    if ((user.role_id === 1 || roleName === 'admin') && !permissions.includes('admin')) {
+    if (roleName.toLowerCase() === 'admin' && !permissions.includes('admin')) {
       permissions.push('admin');
     }
 
