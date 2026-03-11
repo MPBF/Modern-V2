@@ -34,6 +34,9 @@ export function createAlertsRouter(storage: IStorage) {
   router.get("/:id", async (req, res) => {
     try {
       const alertId = parseInt(req.params.id);
+      if (isNaN(alertId) || alertId <= 0) {
+        return res.status(400).json({ message: "معرف التحذير غير صحيح" });
+      }
       const alert = await storage.getSystemAlertById(alertId);
 
       if (!alert) {
@@ -97,6 +100,9 @@ export function createAlertsRouter(storage: IStorage) {
   router.post("/:id/resolve", async (req, res) => {
     try {
       const alertId = parseInt(req.params.id);
+      if (isNaN(alertId) || alertId <= 0) {
+        return res.status(400).json({ message: "معرف التحذير غير صحيح" });
+      }
       const { notes } = req.body;
       const userId = (req as any).user?.id;
       
@@ -116,6 +122,9 @@ export function createAlertsRouter(storage: IStorage) {
   router.post("/:id/dismiss", async (req, res) => {
     try {
       const alertId = parseInt(req.params.id);
+      if (isNaN(alertId) || alertId <= 0) {
+        return res.status(400).json({ message: "معرف التحذير غير صحيح" });
+      }
       const userId = (req as any).user?.id;
       
       if (!userId) {
@@ -414,6 +423,9 @@ export function createCorrectiveActionsRouter(storage: IStorage) {
   router.put("/:id", async (req, res) => {
     try {
       const actionId = parseInt(req.params.id);
+      if (isNaN(actionId) || actionId <= 0) {
+        return res.status(400).json({ message: "معرف الإجراء غير صحيح" });
+      }
       const updates = req.body;
 
       const action = await storage.updateCorrectiveAction(actionId, updates);
@@ -428,6 +440,9 @@ export function createCorrectiveActionsRouter(storage: IStorage) {
   router.post("/:id/complete", async (req, res) => {
     try {
       const actionId = parseInt(req.params.id);
+      if (isNaN(actionId) || actionId <= 0) {
+        return res.status(400).json({ message: "معرف الإجراء غير صحيح" });
+      }
       const { notes } = req.body;
       const userId = (req as any).user?.id || 1;
 

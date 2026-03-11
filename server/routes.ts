@@ -5857,6 +5857,9 @@ Do not include quotes or explanations.`;
   app.get("/api/settings/user/:userId", requireAuth, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
+      if (isNaN(userId) || userId <= 0) {
+        return res.status(400).json({ message: "معرف المستخدم غير صحيح" });
+      }
       const settings = await storage.getUserSettings(userId);
       res.json(settings);
     } catch (error) {
@@ -5868,6 +5871,9 @@ Do not include quotes or explanations.`;
   app.post("/api/settings/user/:userId", requireAuth, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
+      if (isNaN(userId) || userId <= 0) {
+        return res.status(400).json({ message: "معرف المستخدم غير صحيح" });
+      }
       const { settings } = req.body;
       const results = [];
 
@@ -7162,6 +7168,9 @@ Do not include quotes or explanations.`;
   app.get("/api/attendance/summary/:userId", requireAuth, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
+      if (isNaN(userId) || userId <= 0) {
+        return res.status(400).json({ message: "معرف المستخدم غير صحيح" });
+      }
       const { startDate, endDate, period = 'month' } = req.query;
       
       let start: Date, end: Date;
@@ -8079,6 +8088,9 @@ Do not include quotes or explanations.`;
   app.get("/api/production/order-progress/:jobOrderId", requireAuth, async (req, res) => {
     try {
       const jobOrderId = parseInt(req.params.jobOrderId);
+      if (isNaN(jobOrderId) || jobOrderId <= 0) {
+        return res.status(400).json({ message: "معرف أمر العمل غير صحيح" });
+      }
       const progress = await storage.getOrderProgress(jobOrderId);
       res.json(progress);
     } catch (error) {
@@ -8791,7 +8803,13 @@ Do not include quotes or explanations.`;
         }
         allowedUpdates.priority = req.body.priority;
       }
-      if (req.body.assigned_to) allowedUpdates.assigned_to = parseInt(req.body.assigned_to);
+      if (req.body.assigned_to) {
+        const assignedTo = parseInt(req.body.assigned_to);
+        if (isNaN(assignedTo) || assignedTo <= 0) {
+          return res.status(400).json({ message: "معرف المستخدم المعين غير صحيح" });
+        }
+        allowedUpdates.assigned_to = assignedTo;
+      }
       
       const updatedNote = await storage.updateQuickNote(id, allowedUpdates);
       res.json(updatedNote);
@@ -8896,11 +8914,16 @@ Do not include quotes or explanations.`;
         return res.status(400).json({ message: "بيانات المرفق ناقصة" });
       }
 
+      const parsedFileSize = parseInt(req.body.file_size);
+      if (isNaN(parsedFileSize) || parsedFileSize < 0) {
+        return res.status(400).json({ message: "حجم الملف غير صحيح" });
+      }
+
       const attachmentData = {
         note_id: noteId,
         file_name: req.body.file_name,
         file_type: req.body.file_type,
-        file_size: parseInt(req.body.file_size),
+        file_size: parsedFileSize,
         file_url: req.body.file_url,
       };
 
@@ -8966,6 +8989,9 @@ Do not include quotes or explanations.`;
   app.get("/api/mixing-batches/operator/:operatorId", requireAuth, async (req, res) => {
     try {
       const operatorId = parseInt(req.params.operatorId);
+      if (isNaN(operatorId) || operatorId <= 0) {
+        return res.status(400).json({ message: "معرف العامل غير صحيح" });
+      }
       const batches = await storage.getMixingBatchesByOperator(operatorId);
       res.json({ data: batches });
     } catch (error: any) {
@@ -8978,6 +9004,9 @@ Do not include quotes or explanations.`;
   app.get("/api/mixing-batches/production-order/:productionOrderId", requireAuth, async (req, res) => {
     try {
       const productionOrderId = parseInt(req.params.productionOrderId);
+      if (isNaN(productionOrderId) || productionOrderId <= 0) {
+        return res.status(400).json({ message: "معرف أمر الإنتاج غير صحيح" });
+      }
       const batches = await storage.getMixingBatchesByProductionOrder(productionOrderId);
       res.json({ data: batches });
     } catch (error: any) {
@@ -10050,6 +10079,9 @@ Do not include quotes or explanations.`;
   app.get("/api/face-verification/status/:userId", requireAuth, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
+      if (isNaN(userId) || userId <= 0) {
+        return res.status(400).json({ message: "معرف المستخدم غير صحيح", success: false });
+      }
       const user = await storage.getUserById(userId);
       
       if (!user) {
@@ -10195,6 +10227,9 @@ Do not include quotes or explanations.`;
   app.get("/api/face-verification/logs/:userId", requireAuth, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
+      if (isNaN(userId) || userId <= 0) {
+        return res.status(400).json({ message: "معرف المستخدم غير صحيح", success: false });
+      }
       // For now, return empty logs - in production, store in database
       res.json({ 
         logs: [],

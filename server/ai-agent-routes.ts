@@ -2228,6 +2228,9 @@ export function registerAiAgentRoutes(app: Express): void {
   app.get("/api/quotes/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      if (isNaN(id) || id <= 0) {
+        return res.status(400).json({ error: "معرف عرض السعر غير صالح" });
+      }
       const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
       if (!quote) {
         return res.status(404).json({ error: "عرض السعر غير موجود" });
@@ -2529,6 +2532,9 @@ export function registerAiAgentRoutes(app: Express): void {
   app.put("/api/ai-agent/knowledge/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      if (isNaN(id) || id <= 0) {
+        return res.status(400).json({ error: "معرف غير صالح" });
+      }
       const { title, content, category, is_active } = req.body;
       
       const [updated] = await db.update(ai_agent_knowledge)
@@ -2546,6 +2552,9 @@ export function registerAiAgentRoutes(app: Express): void {
   app.delete("/api/ai-agent/knowledge/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      if (isNaN(id) || id <= 0) {
+        return res.status(400).json({ error: "معرف غير صالح" });
+      }
       await db.delete(ai_agent_knowledge).where(eq(ai_agent_knowledge.id, id));
       res.json({ success: true, message: "تم الحذف بنجاح" });
     } catch (error) {
@@ -2602,6 +2611,9 @@ export function registerAiAgentRoutes(app: Express): void {
   app.put("/api/quote-templates/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      if (isNaN(id) || id <= 0) {
+        return res.status(400).json({ error: "معرف النموذج غير صالح" });
+      }
       const { name, description, product_name, product_description, unit_price, unit, min_quantity, specifications, category, is_active } = req.body;
       
       const [updated] = await db.update(quote_templates)
@@ -2631,6 +2643,9 @@ export function registerAiAgentRoutes(app: Express): void {
   app.delete("/api/quote-templates/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      if (isNaN(id) || id <= 0) {
+        return res.status(400).json({ error: "معرف النموذج غير صالح" });
+      }
       await db.delete(quote_templates).where(eq(quote_templates.id, id));
       res.json({ success: true, message: "تم حذف النموذج بنجاح" });
     } catch (error) {

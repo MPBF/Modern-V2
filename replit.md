@@ -43,6 +43,15 @@ The system is built with a modern stack emphasizing efficiency and scalability, 
 
 ## Recent Changes
 
+### Bug Fixes - Comprehensive parseInt Validation & Token Cleanup (March 11, 2026)
+- **Fixed 20+ more unsafe `parseInt` calls across 4 files**: Added NaN validation to all remaining `parseInt(req.params...)` calls:
+  - `server/routes.ts`: user settings (GET/POST), order progress, mixing batches (operator/production order), face verification (status/logs), attendance summary, quick note assigned_to update
+  - `server/ai-agent-routes.ts`: quotes GET, knowledge PUT/DELETE, quote-templates PUT/DELETE
+  - `server/routes/alerts.ts`: alert GET/resolve/dismiss, corrective action PUT/complete
+  - `server/replit_integrations/chat/routes.ts`: conversation GET/DELETE, messages POST
+- **Fixed `file_size` parsing**: Note attachment creation now validates `parseInt(file_size)` result before storing
+- **Added expired mobile token cleanup**: Hourly cleanup interval removes expired tokens from in-memory store to prevent memory leaks
+
 ### Bug Fixes - Route Parameter Validation & Data Filtering (March 11, 2026)
 - **Fixed `getRollsBySection`**: Was ignoring its `stage` parameter and returning all rolls — now properly filters by production stage (film/printing/cutting)
 - **Fixed 59 unsafe `parseInt` calls**: Routes using `parseInt(req.params.id)` without NaN validation replaced with `parseRouteParam()` which throws on invalid input, preventing NaN from reaching database queries

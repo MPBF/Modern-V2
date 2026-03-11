@@ -21,6 +21,18 @@ declare module "express-serve-static-core" {
 const mobileTokens = new Map<string, { userId: number; createdAt: number }>();
 
 const TOKEN_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000;
+const TOKEN_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
+
+function cleanupExpiredTokens() {
+  const now = Date.now();
+  for (const [token, entry] of mobileTokens) {
+    if (now - entry.createdAt > TOKEN_EXPIRY_MS) {
+      mobileTokens.delete(token);
+    }
+  }
+}
+
+setInterval(cleanupExpiredTokens, TOKEN_CLEANUP_INTERVAL_MS);
 
 export function generateMobileToken(userId: number): string {
   const token = crypto.randomBytes(32).toString("hex");
