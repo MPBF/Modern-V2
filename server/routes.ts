@@ -1639,7 +1639,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     }
   });
 
-  app.post("/api/production-orders", requireAuth, async (req, res) => {
+  app.post("/api/production-orders", requireAuth, requirePermission('manage_production'), async (req, res) => {
     try {
       // Extract and validate basic fields first
       const { customer_product_id, quantity_kg, overrun_percentage } = req.body;
@@ -1686,7 +1686,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     }
   });
 
-  app.post("/api/production-orders/batch", requireAuth, async (req, res) => {
+  app.post("/api/production-orders/batch", requireAuth, requirePermission('manage_production'), async (req, res) => {
     try {
       const { orders } = req.body;
 
@@ -3104,7 +3104,7 @@ Do not include quotes or explanations.`;
   });
 
   // Customers routes
-  app.post("/api/customers", requireAuth, async (req, res) => {
+  app.post("/api/customers", requireAuth, requirePermission('manage_orders'), async (req, res) => {
     try {
       const validatedData = insertCustomerSchema.parse(req.body);
       
@@ -3131,7 +3131,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/customers/:id", requireAuth, async (req, res) => {
+  app.put("/api/customers/:id", requireAuth, requirePermission('manage_orders'), async (req, res) => {
     try {
       const id = req.params.id;
       const validatedData = insertCustomerSchema.parse(req.body);
@@ -3318,7 +3318,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/inventory-movements", requireAuth, async (req, res) => {
+  app.post("/api/inventory-movements", requireAuth, requirePermission('manage_warehouse'), async (req, res) => {
     try {
       const validatedData = insertInventoryMovementSchema.parse(req.body);
       const movement = await storage.createInventoryMovement(validatedData);
@@ -3329,7 +3329,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/inventory-movements/:id", requireAuth, async (req, res) => {
+  app.delete("/api/inventory-movements/:id", requireAuth, requirePermission('manage_warehouse'), async (req, res) => {
     try {
       // Enhanced parameter validation
       if (!req.params?.id) {
@@ -3628,7 +3628,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/warehouse-transactions", requireAuth, async (req, res) => {
+  app.post("/api/warehouse-transactions", requireAuth, requirePermission('manage_warehouse'), async (req, res) => {
     try {
       const warehouseTransaction = await storage.createWarehouseTransaction(
         req.body,
@@ -3730,7 +3730,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/quality-issues", requireAuth, async (req: AuthRequest, res) => {
+  app.post("/api/quality-issues", requireAuth, requirePermission('manage_quality'), async (req: AuthRequest, res) => {
     try {
       const issue = await storage.createQualityIssue(req.body);
       res.status(201).json({ success: true, data: issue });
@@ -3740,7 +3740,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.patch("/api/quality-issues/:id", requireAuth, async (req: AuthRequest, res) => {
+  app.patch("/api/quality-issues/:id", requireAuth, requirePermission('manage_quality'), async (req: AuthRequest, res) => {
     try {
       const id = parseInt(req.params.id);
       const issue = await storage.updateQualityIssue(id, req.body);
@@ -3752,7 +3752,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/quality-issues/:id/responsibles", requireAuth, async (req: AuthRequest, res) => {
+  app.post("/api/quality-issues/:id/responsibles", requireAuth, requirePermission('manage_quality'), async (req: AuthRequest, res) => {
     try {
       const issueId = parseInt(req.params.id);
       const resp = await storage.addQualityIssueResponsible({ ...req.body, quality_issue_id: issueId });
@@ -3763,7 +3763,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.patch("/api/quality-issues/responsibles/:id", requireAuth, async (req: AuthRequest, res) => {
+  app.patch("/api/quality-issues/responsibles/:id", requireAuth, requirePermission('manage_quality'), async (req: AuthRequest, res) => {
     try {
       const id = parseInt(req.params.id);
       const resp = await storage.updateQualityIssueResponsible(id, req.body);
@@ -3775,7 +3775,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/quality-issues/responsibles/:id", requireAuth, async (req: AuthRequest, res) => {
+  app.delete("/api/quality-issues/responsibles/:id", requireAuth, requirePermission('manage_quality'), async (req: AuthRequest, res) => {
     try {
       const id = parseInt(req.params.id);
       const deleted = await storage.deleteQualityIssueResponsible(id);
@@ -3787,7 +3787,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/quality-issues/:id/actions", requireAuth, async (req: AuthRequest, res) => {
+  app.post("/api/quality-issues/:id/actions", requireAuth, requirePermission('manage_quality'), async (req: AuthRequest, res) => {
     try {
       const issueId = parseInt(req.params.id);
       const action = await storage.addQualityIssueAction({ ...req.body, quality_issue_id: issueId });
@@ -3798,7 +3798,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.patch("/api/quality-issues/actions/:id", requireAuth, async (req: AuthRequest, res) => {
+  app.patch("/api/quality-issues/actions/:id", requireAuth, requirePermission('manage_quality'), async (req: AuthRequest, res) => {
     try {
       const id = parseInt(req.params.id);
       const action = await storage.updateQualityIssueAction(id, req.body);
@@ -3821,7 +3821,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/maintenance-requests", requireAuth, async (req, res) => {
+  app.post("/api/maintenance-requests", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
       
       // Process the data to convert string values to appropriate types
@@ -3876,7 +3876,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/maintenance-actions", requireAuth, async (req, res) => {
+  app.post("/api/maintenance-actions", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
       const data = insertMaintenanceActionSchema.parse(req.body);
       const action = await storage.createMaintenanceAction(data);
@@ -3890,7 +3890,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/maintenance-actions/:id", requireAuth, async (req, res) => {
+  app.put("/api/maintenance-actions/:id", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "ID");
       const action = await storage.updateMaintenanceAction(id, req.body);
@@ -3901,7 +3901,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/maintenance-actions/:id", requireAuth, async (req, res) => {
+  app.delete("/api/maintenance-actions/:id", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "ID");
       await storage.deleteMaintenanceAction(id);
@@ -3926,7 +3926,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/maintenance-reports", requireAuth, async (req, res) => {
+  app.post("/api/maintenance-reports", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
       const data = insertMaintenanceReportSchema.parse(req.body);
       const report = await storage.createMaintenanceReport(data);
@@ -3937,7 +3937,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/maintenance-reports/:id", requireAuth, async (req, res) => {
+  app.put("/api/maintenance-reports/:id", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "ID");
       const report = await storage.updateMaintenanceReport(id, req.body);
@@ -3948,7 +3948,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/maintenance-reports/:id", requireAuth, async (req, res) => {
+  app.delete("/api/maintenance-reports/:id", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "ID");
       await storage.deleteMaintenanceReport(id);
@@ -4019,7 +4019,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/spare-parts", requireAuth, async (req, res) => {
+  app.post("/api/spare-parts", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
       const sparePart = await storage.createSparePart(req.body);
       res.json(sparePart);
@@ -4029,7 +4029,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/spare-parts/:id", requireAuth, async (req, res) => {
+  app.put("/api/spare-parts/:id", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "ID");
       const sparePart = await storage.updateSparePart(id, req.body);
@@ -4040,7 +4040,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/spare-parts/:id", requireAuth, async (req, res) => {
+  app.delete("/api/spare-parts/:id", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "ID");
       await storage.deleteSparePart(id);
@@ -4062,7 +4062,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/consumable-parts", requireAuth, async (req, res) => {
+  app.post("/api/consumable-parts", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
       const consumablePart = await storage.createConsumablePart(req.body);
       res.json(consumablePart);
@@ -4072,7 +4072,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/consumable-parts/:id", requireAuth, async (req, res) => {
+  app.put("/api/consumable-parts/:id", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "ID");
       const consumablePart = await storage.updateConsumablePart(id, req.body);
@@ -4083,7 +4083,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/consumable-parts/:id", requireAuth, async (req, res) => {
+  app.delete("/api/consumable-parts/:id", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "ID");
       await storage.deleteConsumablePart(id);
@@ -4227,7 +4227,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/machines", requireAuth, async (req, res) => {
+  app.post("/api/machines", requireAuth, requirePermission('manage_definitions'), async (req, res) => {
     try {
 
       // Generate sequential ID if not provided with enhanced null safety
@@ -4298,7 +4298,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/machines/:id", requireAuth, async (req, res) => {
+  app.put("/api/machines/:id", requireAuth, requirePermission('manage_definitions'), async (req, res) => {
     try {
       const id = req.params.id; // Now using string ID
       
@@ -4328,7 +4328,7 @@ Do not include quotes or explanations.`;
   });
 
   // Users routes
-  app.post("/api/users", requireAuth, async (req, res) => {
+  app.post("/api/users", requireAuth, requirePermission('manage_users'), async (req, res) => {
     try {
 
       // ID will be auto-generated by the database (serial/auto-increment)
@@ -4408,7 +4408,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/users/:id", requireAuth, async (req, res) => {
+  app.put("/api/users/:id", requireAuth, requirePermission('manage_users'), async (req, res) => {
     try {
       // Enhanced parameter validation
       if (!req.params?.id) {
@@ -4617,7 +4617,7 @@ Do not include quotes or explanations.`;
   // Material Groups routes
 
   // Items routes
-  app.post("/api/items", requireAuth, async (req, res) => {
+  app.post("/api/items", requireAuth, requirePermission('manage_warehouse'), async (req, res) => {
     try {
 
       // Generate sequential ID if not provided with enhanced null safety
@@ -4668,7 +4668,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/items/:id", requireAuth, async (req, res) => {
+  app.put("/api/items/:id", requireAuth, requirePermission('manage_warehouse'), async (req, res) => {
     try {
       // Enhanced parameter validation
       if (!req.params?.id?.trim()) {
@@ -4776,7 +4776,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/training-programs", requireAuth, async (req, res) => {
+  app.post("/api/hr/training-programs", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const program = await storage.createTrainingProgram(req.body);
       res.json(program);
@@ -4786,7 +4786,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/hr/training-programs/:id", requireAuth, async (req, res) => {
+  app.put("/api/hr/training-programs/:id", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       // Enhanced parameter validation
       if (!req.params?.id) {
@@ -4868,7 +4868,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/training-materials", requireAuth, async (req, res) => {
+  app.post("/api/hr/training-materials", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const material = await storage.createTrainingMaterial(req.body);
       res.json(material);
@@ -4902,7 +4902,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/training-enrollments", requireAuth, async (req, res) => {
+  app.post("/api/hr/training-enrollments", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const enrollment = await storage.createTrainingEnrollment(req.body);
       res.json(enrollment);
@@ -4912,7 +4912,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/hr/training-enrollments/:id", requireAuth, async (req, res) => {
+  app.put("/api/hr/training-enrollments/:id", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "ID");
       const enrollment = await storage.updateTrainingEnrollment(id, req.body);
@@ -4943,7 +4943,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/training-evaluations", requireAuth, async (req, res) => {
+  app.post("/api/hr/training-evaluations", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const evaluation = await storage.createTrainingEvaluation(req.body);
       res.json(evaluation);
@@ -4953,7 +4953,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/hr/training-evaluations/:id", requireAuth, async (req, res) => {
+  app.put("/api/hr/training-evaluations/:id", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "ID");
       const evaluation = await storage.updateTrainingEvaluation(id, req.body);
@@ -5055,7 +5055,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/performance-reviews", requireAuth, async (req, res) => {
+  app.post("/api/hr/performance-reviews", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const review = await storage.createPerformanceReview(req.body);
       res.json(review);
@@ -5065,7 +5065,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/hr/performance-reviews/:id", requireAuth, async (req, res) => {
+  app.put("/api/hr/performance-reviews/:id", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const review = await storage.updatePerformanceReview(id, req.body);
@@ -5132,7 +5132,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/leave-requests", requireAuth, async (req, res) => {
+  app.post("/api/hr/leave-requests", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const request = await storage.createLeaveRequest(req.body);
       res.json(request);
@@ -5142,7 +5142,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/hr/leave-requests/:id", requireAuth, async (req, res) => {
+  app.put("/api/hr/leave-requests/:id", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const request = await storage.updateLeaveRequest(id, req.body);
@@ -5210,7 +5210,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/items/:id", requireAuth, async (req, res) => {
+  app.delete("/api/items/:id", requireAuth, requirePermission('manage_warehouse'), async (req, res) => {
     try {
       await storage.deleteItem(req.params.id);
       res.json({ message: "تم حذف الصنف بنجاح" });
@@ -5242,7 +5242,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/machines/:id", requireAuth, async (req, res) => {
+  app.delete("/api/machines/:id", requireAuth, requirePermission('manage_definitions'), async (req, res) => {
     try {
       const id = req.params.id;
       await storage.deleteMachine(id);
@@ -5253,7 +5253,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/users/:id", requireAuth, async (req, res) => {
+  app.delete("/api/users/:id", requireAuth, requirePermission('manage_users'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteUser(id);
@@ -5285,7 +5285,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/inventory", requireAuth, async (req, res) => {
+  app.post("/api/inventory", requireAuth, requirePermission('manage_warehouse'), async (req, res) => {
     try {
       // STEP 1: Zod schema validation
       const validatedData = insertInventorySchema.parse(req.body);
@@ -5333,7 +5333,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/inventory/:id", requireAuth, async (req, res) => {
+  app.put("/api/inventory/:id", requireAuth, requirePermission('manage_warehouse'), async (req, res) => {
     try {
       // STEP 1: Parameter validation
       const id = parseInt(req.params.id);
@@ -5391,7 +5391,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/inventory/:id", requireAuth, async (req, res) => {
+  app.delete("/api/inventory/:id", requireAuth, requirePermission('manage_warehouse'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteInventoryItem(id);
@@ -5617,7 +5617,7 @@ Do not include quotes or explanations.`;
   // ============ Orders Management API ============
 
 
-  app.post("/api/orders", requireAuth, async (req, res) => {
+  app.post("/api/orders", requireAuth, requirePermission('manage_orders'), async (req, res) => {
     try {
       const order = await storage.createOrder(req.body);
       res.status(201).json(order);
@@ -9454,7 +9454,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/suppliers", requireAuth, async (req, res) => {
+  app.post("/api/suppliers", requireAuth, requirePermission('manage_warehouse'), async (req, res) => {
     try {
       const { name, name_ar, phone, email, address, contact_person } = req.body;
       const result = await db.execute(sql`
@@ -9469,7 +9469,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/suppliers/:id", requireAuth, async (req, res) => {
+  app.put("/api/suppliers/:id", requireAuth, requirePermission('manage_warehouse'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { name, name_ar, phone, email, address, contact_person } = req.body;
@@ -9487,7 +9487,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/suppliers/:id", requireAuth, async (req, res) => {
+  app.delete("/api/suppliers/:id", requireAuth, requirePermission('manage_warehouse'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await db.execute(sql`UPDATE suppliers SET is_active = false WHERE id = ${id}`);

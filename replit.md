@@ -43,6 +43,21 @@ The system is built with a modern stack emphasizing efficiency and scalability, 
 
 ## Recent Changes
 
+### Roles & Permissions System Hardening (March 11, 2026)
+- **Backend middleware fix**: `requireAdmin` and `requirePermission` now check `permissions` array for `'admin'` instead of checking role name string — consistent with frontend behavior
+- **Admin compatibility**: Session population (`session-auth.ts`) auto-injects `'admin'` permission for role_id 1 or role named 'admin', preventing lockouts for legacy admin roles
+- **Backend route enforcement**: Added `requirePermission(...)` to ~60 write/delete API routes across all modules:
+  - Orders: `manage_orders` for POST/PUT customers and POST orders
+  - Production: `manage_production` for POST production orders (single + batch)
+  - Quality: `manage_quality` for all quality issue CRUD, responsibles, actions
+  - Maintenance: `manage_maintenance` for requests, actions, reports, spare parts, consumable parts
+  - Warehouse: `manage_warehouse` for items, inventory, inventory movements, warehouse transactions, suppliers
+  - HR: `manage_hr` for training programs, materials, enrollments, evaluations, performance reviews, leave requests
+  - Definitions: `manage_definitions` for machines CRUD
+  - Users: `manage_users` for user CRUD
+- **Route permissions**: Added `/factory-floor` to `ROUTE_PERMISSIONS` in `shared/permissions.ts`
+- **Frontend sidebar filtering**: Already uses `canAccessRoute()` → `ROUTE_PERMISSIONS` to show/hide menu items per user permissions
+
 ### Quality Management System (March 11, 2026)
 - **New tables**: `quality_issues`, `quality_issue_responsibles`, `quality_issue_actions`
 - **Quality Issues**: Track production problems from inspections, customer complaints, or internal reports

@@ -727,6 +727,9 @@ export const ROUTE_PERMISSIONS: Record<string, PermissionKey[]> = {
   // Display Screen
   '/display-screen': ['view_display_screen', 'admin'],
   '/display-control': ['manage_display_screen', 'admin'],
+
+  // Factory Floor
+  '/factory-floor': ['view_production', 'manage_production', 'admin'],
 };
 
 // Settings tabs permissions

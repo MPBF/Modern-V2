@@ -78,7 +78,10 @@ export async function populateUserFromSession(req: Request, res: Response, next:
       }
     }
 
-    // Populate req.user with user data  
+    if ((user.role_id === 1 || roleName === 'admin') && !permissions.includes('admin')) {
+      permissions.push('admin');
+    }
+
     req.user = {
       id: user.id,
       email: user.email || "",
