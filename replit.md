@@ -41,6 +41,15 @@ The system is built with a modern stack emphasizing efficiency and scalability, 
     4.  **Material Mixing**: `mixing_formulas`, `formula_ingredients`, `mixing_batches`, `batch_ingredients`. Includes an `Inventory Consumption API` for automatic stock deduction.
     All sections maintain referential integrity via foreign keys, real-time cache invalidation, and transaction-safe operations.
 
+## Mobile App Integration
+- **API Contract Reference**: `attached_assets/MOBILE_APP_API_CONTRACT.md` — comprehensive technical reference for the Expo/React Native mobile app (SDK 54).
+- **Authentication**: Bearer token via `POST /api/mobile/login`, token valid 30 days, stored in `mobileTokens` Map in `session-auth.ts`.
+- **Key Mobile API Endpoints**: `/api/mobile/login`, `/api/mobile/logout`, `/api/mobile/status`, `/api/orders/enhanced`, `/api/production-orders`, `/api/rolls`, `/api/rolls/create-with-timing`, `/api/rolls/:id/print`, `/api/rolls/:id/complete-cutting`, `/api/machines`, `/api/customers`, `/api/customer-products`, `/api/master-batch-colors`, `/api/attendance/check-in`, `/api/attendance/check-out`, `/api/notifications`, `/api/maintenance-requests`, `/api/quality-issues`, `/api/dashboard/stats`.
+- **Critical Data Rules**: All decimal values returned as STRING (client uses `parseFloat()`). Customer/Machine/MasterBatch IDs are STRING. Order status uses `waiting` (not `pending`). Production order status uses `pending`/`active`/`completed`/`cancelled`.
+- **Response Wrappers**: Not uniform — some endpoints return `{data:[], success}`, others return raw arrays. Mobile app handles both via `data?.data || (Array.isArray(data) ? data : [])`.
+- **CORS**: Must support `Authorization` header and `Bearer` token for cross-origin requests from mobile.
+- **⚠️ DO NOT** change field names, data types, or remove existing fields without updating the contract doc and notifying the mobile developer.
+
 ## Recent Changes
 
 ### Bug Fixes - Server Crash & Error Message Leaks (March 12, 2026)
