@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import multer from "multer";
 import * as XLSX from "xlsx";
 import { requireAuth, requirePermission, requireAdmin, type AuthRequest } from "./middleware/auth";
-import { generateMobileToken, revokeMobileToken } from "./middleware/session-auth";
+import { generateMobileToken, revokeMobileToken, invalidateRolesCache } from "./middleware/session-auth";
 import { logger } from "./lib/logger";
 
 // Configure multer for file uploads
@@ -2389,7 +2389,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       console.error("Error creating roll with timing:", error);
       res.status(500).json({ 
         success: false,
-        message: error instanceof Error ? error.message : "خطأ في إنشاء الرول" 
+        message: "خطأ في إنشاء الرول" 
       });
     }
   });
@@ -2431,7 +2431,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       console.error("Error creating final roll:", error);
       res.status(500).json({ 
         success: false,
-        message: error instanceof Error ? error.message : "خطأ في إنشاء آخر رول" 
+        message: "خطأ في إنشاء آخر رول" 
       });
     }
   });
@@ -2962,7 +2962,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       console.error("PDF generation error:", error);
       res.status(500).json({
         message: "خطأ في إنشاء ملف PDF",
-        error: error instanceof Error ? error.message : "Unknown error",
         success: false,
       });
     }
@@ -3070,7 +3069,7 @@ Do not include quotes or explanations.`;
       console.error("Translation error:", error);
       res.status(500).json({ 
         message: "خطأ في الترجمة",
-        error: error instanceof Error ? error.message : "Unknown error"
+        error: "خطأ داخلي"
       });
     }
   });
@@ -3098,7 +3097,7 @@ Do not include quotes or explanations.`;
       }
       res.status(400).json({
         message: "بيانات غير صحيحة",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "خطأ داخلي",
       });
     }
   });
@@ -3123,7 +3122,7 @@ Do not include quotes or explanations.`;
       console.error("Customer update error:", error);
       res.status(400).json({
         message: "خطأ في تحديث العميل",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "خطأ داخلي",
       });
     }
   });
@@ -3425,7 +3424,7 @@ Do not include quotes or explanations.`;
       console.error("Category creation error:", error);
       res.status(500).json({
         message: "خطأ في إنشاء الفئة",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "خطأ داخلي",
       });
     }
   });
@@ -3449,7 +3448,7 @@ Do not include quotes or explanations.`;
       console.error("Category update error:", error);
       res.status(500).json({
         message: "خطأ في تحديث الفئة",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "خطأ داخلي",
       });
     }
   });
@@ -3463,7 +3462,7 @@ Do not include quotes or explanations.`;
       console.error("Category deletion error:", error);
       res.status(500).json({
         message: "خطأ في حذف الفئة",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "خطأ داخلي",
       });
     }
   });
@@ -3507,7 +3506,7 @@ Do not include quotes or explanations.`;
       console.error("Error creating master batch color:", error);
       res.status(500).json({ 
         message: "خطأ في إنشاء لون الماستر باتش",
-        error: error instanceof Error ? error.message : "Unknown error"
+        error: "خطأ داخلي"
       });
     }
   });
@@ -3527,7 +3526,7 @@ Do not include quotes or explanations.`;
       console.error("Error updating master batch color:", error);
       res.status(500).json({ 
         message: "خطأ في تحديث لون الماستر باتش",
-        error: error instanceof Error ? error.message : "Unknown error"
+        error: "خطأ داخلي"
       });
     }
   });
@@ -3540,7 +3539,7 @@ Do not include quotes or explanations.`;
       console.error("Error deleting master batch color:", error);
       res.status(500).json({ 
         message: "خطأ في حذف لون الماستر باتش",
-        error: error instanceof Error ? error.message : "Unknown error"
+        error: "خطأ داخلي"
       });
     }
   });
@@ -3672,7 +3671,7 @@ Do not include quotes or explanations.`;
       res.json({ success: true, data: issues });
     } catch (error: any) {
       console.error("Error fetching quality issues:", error);
-      res.status(500).json({ message: "خطأ في جلب مشاكل الجودة", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب مشاكل الجودة" });
     }
   });
 
@@ -3682,7 +3681,7 @@ Do not include quotes or explanations.`;
       res.json({ success: true, data: stats });
     } catch (error: any) {
       console.error("Error fetching quality stats:", error);
-      res.status(500).json({ message: "خطأ في جلب إحصائيات الجودة", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب إحصائيات الجودة" });
     }
   });
 
@@ -3694,7 +3693,7 @@ Do not include quotes or explanations.`;
       res.json({ success: true, data: issue });
     } catch (error: any) {
       console.error("Error fetching quality issue:", error);
-      res.status(500).json({ message: "خطأ في جلب بيانات المشكلة", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب بيانات المشكلة" });
     }
   });
 
@@ -3704,7 +3703,7 @@ Do not include quotes or explanations.`;
       res.status(201).json({ success: true, data: issue });
     } catch (error: any) {
       console.error("Error creating quality issue:", error);
-      res.status(500).json({ message: "خطأ في إنشاء مشكلة الجودة", error: error.message });
+      res.status(500).json({ message: "خطأ في إنشاء مشكلة الجودة" });
     }
   });
 
@@ -3716,7 +3715,7 @@ Do not include quotes or explanations.`;
       res.json({ success: true, data: issue });
     } catch (error: any) {
       console.error("Error updating quality issue:", error);
-      res.status(500).json({ message: "خطأ في تحديث مشكلة الجودة", error: error.message });
+      res.status(500).json({ message: "خطأ في تحديث مشكلة الجودة" });
     }
   });
 
@@ -3727,7 +3726,7 @@ Do not include quotes or explanations.`;
       res.status(201).json({ success: true, data: resp });
     } catch (error: any) {
       console.error("Error adding responsible:", error);
-      res.status(500).json({ message: "خطأ في إضافة المتسبب", error: error.message });
+      res.status(500).json({ message: "خطأ في إضافة المتسبب" });
     }
   });
 
@@ -3739,7 +3738,7 @@ Do not include quotes or explanations.`;
       res.json({ success: true, data: resp });
     } catch (error: any) {
       console.error("Error updating responsible:", error);
-      res.status(500).json({ message: "خطأ في تحديث بيانات المتسبب", error: error.message });
+      res.status(500).json({ message: "خطأ في تحديث بيانات المتسبب" });
     }
   });
 
@@ -3751,7 +3750,7 @@ Do not include quotes or explanations.`;
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting responsible:", error);
-      res.status(500).json({ message: "خطأ في حذف المتسبب", error: error.message });
+      res.status(500).json({ message: "خطأ في حذف المتسبب" });
     }
   });
 
@@ -3762,7 +3761,7 @@ Do not include quotes or explanations.`;
       res.status(201).json({ success: true, data: action });
     } catch (error: any) {
       console.error("Error adding action:", error);
-      res.status(500).json({ message: "خطأ في إضافة الإجراء", error: error.message });
+      res.status(500).json({ message: "خطأ في إضافة الإجراء" });
     }
   });
 
@@ -3774,7 +3773,7 @@ Do not include quotes or explanations.`;
       res.json({ success: true, data: action });
     } catch (error: any) {
       console.error("Error updating action:", error);
-      res.status(500).json({ message: "خطأ في تحديث الإجراء", error: error.message });
+      res.status(500).json({ message: "خطأ في تحديث الإجراء" });
     }
   });
 
@@ -3817,7 +3816,7 @@ Do not include quotes or explanations.`;
       console.error("Error creating maintenance request:", error);
       res.status(500).json({
         message: "خطأ في إنشاء طلب الصيانة",
-        error: error instanceof Error ? error.message : String(error),
+        error: "خطأ داخلي",
       });
     }
   });
@@ -3853,7 +3852,7 @@ Do not include quotes or explanations.`;
       console.error("Error creating maintenance action:", error);
       res.status(500).json({
         message: "خطأ في إنشاء إجراء الصيانة",
-        error: error instanceof Error ? error.message : String(error),
+        error: "خطأ داخلي",
       });
     }
   });
@@ -4295,7 +4294,7 @@ Do not include quotes or explanations.`;
       console.error("Machine update error:", error);
       res.status(500).json({
         message: "خطأ في تحديث الماكينة",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "خطأ داخلي",
       });
     }
   });
@@ -4372,7 +4371,7 @@ Do not include quotes or explanations.`;
       console.error("User creation error:", error);
       res.status(500).json({
         message: "خطأ في إنشاء المستخدم",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "خطأ داخلي",
       });
     }
   });
@@ -4446,7 +4445,7 @@ Do not include quotes or explanations.`;
       console.error("User update error:", error);
       res.status(500).json({
         message: "خطأ في تحديث المستخدم",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "خطأ داخلي",
       });
     }
   });
@@ -4465,12 +4464,12 @@ Do not include quotes or explanations.`;
   app.post("/api/roles", requireAuth, requirePermission('manage_roles'), async (req: AuthRequest, res) => {
     try {
       const role = await storage.createRole(req.body);
+      invalidateRolesCache();
       res.json(role);
     } catch (error) {
       console.error("Role creation error:", error);
       res.status(500).json({
         message: "خطأ في إنشاء الدور",
-        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   });
@@ -4495,12 +4494,12 @@ Do not include quotes or explanations.`;
       if (!role) {
         return res.status(404).json({ message: "الدور غير موجود" });
       }
+      invalidateRolesCache();
       res.json(role);
     } catch (error) {
       console.error("Role update error:", error);
       res.status(500).json({
         message: "خطأ في تحديث الدور",
-        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   });
@@ -4518,13 +4517,12 @@ Do not include quotes or explanations.`;
       }
 
       await storage.deleteRole(id);
-      // If no error thrown, deletion was successful
+      invalidateRolesCache();
       res.json({ message: "تم حذف الدور بنجاح" });
     } catch (error) {
       console.error("Role deletion error:", error);
       res.status(500).json({
         message: "خطأ في حذف الدور",
-        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   });
@@ -4565,7 +4563,7 @@ Do not include quotes or explanations.`;
       console.error("Section creation error:", error);
       res.status(500).json({
         message: "خطأ في إنشاء القسم",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "خطأ داخلي",
       });
     }
   });
@@ -4642,7 +4640,7 @@ Do not include quotes or explanations.`;
       );
       res.status(500).json({
         message: "خطأ في إنشاء الصنف",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "خطأ داخلي",
       });
     }
   });
@@ -4681,7 +4679,7 @@ Do not include quotes or explanations.`;
       console.error("Item update error:", error);
       res.status(500).json({
         message: "خطأ في تحديث الصنف",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "خطأ داخلي",
       });
     }
   });
@@ -4732,11 +4730,8 @@ Do not include quotes or explanations.`;
       res.json(customerProduct);
     } catch (error) {
       console.error("Customer product update error:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({
         message: "خطأ في تحديث منتج العميل",
-        error: errorMessage,
       });
     }
   });
@@ -4905,12 +4900,16 @@ Do not include quotes or explanations.`;
   // Training Evaluations
   app.get("/api/hr/training-evaluations", requireAuth, async (req, res) => {
     try {
-      const employeeId = req.query.employee_id
-        ? parseInt(req.query.employee_id as string)
-        : undefined;
-      const programId = req.query.program_id
-        ? parseInt(req.query.program_id as string)
-        : undefined;
+      let employeeId: number | undefined;
+      if (req.query.employee_id) {
+        const parsed = parseInt(req.query.employee_id as string);
+        employeeId = !isNaN(parsed) && parsed > 0 ? parsed : undefined;
+      }
+      let programId: number | undefined;
+      if (req.query.program_id) {
+        const parsed = parseInt(req.query.program_id as string);
+        programId = !isNaN(parsed) && parsed > 0 ? parsed : undefined;
+      }
       const evaluations = await storage.getTrainingEvaluations(
         employeeId,
         programId,
@@ -4961,9 +4960,11 @@ Do not include quotes or explanations.`;
   // Training Certificates
   app.get("/api/hr/training-certificates", requireAuth, async (req, res) => {
     try {
-      const employeeId = req.query.employee_id
-        ? parseInt(req.query.employee_id as string)
-        : undefined;
+      let employeeId: number | undefined;
+      if (req.query.employee_id) {
+        const parsed = parseInt(req.query.employee_id as string);
+        employeeId = !isNaN(parsed) && parsed > 0 ? parsed : undefined;
+      }
       const certificates = await storage.getTrainingCertificates(employeeId);
       res.json(certificates);
     } catch (error) {
@@ -5146,9 +5147,11 @@ Do not include quotes or explanations.`;
   app.get("/api/hr/leave-balances/:employeeId", requireAuth, async (req, res) => {
     try {
       const employeeId = req.params.employeeId;
-      const year = req.query.year
-        ? parseInt(req.query.year as string)
-        : undefined;
+      let year: number | undefined;
+      if (req.query.year) {
+        const parsed = parseInt(req.query.year as string);
+        year = !isNaN(parsed) && parsed > 0 ? parsed : undefined;
+      }
       const balances = await storage.getLeaveBalances(employeeId, year);
       res.json(balances);
     } catch (error) {
@@ -6262,7 +6265,6 @@ Do not include quotes or explanations.`;
         console.error("Error in batch import:", error);
         res.status(500).json({
           message: "خطأ في معالجة الدفعة",
-          error: error instanceof Error ? error.message : "خطأ غير معروف",
         });
       }
     },
@@ -8309,7 +8311,6 @@ Do not include quotes or explanations.`;
       console.error("Error fetching user performance stats:", error);
       res.status(500).json({
         message: "خطأ في جلب إحصائيات أداء المستخدمين",
-        error: error.message,
       });
     }
   });
@@ -8349,7 +8350,6 @@ Do not include quotes or explanations.`;
       console.error("Error fetching role performance stats:", error);
       res.status(500).json({
         message: "خطأ في جلب إحصائيات أداء الأقسام",
-        error: error.message,
       });
     }
   });
@@ -8362,7 +8362,7 @@ Do not include quotes or explanations.`;
       res.json({ success: true, data });
     } catch (error: any) {
       console.error("Error fetching monitoring dashboard:", error);
-      res.status(500).json({ message: "خطأ في جلب بيانات لوحة المراقبة", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب بيانات لوحة المراقبة" });
     }
   });
 
@@ -8379,7 +8379,6 @@ Do not include quotes or explanations.`;
       console.error("Error fetching real-time production stats:", error);
       res.status(500).json({
         message: "خطأ في جلب الإحصائيات الفورية",
-        error: error.message,
       });
     }
   });
@@ -8422,7 +8421,6 @@ Do not include quotes or explanations.`;
         console.error("Error fetching production efficiency metrics:", error);
         res.status(500).json({
           message: "خطأ في جلب مؤشرات الكفاءة",
-          error: error.message,
         });
       }
     },
@@ -8447,7 +8445,6 @@ Do not include quotes or explanations.`;
       console.error("Error fetching production alerts:", error);
       res.status(500).json({
         message: "خطأ في جلب تنبيهات الإنتاج",
-        error: error.message,
       });
     }
   });
@@ -8494,7 +8491,6 @@ Do not include quotes or explanations.`;
         console.error("Error fetching machine utilization stats:", error);
         res.status(500).json({
           message: "خطأ في جلب إحصائيات استخدام المكائن",
-          error: error.message,
         });
       }
     },
@@ -8520,7 +8516,7 @@ Do not include quotes or explanations.`;
       res.json(stats);
     } catch (error: any) {
       console.error("Error fetching section stats:", error);
-      res.status(500).json({ message: "خطأ في جلب إحصائيات القسم", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب إحصائيات القسم" });
     }
   });
 
@@ -8542,7 +8538,7 @@ Do not include quotes or explanations.`;
       res.json({ data: users });
     } catch (error: any) {
       console.error("Error fetching users performance:", error);
-      res.status(500).json({ message: "خطأ في جلب أداء المستخدمين", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب أداء المستخدمين" });
     }
   });
 
@@ -8564,7 +8560,7 @@ Do not include quotes or explanations.`;
       res.json({ data: machines });
     } catch (error: any) {
       console.error("Error fetching machines production:", error);
-      res.status(500).json({ message: "خطأ في جلب إنتاج المكائن", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب إنتاج المكائن" });
     }
   });
 
@@ -8584,7 +8580,7 @@ Do not include quotes or explanations.`;
       res.json({ data: detail });
     } catch (error: any) {
       console.error("Error fetching machine detail:", error);
-      res.status(500).json({ message: "خطأ في جلب تفاصيل الماكينة", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب تفاصيل الماكينة" });
     }
   });
 
@@ -8605,7 +8601,7 @@ Do not include quotes or explanations.`;
       res.json({ data: rolls });
     } catch (error: any) {
       console.error("Error fetching rolls:", error);
-      res.status(500).json({ message: "خطأ في جلب الرولات", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب الرولات" });
     }
   });
 
@@ -8626,7 +8622,7 @@ Do not include quotes or explanations.`;
       res.json({ data: orders });
     } catch (error: any) {
       console.error("Error fetching production orders:", error);
-      res.status(500).json({ message: "خطأ في جلب أوامر الإنتاج", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب أوامر الإنتاج" });
     }
   });
 
@@ -8666,7 +8662,7 @@ Do not include quotes or explanations.`;
       res.json(notes);
     } catch (error: any) {
       console.error("Error fetching quick notes:", error);
-      res.status(500).json({ message: "خطأ في جلب الملاحظات", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب الملاحظات" });
     }
   });
 
@@ -8690,7 +8686,7 @@ Do not include quotes or explanations.`;
       res.json(note);
     } catch (error: any) {
       console.error("Error fetching note:", error);
-      res.status(500).json({ message: "خطأ في جلب الملاحظة", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب الملاحظة" });
     }
   });
 
@@ -8742,7 +8738,7 @@ Do not include quotes or explanations.`;
       res.status(201).json(newNote);
     } catch (error: any) {
       console.error("Error creating note:", error);
-      res.status(500).json({ message: "خطأ في إنشاء الملاحظة", error: error.message });
+      res.status(500).json({ message: "خطأ في إنشاء الملاحظة" });
     }
   });
 
@@ -8791,7 +8787,7 @@ Do not include quotes or explanations.`;
       res.json(updatedNote);
     } catch (error: any) {
       console.error("Error updating note:", error);
-      res.status(500).json({ message: "خطأ في تحديث الملاحظة", error: error.message });
+      res.status(500).json({ message: "خطأ في تحديث الملاحظة" });
     }
   });
 
@@ -8815,7 +8811,7 @@ Do not include quotes or explanations.`;
       res.json(updatedNote);
     } catch (error: any) {
       console.error("Error marking note as read:", error);
-      res.status(500).json({ message: "خطأ في تحديث حالة القراءة", error: error.message });
+      res.status(500).json({ message: "خطأ في تحديث حالة القراءة" });
     }
   });
 
@@ -8839,7 +8835,7 @@ Do not include quotes or explanations.`;
       res.json({ message: "تم حذف الملاحظة بنجاح" });
     } catch (error: any) {
       console.error("Error deleting note:", error);
-      res.status(500).json({ message: "خطأ في حذف الملاحظة", error: error.message });
+      res.status(500).json({ message: "خطأ في حذف الملاحظة" });
     }
   });
 
@@ -8865,7 +8861,7 @@ Do not include quotes or explanations.`;
       res.json(attachments);
     } catch (error: any) {
       console.error("Error fetching attachments:", error);
-      res.status(500).json({ message: "خطأ في جلب المرفقات", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب المرفقات" });
     }
   });
 
@@ -8907,7 +8903,7 @@ Do not include quotes or explanations.`;
       res.status(201).json(newAttachment);
     } catch (error: any) {
       console.error("Error creating attachment:", error);
-      res.status(500).json({ message: "خطأ في رفع المرفق", error: error.message });
+      res.status(500).json({ message: "خطأ في رفع المرفق" });
     }
   });
 
@@ -8927,7 +8923,7 @@ Do not include quotes or explanations.`;
       res.json({ message: "تم حذف المرفق بنجاح" });
     } catch (error: any) {
       console.error("Error deleting attachment:", error);
-      res.status(500).json({ message: "خطأ في حذف المرفق", error: error.message });
+      res.status(500).json({ message: "خطأ في حذف المرفق" });
     }
   });
 
@@ -8940,7 +8936,7 @@ Do not include quotes or explanations.`;
       res.json({ data: batches });
     } catch (error: any) {
       console.error("Error getting mixing batches:", error);
-      res.status(500).json({ message: "خطأ في جلب عمليات الخلط", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب عمليات الخلط" });
     }
   });
 
@@ -8957,7 +8953,7 @@ Do not include quotes or explanations.`;
       res.json(batch);
     } catch (error: any) {
       console.error("Error getting mixing batch:", error);
-      res.status(500).json({ message: "خطأ في جلب عملية الخلط", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب عملية الخلط" });
     }
   });
 
@@ -8972,7 +8968,7 @@ Do not include quotes or explanations.`;
       res.json({ data: batches });
     } catch (error: any) {
       console.error("Error getting operator batches:", error);
-      res.status(500).json({ message: "خطأ في جلب عمليات الخلط للعامل", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب عمليات الخلط للعامل" });
     }
   });
 
@@ -8987,7 +8983,7 @@ Do not include quotes or explanations.`;
       res.json({ data: batches });
     } catch (error: any) {
       console.error("Error getting production order batches:", error);
-      res.status(500).json({ message: "خطأ في جلب عمليات الخلط لأمر الإنتاج", error: error.message });
+      res.status(500).json({ message: "خطأ في جلب عمليات الخلط لأمر الإنتاج" });
     }
   });
 
@@ -9024,7 +9020,7 @@ Do not include quotes or explanations.`;
       res.status(201).json(newBatch);
     } catch (error: any) {
       console.error("Error creating mixing batch:", error);
-      res.status(500).json({ message: "خطأ في إنشاء عملية الخلط", error: error.message });
+      res.status(500).json({ message: "خطأ في إنشاء عملية الخلط" });
     }
   });
 
@@ -9038,7 +9034,7 @@ Do not include quotes or explanations.`;
       res.json(updatedBatch);
     } catch (error: any) {
       console.error("Error updating mixing batch:", error);
-      res.status(500).json({ message: "خطأ في تحديث عملية الخلط", error: error.message });
+      res.status(500).json({ message: "خطأ في تحديث عملية الخلط" });
     }
   });
 
@@ -9057,7 +9053,7 @@ Do not include quotes or explanations.`;
       res.json(updatedBatch);
     } catch (error: any) {
       console.error("Error updating batch ingredients:", error);
-      res.status(500).json({ message: "خطأ في تحديث الكميات الفعلية", error: error.message });
+      res.status(500).json({ message: "خطأ في تحديث الكميات الفعلية" });
     }
   });
 
@@ -9069,7 +9065,7 @@ Do not include quotes or explanations.`;
       res.json(completedBatch);
     } catch (error: any) {
       console.error("Error completing mixing batch:", error);
-      res.status(500).json({ message: "خطأ في إتمام عملية الخلط", error: error.message });
+      res.status(500).json({ message: "خطأ في إتمام عملية الخلط" });
     }
   });
 
@@ -9135,8 +9131,7 @@ Do not include quotes or explanations.`;
     } catch (error: any) {
       console.error("Error recording material consumption:", error);
       res.status(500).json({ 
-        message: "خطأ في تسجيل استهلاك المواد", 
-        error: error.message 
+        message: "خطأ في تسجيل استهلاك المواد"
       });
     }
   });
@@ -9170,7 +9165,7 @@ Do not include quotes or explanations.`;
       res.status(201).json(voucher);
     } catch (error: any) {
       console.error("Error creating raw material in voucher:", error);
-      res.status(500).json({ message: "خطأ في إنشاء سند إدخال المواد الخام", error: error.message });
+      res.status(500).json({ message: "خطأ في إنشاء سند إدخال المواد الخام" });
     }
   });
 
@@ -9215,7 +9210,7 @@ Do not include quotes or explanations.`;
       res.status(201).json(voucher);
     } catch (error: any) {
       console.error("Error creating raw material out voucher:", error);
-      res.status(500).json({ message: "خطأ في إنشاء سند إخراج المواد الخام", error: error.message });
+      res.status(500).json({ message: "خطأ في إنشاء سند إخراج المواد الخام" });
     }
   });
 
@@ -9375,7 +9370,7 @@ Do not include quotes or explanations.`;
       res.status(201).json(count);
     } catch (error: any) {
       console.error("Error creating inventory count:", error);
-      res.status(500).json({ message: "خطأ في إنشاء عملية الجرد", error: error.message });
+      res.status(500).json({ message: "خطأ في إنشاء عملية الجرد" });
     }
   });
 
@@ -9405,7 +9400,7 @@ Do not include quotes or explanations.`;
       res.status(201).json(item);
     } catch (error: any) {
       console.error("Error adding inventory count item:", error);
-      res.status(500).json({ message: "خطأ في إضافة صنف للجرد", error: error.message });
+      res.status(500).json({ message: "خطأ في إضافة صنف للجرد" });
     }
   });
 
@@ -9421,7 +9416,7 @@ Do not include quotes or explanations.`;
       res.json(count);
     } catch (error: any) {
       console.error("Error completing inventory count:", error);
-      res.status(500).json({ message: "خطأ في إتمام عملية الجرد", error: error.message });
+      res.status(500).json({ message: "خطأ في إتمام عملية الجرد" });
     }
   });
 
@@ -9698,7 +9693,7 @@ Do not include quotes or explanations.`;
       });
     } catch (error: any) {
       console.error("Error importing opening balance:", error);
-      res.status(500).json({ message: "خطأ في استيراد الأرصدة الافتتاحية", error: error.message });
+      res.status(500).json({ message: "خطأ في استيراد الأرصدة الافتتاحية" });
     }
   });
 
@@ -9749,7 +9744,7 @@ Do not include quotes or explanations.`;
       });
     } catch (error: any) {
       console.error("Error importing suppliers:", error);
-      res.status(500).json({ message: "خطأ في استيراد الموردين", error: error.message });
+      res.status(500).json({ message: "خطأ في استيراد الموردين" });
     }
   });
 

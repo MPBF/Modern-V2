@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 import { storage } from "../storage";
 
-// Extend the Express Request to include user data
 declare module "express-serve-static-core" {
   interface Request {
     user?: {
@@ -22,6 +21,23 @@ const mobileTokens = new Map<string, { userId: number; createdAt: number }>();
 
 const TOKEN_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000;
 const TOKEN_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
+
+const ROLES_CACHE_TTL_MS = 60 * 1000;
+let rolesCache: { data: any[] | null; fetchedAt: number } = { data: null, fetchedAt: 0 };
+
+async function getCachedRoles() {
+  const now = Date.now();
+  if (rolesCache.data && now - rolesCache.fetchedAt < ROLES_CACHE_TTL_MS) {
+    return rolesCache.data;
+  }
+  const roles = await storage.getRoles();
+  rolesCache = { data: roles, fetchedAt: now };
+  return roles;
+}
+
+export function invalidateRolesCache() {
+  rolesCache = { data: null, fetchedAt: 0 };
+}
 
 function cleanupExpiredTokens() {
   const now = Date.now();
@@ -106,7 +122,7 @@ async function resolveUserById(userId: number) {
   let roleName = "user";
 
   if (user.role_id) {
-    const roles = await storage.getRoles();
+    const roles = await getCachedRoles();
     const userRole = roles.find(r => r.id === user.role_id);
 
     if (userRole) {

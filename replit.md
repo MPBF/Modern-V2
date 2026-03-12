@@ -43,6 +43,12 @@ The system is built with a modern stack emphasizing efficiency and scalability, 
 
 ## Recent Changes
 
+### Bug Fixes - Performance, Security & Validation (March 12, 2026)
+- **Fixed roles DB query on every request**: `resolveUserById()` in session-auth middleware was calling `storage.getRoles()` on every authenticated API request. Added in-memory cache with 60-second TTL via `getCachedRoles()`. Cache is invalidated on role create/update/delete operations via `invalidateRolesCache()`.
+- **Fixed missing NaN validation on query params**: Training evaluations, certificates, and leave balance routes were passing raw `parseInt()` results without NaN checks. Invalid values now safely default to undefined instead of passing NaN to database queries.
+- **Removed internal error message exposure**: Removed 40+ instances of `error.message` and `error instanceof Error ? error.message` being sent in API JSON responses. Internal error details now only appear in server-side console logs, not client responses.
+- **Added roles cache invalidation**: Role CRUD routes (`POST/PUT/DELETE /api/roles`) now call `invalidateRolesCache()` to ensure permission changes take effect immediately.
+
 ### Bug Fixes - Password Exposure & Section ID Type Mismatch (March 12, 2026)
 - **Fixed password hash leaking in 3 API responses**: `GET /api/auth/user`, `POST /api/users`, `PUT /api/users/:id` were returning full user objects including the hashed password field. Now strip `password` before sending response.
 - **Fixed section ID type mismatch in monthly attendance editor**: `users.section_id` stores integers (e.g., `2`) but `sections.id` uses varchar (e.g., `"SEC02"`). The lookup at `/api/attendance/monthly-editor/:userId` was comparing `String(2)` → `"2"` against `"SEC02"`, always failing. Now reconstructs the full `SECxx` key for matching.
