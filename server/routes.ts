@@ -6801,7 +6801,7 @@ Do not include quotes or explanations.`;
   });
 
   // تسجيل الحضور مع تحقق الموقع الجغرافي المحسّن
-  app.post("/api/attendance", requireAuth, async (req, res) => {
+  app.post(["/api/attendance", "/api/attendance/check-in"], requireAuth, async (req, res) => {
     try {
       const isDevMode = process.env.NODE_ENV === 'development';
       

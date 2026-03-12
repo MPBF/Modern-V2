@@ -1,0 +1,37 @@
+[DataValidator] نظام التحقق من صحة البيانات مُفعل
+[DataValidator] تم تحميل 9 قاعدة تحقق افتراضية
+✅ Using PostgreSQL session store for development - sessions will persist across server restarts
+[DataValidator] تم تسجيل المدققات المخصصة
+[DataValidator] تم تشغيل نظام التحقق من البيانات بنجاح ✅
+9:02:27 PM [express] serving on port 5000
+9:02:28 PM [express] also serving on port 8000
+✅ Password security check passed: All 64 user passwords are properly hashed
+✅ Memory monitoring started (interval: 30000ms)
+No logging configuration. Using default config
+[2026-03-12T21:02:29.464Z] [INFO] ✅ Meta WhatsApp API service initialized successfully
+✅ Taqnyat SMS service initialized successfully
+✅ Twilio WhatsApp service initialized successfully
+🚀 Using Meta WhatsApp Business API directly
+✅ Taqnyat SMS service initialized successfully
+⚠️ Unauthenticated API request: /api/dashboard/stats
+9:02:29 PM [express] GET /api/dashboard/stats 404 in 4ms
+⚠️ Unauthenticated API request: /api/production-orders
+9:02:29 PM [express] GET /api/production-orders 404 in 1ms
+9:02:29 PM [express] development server fully initialized
+9:02:55 PM [express] POST /api/mobile/login 200 in 280ms :: {"token":"[REDACTED]","user":"[Object]"}
+⚠️ Unauthenticated API request: /api/dashboard/stats
+9:02:55 PM [express] GET /api/dashboard/stats 200 in 11ms :: {"totalOrders":1,"totalProductionOrders…
+⚠️ Unauthenticated API request: /api/production-orders
+9:02:55 PM [express] GET /api/production-orders 200 in 4ms :: {"data":"[Array:2]"}
+⚠️ Unauthenticated API request: /api/orders
+9:04:58 PM [express] GET /api/orders 200 in 4ms :: {"data":"[Array:1]","count":1,"success":true}
+⚠️ Unauthenticated API request: /api/notifications
+9:05:02 PM [express] GET /api/notifications 200 in 104ms :: {"data":"[Array:50]"}
+⚠️ Unauthenticated API request: /api/attendance
+9:05:03 PM [express] GET /api/attendance 200 in 6ms :: {"data":"[Array:48]"}
+⚠️ Unauthenticated API request: /api/maintenance-requests
+⚠️ Unauthenticated API request: /api/machines
+9:05:04 PM [express] GET /api/maintenance-requests 304 in 229ms :: {"data":"[Array:0]"}
+9:05:04 PM [express] GET /api/machines 200 in 420ms :: {"data":"[Array:28]"}
+⚠️ Unauthenticated API request: /api/attendance/check-in
+9:05:06 PM [express] POST /api/attendance/check-in 404 in 2ms :: {"message":"API endpoint not found"}

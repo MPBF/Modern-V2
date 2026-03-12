@@ -261,11 +261,13 @@ app.use((req, res, next) => {
         );
       }
     } else if (
+      !req.user &&
       req.path !== "/api/login" &&
       req.path !== "/api/me" &&
       req.path !== "/api/health" &&
       !req.path.startsWith("/api/mobile/") &&
-      !req.path.startsWith("/api/notifications/webhook/")
+      !req.path.startsWith("/api/notifications/webhook/") &&
+      !req.path.startsWith("/api/display/")
     ) {
       if (!isProduction) {
         console.log(`⚠️ Unauthenticated API request: ${req.path}`);
