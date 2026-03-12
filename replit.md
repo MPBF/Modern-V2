@@ -43,6 +43,12 @@ The system is built with a modern stack emphasizing efficiency and scalability, 
 
 ## Recent Changes
 
+### Bug Fixes - Password Exposure & Section ID Type Mismatch (March 12, 2026)
+- **Fixed password hash leaking in 3 API responses**: `GET /api/auth/user`, `POST /api/users`, `PUT /api/users/:id` were returning full user objects including the hashed password field. Now strip `password` before sending response.
+- **Fixed section ID type mismatch in monthly attendance editor**: `users.section_id` stores integers (e.g., `2`) but `sections.id` uses varchar (e.g., `"SEC02"`). The lookup at `/api/attendance/monthly-editor/:userId` was comparing `String(2)` → `"2"` against `"SEC02"`, always failing. Now reconstructs the full `SECxx` key for matching.
+- **Removed hardcoded section mapping in user creation**: `POST /api/users` had a hardcoded `sectionMapping` object limited to 7 sections. Replaced with regex extraction (`/^SEC(\d+)$/`) consistent with the update route.
+- **Hardened section_id and role_id parsing**: Both create and update user routes now handle `section_id` and `role_id` sent as either strings (`"SEC02"`, `"ROLE08"`) or numbers, preventing `TypeError` crashes when `.match()` was called on non-string values.
+
 ### Bug Fixes - Comprehensive parseInt Validation & Token Cleanup (March 11, 2026)
 - **Fixed 20+ more unsafe `parseInt` calls across 4 files**: Added NaN validation to all remaining `parseInt(req.params...)` calls:
   - `server/routes.ts`: user settings (GET/POST), order progress, mixing batches (operator/production order), face verification (status/logs), attendance summary, quick note assigned_to update

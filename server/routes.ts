@@ -199,7 +199,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      res.json(user);
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
     } catch (error) {
       logger.error("Error fetching Replit auth user", error);
       console.error("[API Error]", error);
@@ -4339,24 +4340,19 @@ Do not include quotes or explanations.`;
         }
       }
 
-      // Handle section_id - convert section string ID to integer
       let sectionId = null;
       if (
         req.body.section_id &&
         req.body.section_id !== "" &&
         req.body.section_id !== "none"
       ) {
-        // Simple mapping from section string ID to integer
-        const sectionMapping: { [key: string]: number } = {
-          SEC01: 1,
-          SEC02: 2,
-          SEC03: 3,
-          SEC04: 4,
-          SEC05: 5,
-          SEC06: 6,
-          SEC07: 7,
-        };
-        sectionId = sectionMapping[req.body.section_id] || null;
+        const sid = String(req.body.section_id);
+        const sectionMatch = sid.match(/^SEC(\d+)$/);
+        if (sectionMatch) {
+          sectionId = parseInt(sectionMatch[1], 10);
+        } else if (!isNaN(Number(sid))) {
+          sectionId = Number(sid);
+        }
       }
 
       const processedData = {
@@ -4370,7 +4366,8 @@ Do not include quotes or explanations.`;
       };
 
       const user = await storage.createUser(processedData);
-      res.json(user);
+      const { password: _, ...safeUser } = user;
+      res.json(safeUser);
     } catch (error) {
       console.error("User creation error:", error);
       res.status(500).json({
@@ -4404,10 +4401,12 @@ Do not include quotes or explanations.`;
         req.body.role_id !== "" &&
         req.body.role_id !== "none"
       ) {
-        // Extract numeric ID from ROLE{number} format (e.g., ROLE08 -> 8)
-        const roleMatch = req.body.role_id.match(/^ROLE(\d+)$/);
+        const rid = String(req.body.role_id);
+        const roleMatch = rid.match(/^ROLE(\d+)$/);
         if (roleMatch) {
           roleId = parseInt(roleMatch[1], 10);
+        } else if (!isNaN(Number(rid))) {
+          roleId = Number(rid);
         }
       }
 
@@ -4417,10 +4416,12 @@ Do not include quotes or explanations.`;
         req.body.section_id !== "" &&
         req.body.section_id !== "none"
       ) {
-        // Extract numeric ID from SEC{number} format (e.g., SEC02 -> 2)
-        const sectionMatch = req.body.section_id.match(/^SEC(\d+)$/);
+        const sid = String(req.body.section_id);
+        const sectionMatch = sid.match(/^SEC(\d+)$/);
         if (sectionMatch) {
           sectionId = parseInt(sectionMatch[1], 10);
+        } else if (!isNaN(Number(sid))) {
+          sectionId = Number(sid);
         }
       }
 
@@ -4434,7 +4435,8 @@ Do not include quotes or explanations.`;
       if (!user) {
         return res.status(404).json({ message: "المستخدم غير موجود" });
       }
-      res.json(user);
+      const { password: _, ...safeUser } = user;
+      res.json(safeUser);
     } catch (error) {
       console.error("User update error:", error);
       res.status(500).json({
@@ -7279,7 +7281,8 @@ Do not include quotes or explanations.`;
       const allRoles = await storage.getRoles();
       const allSections = await storage.getSections();
       const role = user.role_id ? allRoles.find(r => r.id === user.role_id) : null;
-      const section = user.section_id ? allSections.find(s => s.id === String(user.section_id)) : null;
+      const sectionKey = user.section_id ? `SEC${String(user.section_id).padStart(2, '0')}` : null;
+      const section = sectionKey ? allSections.find(s => s.id === sectionKey) : null;
 
       // Generate all dates in the range
       const start = new Date(startDate);
