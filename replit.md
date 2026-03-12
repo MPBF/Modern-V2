@@ -43,6 +43,16 @@ The system is built with a modern stack emphasizing efficiency and scalability, 
 
 ## Recent Changes
 
+### Bug Fixes - Remaining Error Message Leaks (March 12, 2026)
+- **Fixed 26 remaining internal error message leaks**: Despite prior cleanup, 26 catch blocks still sent `error.message` to API clients. Fixed patterns include:
+  - 5 `DatabaseError` blocks exposing raw SQL errors (orders, customer products, machines, inventory, order status)
+  - 5 notification route error leaks
+  - 12 production/queue route `error.message || "fallback"` patterns
+  - 2 warehouse voucher routes: changed from `error.message || fallback` to only forward `error.message` when it matches known Arabic validation patterns
+  - 1 delivery days validation exposing internal error details (now shows Arabic message)
+  - 1 delivery days error message in English replaced with proper Arabic message
+- **Remaining safe pass-throughs**: 6 instances intentionally forward controlled Arabic business validation messages (attendance duplication, roll/cut weight limits, voucher quantity limits)
+
 ### Bug Fixes - Performance, Security & Validation (March 12, 2026)
 - **Fixed roles DB query on every request**: `resolveUserById()` in session-auth middleware was calling `storage.getRoles()` on every authenticated API request. Added in-memory cache with 60-second TTL via `getCachedRoles()`. Cache is invalidated on role create/update/delete operations via `invalidateRolesCache()`.
 - **Fixed missing NaN validation on query params**: Training evaluations, certificates, and leave balance routes were passing raw `parseInt()` results without NaN checks. Invalid values now safely default to undefined instead of passing NaN to database queries.

@@ -1226,7 +1226,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         console.error("Error creating system notification:", error);
         res.status(500).json({
           success: false,
-          message: error.message || "فشل في إرسال الإشعار",
+          message: "فشل في إرسال الإشعار",
         });
       }
     },
@@ -1252,7 +1252,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         console.error("Error marking notification as read:", error);
         res.status(500).json({
           success: false,
-          message: error.message || "فشل في تعليم الإشعار كمقروء",
+          message: "فشل في تعليم الإشعار كمقروء",
         });
       }
     },
@@ -1279,7 +1279,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         console.error("Error marking all notifications as read:", error);
         res.status(500).json({
           success: false,
-          message: error.message || "فشل في تعليم الإشعارات كمقروءة",
+          message: "فشل في تعليم الإشعارات كمقروءة",
         });
       }
     },
@@ -1300,7 +1300,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       console.error("Error deleting notification:", error);
       res.status(500).json({
         success: false,
-        message: error.message || "فشل في حذف الإشعار",
+        message: "فشل في حذف الإشعار",
       });
     }
   });
@@ -1349,7 +1349,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       console.error("Error fetching user notifications:", error);
       res.status(500).json({
         success: false,
-        message: error.message || "فشل في جلب الإشعارات",
+        message: "فشل في جلب الإشعارات",
       });
     }
   });
@@ -1421,13 +1421,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       });
     } catch (error: any) {
       console.error("Orders fetch error:", error);
-
-      if (error.name === "DatabaseError") {
-        return res.status(500).json({
-          message: error.message,
-          success: false,
-        });
-      }
 
       res.status(500).json({
         message: "خطأ في جلب الطلبات",
@@ -1503,7 +1496,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
             );
           } catch (error) {
             return res.status(400).json({
-              message: `Invalid delivery days: ${error instanceof Error ? error.message : "Invalid value"}`,
+              message: "قيمة أيام التسليم غير صحيحة",
               success: false,
             });
           }
@@ -1535,13 +1528,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         });
       } catch (error: any) {
         console.error("Order creation error:", error);
-
-        if (error.name === "DatabaseError") {
-          return res.status(400).json({
-            message: error.message,
-            success: false,
-          });
-        }
 
         res.status(500).json({
           message: "خطأ في إنشاء الطلب",
@@ -1584,13 +1570,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         });
       } catch (error: any) {
         console.error("Order deletion error:", error);
-
-        if (error.name === "DatabaseError") {
-          return res.status(400).json({
-            message: error.message,
-            success: false,
-          });
-        }
 
         res.status(500).json({
           message: "خطأ في حذف الطلب",
@@ -1971,7 +1950,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         console.error("Error activating production order:", error);
         res.status(400).json({ 
           success: false,
-          message: error.message || "خطأ في تفعيل أمر الإنتاج" 
+          message: "خطأ في تفعيل أمر الإنتاج" 
         });
       }
     }
@@ -2012,7 +1991,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         console.error("Error assigning production order:", error);
         res.status(400).json({ 
           success: false,
-          message: error.message || "خطأ في تخصيص أمر الإنتاج" 
+          message: "خطأ في تخصيص أمر الإنتاج" 
         });
       }
     }
@@ -2034,7 +2013,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         console.error("Error fetching production order stats:", error);
         res.status(400).json({ 
           success: false,
-          message: error.message || "خطأ في جلب إحصائيات أمر الإنتاج" 
+          message: "خطأ في جلب إحصائيات أمر الإنتاج" 
         });
       }
     }
@@ -2191,7 +2170,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       console.error("Error marking roll as printed:", error);
       res.status(400).json({ 
         success: false,
-        message: error.message || "خطأ في تسجيل طباعة الرول" 
+        message: "خطأ في تسجيل طباعة الرول" 
       });
     }
   });
@@ -3230,13 +3209,6 @@ Do not include quotes or explanations.`;
     } catch (error: any) {
       console.error("Customer product creation error:", error);
 
-      if (error.name === "DatabaseError") {
-        return res.status(400).json({
-          message: error.message,
-          success: false,
-        });
-      }
-
       res.status(500).json({
         message: "خطأ في إنشاء منتج العميل",
         success: false,
@@ -4255,13 +4227,6 @@ Do not include quotes or explanations.`;
       });
     } catch (error: any) {
       console.error("Machine creation error:", error);
-
-      if (error.name === "DatabaseError") {
-        return res.status(400).json({
-          message: error.message,
-          success: false,
-        });
-      }
 
       res.status(500).json({
         message: "خطأ في إنشاء الماكينة",
@@ -5301,13 +5266,6 @@ Do not include quotes or explanations.`;
     } catch (error: any) {
       console.error("Inventory creation error:", error);
 
-      if (error.name === "DatabaseError") {
-        return res.status(400).json({
-          message: error.message,
-          success: false,
-        });
-      }
-
       res.status(500).json({
         message: "خطأ في إضافة صنف للمخزون",
         success: false,
@@ -5358,13 +5316,6 @@ Do not include quotes or explanations.`;
       });
     } catch (error: any) {
       console.error("Inventory update error:", error);
-
-      if (error.name === "DatabaseError") {
-        return res.status(400).json({
-          message: error.message,
-          success: false,
-        });
-      }
 
       res.status(500).json({
         message: "خطأ في تحديث صنف المخزون",
@@ -5424,7 +5375,7 @@ Do not include quotes or explanations.`;
     } catch (error: any) {
       console.error("Error assigning to machine queue:", error);
       res.status(400).json({ 
-        message: error.message || "خطأ في تخصيص أمر الإنتاج للماكينة" 
+        message: "خطأ في تخصيص أمر الإنتاج للماكينة" 
       });
     }
   });
@@ -5448,7 +5399,7 @@ Do not include quotes or explanations.`;
     } catch (error: any) {
       console.error("Error reordering queue:", error);
       res.status(400).json({ 
-        message: error.message || "خطأ في تحديث ترتيب الطابور" 
+        message: "خطأ في تحديث ترتيب الطابور" 
       });
     }
   });
@@ -5472,7 +5423,7 @@ Do not include quotes or explanations.`;
     } catch (error: any) {
       console.error("Error removing from queue:", error);
       res.status(400).json({ 
-        message: error.message || "خطأ في إزالة أمر الإنتاج من الطابور" 
+        message: "خطأ في إزالة أمر الإنتاج من الطابور" 
       });
     }
   });
@@ -5523,7 +5474,7 @@ Do not include quotes or explanations.`;
     } catch (error: any) {
       console.error("Error applying smart distribution:", error);
       res.status(400).json({
-        message: error.message || "خطأ في تطبيق التوزيع الذكي"
+        message: "خطأ في تطبيق التوزيع الذكي"
       });
     }
   });
@@ -5548,7 +5499,7 @@ Do not include quotes or explanations.`;
     } catch (error: any) {
       console.error("Error getting distribution preview:", error);
       res.status(400).json({
-        message: error.message || "خطأ في معاينة التوزيع"
+        message: "خطأ في معاينة التوزيع"
       });
     }
   });
@@ -5565,7 +5516,7 @@ Do not include quotes or explanations.`;
     } catch (error: any) {
       console.error("Error getting machine capacity stats:", error);
       res.status(500).json({
-        message: error.message || "خطأ في جلب إحصائيات السعة"
+        message: "خطأ في جلب إحصائيات السعة"
       });
     }
   });
@@ -5590,7 +5541,7 @@ Do not include quotes or explanations.`;
     } catch (error: any) {
       console.error("Error optimizing queue order:", error);
       res.status(400).json({
-        message: error.message || "خطأ في تحسين ترتيب الطابور"
+        message: "خطأ في تحسين ترتيب الطابور"
       });
     }
   });
@@ -5762,13 +5713,6 @@ Do not include quotes or explanations.`;
         });
       } catch (error: any) {
         console.error("Error updating order status:", error);
-
-        if (error.name === "DatabaseError") {
-          return res.status(400).json({
-            message: error.message,
-            success: false,
-          });
-        }
 
         res.status(500).json({
           message: "خطأ في تحديث حالة الطلب",
@@ -8218,7 +8162,7 @@ Do not include quotes or explanations.`;
     } catch (error: any) {
       console.error("Error completing cutting:", error);
       res.status(500).json({ 
-        message: error.message || "خطأ في إكمال عملية التقطيع" 
+        message: "خطأ في إكمال عملية التقطيع" 
       });
     }
   });
@@ -9266,8 +9210,9 @@ Do not include quotes or explanations.`;
       res.status(201).json(voucher);
     } catch (error: any) {
       console.error("Error creating finished goods in voucher:", error);
-      const isValidation = error.message?.includes("تتجاوز") || error.message?.includes("تم استلام كامل") || error.message?.includes("غير موجود");
-      res.status(isValidation ? 400 : 500).json({ message: error.message || "خطأ في إنشاء سند استلام المواد التامة" });
+      const validationPatterns = ["تتجاوز", "تم استلام كامل", "غير موجود"];
+      const isValidation = error.message && validationPatterns.some((p: string) => error.message.includes(p));
+      res.status(isValidation ? 400 : 500).json({ message: isValidation ? error.message : "خطأ في إنشاء سند استلام المواد التامة" });
     }
   });
 
@@ -9313,7 +9258,7 @@ Do not include quotes or explanations.`;
     } catch (error: any) {
       console.error("Error creating finished goods out voucher:", error);
       const isValidation = error.message?.includes("تتجاوز");
-      res.status(isValidation ? 400 : 500).json({ message: error.message || "خطأ في إنشاء سند إخراج المواد التامة" });
+      res.status(isValidation ? 400 : 500).json({ message: isValidation ? error.message : "خطأ في إنشاء سند إخراج المواد التامة" });
     }
   });
 
