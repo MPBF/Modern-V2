@@ -117,8 +117,8 @@ export default function ProductionOrdersManagement() {
   };
 
   const getProgressPercentage = (order: any) => {
-    const quantity = parseFloat(order.quantity_kg || 0);
-    const produced = parseFloat(order.produced_kg || 0);
+    const quantity = parseFloat(order.final_quantity_kg || order.quantity_kg || 0);
+    const produced = parseFloat(order.produced_quantity_kg || order.produced_kg || 0);
     if (quantity === 0) return 0;
     return Math.min(100, Math.round((produced / quantity) * 100));
   };

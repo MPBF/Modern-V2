@@ -1143,10 +1143,57 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
-  async getAllProductionOrders(): Promise<ProductionOrder[]> {
+  async getAllProductionOrders(): Promise<any[]> {
     return withDatabaseErrorHandling(
       async () => {
-        return await db.select().from(production_orders).orderBy(desc(production_orders.id));
+        const operatorUser = alias(users, 'operator_user');
+        const result = await db
+          .select({
+            id: production_orders.id,
+            production_order_number: production_orders.production_order_number,
+            order_id: production_orders.order_id,
+            customer_product_id: production_orders.customer_product_id,
+            quantity_kg: production_orders.quantity_kg,
+            overrun_percentage: production_orders.overrun_percentage,
+            final_quantity_kg: production_orders.final_quantity_kg,
+            produced_quantity_kg: production_orders.produced_quantity_kg,
+            printed_quantity_kg: production_orders.printed_quantity_kg,
+            net_quantity_kg: production_orders.net_quantity_kg,
+            waste_quantity_kg: production_orders.waste_quantity_kg,
+            film_completion_percentage: production_orders.film_completion_percentage,
+            printing_completion_percentage: production_orders.printing_completion_percentage,
+            cutting_completion_percentage: production_orders.cutting_completion_percentage,
+            assigned_machine_id: production_orders.assigned_machine_id,
+            assigned_operator_id: production_orders.assigned_operator_id,
+            production_start_time: production_orders.production_start_time,
+            production_end_time: production_orders.production_end_time,
+            production_time_minutes: production_orders.production_time_minutes,
+            film_completed: production_orders.film_completed,
+            printing_completed: production_orders.printing_completed,
+            cutting_completed: production_orders.cutting_completed,
+            is_final_roll_created: production_orders.is_final_roll_created,
+            warehouse_received_kg: production_orders.warehouse_received_kg,
+            status: production_orders.status,
+            order_number: orders.order_number,
+            customer_id: customers.id,
+            customer_name: customers.name,
+            customer_name_ar: customers.name_ar,
+            size_caption: customer_products.size_caption,
+            is_printed: customer_products.is_printed,
+            item_id: customer_products.item_id,
+            machine_name: machines.name,
+            machine_name_ar: machines.name_ar,
+            operator_name: operatorUser.display_name,
+            operator_name_ar: operatorUser.display_name_ar,
+          })
+          .from(production_orders)
+          .leftJoin(orders, eq(production_orders.order_id, orders.id))
+          .leftJoin(customers, eq(orders.customer_id, customers.id))
+          .leftJoin(customer_products, eq(production_orders.customer_product_id, customer_products.id))
+          .leftJoin(machines, eq(production_orders.assigned_machine_id, machines.id))
+          .leftJoin(operatorUser, eq(production_orders.assigned_operator_id, operatorUser.id))
+          .orderBy(desc(production_orders.id));
+        return result;
       },
       "getAllProductionOrders",
       "جلب أوامر الإنتاج",
