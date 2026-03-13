@@ -118,10 +118,10 @@ export default function Quality() {
 
   const issues = issuesData?.data || [];
   const stats = statsData?.data || { total: 0, byStatus: {}, bySeverity: {}, bySource: {}, byCategory: {} };
-  const customersList = customersData?.data || [];
-  const usersList = usersData?.data || [];
-  const prodOrders = prodOrdersData?.data || [];
-  const ordersList = ordersData?.data || [];
+  const customersList = Array.isArray(customersData) ? customersData : (customersData?.data || []);
+  const usersList = Array.isArray(usersData) ? usersData : (usersData?.data || []);
+  const prodOrders = Array.isArray(prodOrdersData) ? prodOrdersData : (prodOrdersData?.data || []);
+  const ordersList = Array.isArray(ordersData) ? ordersData : (ordersData?.data || []);
 
   const filteredIssues = useMemo(() => {
     if (!searchText) return issues;
