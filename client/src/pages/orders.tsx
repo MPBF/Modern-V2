@@ -758,13 +758,13 @@ export default function Orders() {
         <TabsContent value="orders">
           {!ordersLoading && (
             <>
-              <OrdersStats orders={orders} productionOrders={productionOrders} />
+              <OrdersStats orders={safeOrders} productionOrders={safeProductionOrders} />
               <div className="mt-6">
                 <OrdersTabs
-                  orders={orders}
-                  productionOrders={productionOrders}
-                  customers={customers}
-                  customerProducts={customerProducts}
+                  orders={safeOrders}
+                  productionOrders={safeProductionOrders}
+                  customers={safeCustomers}
+                  customerProducts={safeCustomerProducts}
                   users={users}
                   items={items}
                   categories={categories}
@@ -810,8 +810,8 @@ export default function Orders() {
         {/* محتوى الرولات */}
         <TabsContent value="rolls">
           <RollsTab 
-            customers={customers}
-            productionOrders={productionOrders}
+            customers={safeCustomers}
+            productionOrders={safeProductionOrders}
           />
         </TabsContent>
 

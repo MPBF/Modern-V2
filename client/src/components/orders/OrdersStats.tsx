@@ -10,6 +10,9 @@ export default function OrdersStats({
   orders,
   productionOrders,
 }: OrdersStatsProps) {
+  const safeOrders = Array.isArray(orders) ? orders : [];
+  const safeProdOrders = Array.isArray(productionOrders) ? productionOrders : [];
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <Card>
@@ -18,7 +21,7 @@ export default function OrdersStats({
           <Package className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{orders.length}</div>
+          <div className="text-2xl font-bold">{safeOrders.length}</div>
           <p className="text-xs text-muted-foreground">طلب</p>
         </CardContent>
       </Card>
@@ -29,7 +32,7 @@ export default function OrdersStats({
           <Package className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{productionOrders.length}</div>
+          <div className="text-2xl font-bold">{safeProdOrders.length}</div>
           <p className="text-xs text-muted-foreground">أمر إنتاج</p>
         </CardContent>
       </Card>
@@ -41,10 +44,7 @@ export default function OrdersStats({
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-yellow-600">
-            {
-              productionOrders.filter((po: any) => po.status === "in_progress")
-                .length
-            }
+            {safeProdOrders.filter((po: any) => po.status === "in_progress").length}
           </div>
           <p className="text-xs text-muted-foreground">أمر قيد التنفيذ</p>
         </CardContent>
@@ -57,10 +57,7 @@ export default function OrdersStats({
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-green-600">
-            {
-              productionOrders.filter((po: any) => po.status === "completed")
-                .length
-            }
+            {safeProdOrders.filter((po: any) => po.status === "completed").length}
           </div>
           <p className="text-xs text-muted-foreground">أمر مكتمل</p>
         </CardContent>

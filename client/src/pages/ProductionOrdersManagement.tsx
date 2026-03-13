@@ -61,12 +61,13 @@ export default function ProductionOrdersManagement() {
         const error = await response.json();
         throw new Error(error.message || t('production.ordersManagement.noProductionOrders'));
       }
-      return response.json();
+      const result = await response.json();
+      return Array.isArray(result) ? result : (result.data || []);
     },
   });
 
   const filteredOrders = useMemo(() => {
-    const orders = ordersData?.data || [];
+    const orders = Array.isArray(ordersData) ? ordersData : (ordersData?.data || []);
     return orders.filter((order: any) => {
       if (statusFilter !== "all" && order.status !== statusFilter) {
         return false;
@@ -89,7 +90,7 @@ export default function ProductionOrdersManagement() {
   }, [ordersData, statusFilter, searchTerm]);
 
   const stats = useMemo(() => {
-    const orders = ordersData?.data || [];
+    const orders = Array.isArray(ordersData) ? ordersData : (ordersData?.data || []);
     const pending = orders.filter((o: any) => o.status === "pending").length;
     const active = orders.filter((o: any) => o.status === "active" || o.status === "in_production").length;
     const completed = orders.filter((o: any) => o.status === "completed").length;
