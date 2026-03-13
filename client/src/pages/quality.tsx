@@ -13,6 +13,7 @@ import { Label } from "../components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { SearchableSelect } from "../components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { Separator } from "../components/ui/separator";
 import { useToast } from "../hooks/use-toast";
@@ -639,63 +640,47 @@ function CreateIssueDialog({ open, onClose, customers, users, prodOrders, orders
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>العميل</Label>
-              <Select value={form.customer_id} onValueChange={v => setForm({ ...form, customer_id: v, order_id: "", production_order_id: "" })}>
-                <SelectTrigger><SelectValue placeholder="اختر العميل" /></SelectTrigger>
-                <SelectContent>
-                  {customers.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>{ln(c.name_ar, c.name)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={customers.map((c: any) => ({ value: String(c.id), label: ln(c.name_ar, c.name) || String(c.id) }))}
+                value={form.customer_id}
+                onValueChange={v => setForm({ ...form, customer_id: v, order_id: "", production_order_id: "" })}
+                placeholder="اختر العميل"
+                searchPlaceholder="ابحث عن عميل..."
+              />
             </div>
             <div className="space-y-2">
               <Label>الطلبية</Label>
-              <Select
+              <SearchableSelect
+                options={orders.filter((o: any) => String(o.customer_id) === form.customer_id).map((o: any) => ({ value: String(o.id), label: o.order_number }))}
                 value={form.order_id}
                 onValueChange={v => setForm({ ...form, order_id: v, production_order_id: "" })}
+                placeholder={form.customer_id ? "اختر الطلبية" : "اختر العميل أولاً"}
+                searchPlaceholder="ابحث عن طلبية..."
                 disabled={!form.customer_id}
-              >
-                <SelectTrigger><SelectValue placeholder={form.customer_id ? "اختر الطلبية" : "اختر العميل أولاً"} /></SelectTrigger>
-                <SelectContent>
-                  {orders
-                    .filter((o: any) => o.customer_id === form.customer_id)
-                    .map((o: any) => (
-                      <SelectItem key={o.id} value={String(o.id)}>{o.order_number}</SelectItem>
-                    ))
-                  }
-                </SelectContent>
-              </Select>
+              />
             </div>
             <div className="space-y-2">
               <Label>أمر الإنتاج</Label>
-              <Select
+              <SearchableSelect
+                options={prodOrders.filter((po: any) => String(po.order_id) === form.order_id).map((po: any) => ({ value: String(po.id), label: po.production_order_number }))}
                 value={form.production_order_id}
                 onValueChange={v => setForm({ ...form, production_order_id: v })}
+                placeholder={form.order_id ? "اختر أمر الإنتاج" : "اختر الطلبية أولاً"}
+                searchPlaceholder="ابحث عن أمر إنتاج..."
                 disabled={!form.order_id}
-              >
-                <SelectTrigger><SelectValue placeholder={form.order_id ? "اختر أمر الإنتاج" : "اختر الطلبية أولاً"} /></SelectTrigger>
-                <SelectContent>
-                  {prodOrders
-                    .filter((po: any) => String(po.order_id) === form.order_id)
-                    .map((po: any) => (
-                      <SelectItem key={po.id} value={String(po.id)}>{po.production_order_number}</SelectItem>
-                    ))
-                  }
-                </SelectContent>
-              </Select>
+              />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label>تم الكشف بواسطة</Label>
-            <Select value={form.detected_by} onValueChange={v => setForm({ ...form, detected_by: v })}>
-              <SelectTrigger><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
-              <SelectContent>
-                {users.map((u: any) => (
-                  <SelectItem key={u.id} value={String(u.id)}>{ln(u.display_name_ar, u.display_name)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={users.map((u: any) => ({ value: String(u.id), label: ln(u.display_name_ar, u.display_name) || u.username }))}
+              value={form.detected_by}
+              onValueChange={v => setForm({ ...form, detected_by: v })}
+              placeholder="اختر الموظف"
+              searchPlaceholder="ابحث عن موظف..."
+            />
           </div>
 
           <Separator />
@@ -1403,49 +1388,45 @@ function EditIssueDialog({ issueId, open, onClose, customers, users, prodOrders,
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>العميل</Label>
-              <Select value={form.customer_id} onValueChange={v => setForm({ ...form, customer_id: v, order_id: "", production_order_id: "" })}>
-                <SelectTrigger><SelectValue placeholder="اختر العميل" /></SelectTrigger>
-                <SelectContent>
-                  {customers.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>{ln(c.name_ar, c.name)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={customers.map((c: any) => ({ value: String(c.id), label: ln(c.name_ar, c.name) || String(c.id) }))}
+                value={form.customer_id}
+                onValueChange={v => setForm({ ...form, customer_id: v, order_id: "", production_order_id: "" })}
+                placeholder="اختر العميل"
+                searchPlaceholder="ابحث عن عميل..."
+              />
             </div>
             <div className="space-y-2">
               <Label>الطلبية</Label>
-              <Select value={form.order_id} onValueChange={v => setForm({ ...form, order_id: v, production_order_id: "" })}>
-                <SelectTrigger><SelectValue placeholder="اختر الطلبية" /></SelectTrigger>
-                <SelectContent>
-                  {orders.filter((o: any) => o.customer_id === form.customer_id).map((o: any) => (
-                    <SelectItem key={o.id} value={String(o.id)}>{o.order_number}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={orders.filter((o: any) => String(o.customer_id) === form.customer_id).map((o: any) => ({ value: String(o.id), label: o.order_number }))}
+                value={form.order_id}
+                onValueChange={v => setForm({ ...form, order_id: v, production_order_id: "" })}
+                placeholder="اختر الطلبية"
+                searchPlaceholder="ابحث عن طلبية..."
+              />
             </div>
             <div className="space-y-2">
               <Label>أمر الإنتاج</Label>
-              <Select value={form.production_order_id} onValueChange={v => setForm({ ...form, production_order_id: v })}>
-                <SelectTrigger><SelectValue placeholder="اختر أمر الإنتاج" /></SelectTrigger>
-                <SelectContent>
-                  {prodOrders.filter((po: any) => String(po.order_id) === form.order_id).map((po: any) => (
-                    <SelectItem key={po.id} value={String(po.id)}>{po.production_order_number}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={prodOrders.filter((po: any) => String(po.order_id) === form.order_id).map((po: any) => ({ value: String(po.id), label: po.production_order_number }))}
+                value={form.production_order_id}
+                onValueChange={v => setForm({ ...form, production_order_id: v })}
+                placeholder="اختر أمر الإنتاج"
+                searchPlaceholder="ابحث عن أمر إنتاج..."
+              />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label>تم الكشف بواسطة</Label>
-            <Select value={form.detected_by} onValueChange={v => setForm({ ...form, detected_by: v })}>
-              <SelectTrigger><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
-              <SelectContent>
-                {users.map((u: any) => (
-                  <SelectItem key={u.id} value={String(u.id)}>{ln(u.display_name_ar, u.display_name)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={users.map((u: any) => ({ value: String(u.id), label: ln(u.display_name_ar, u.display_name) || u.username }))}
+              value={form.detected_by}
+              onValueChange={v => setForm({ ...form, detected_by: v })}
+              placeholder="اختر الموظف"
+              searchPlaceholder="ابحث عن موظف..."
+            />
           </div>
 
           <Separator />
@@ -1766,14 +1747,13 @@ function AddResponsibleForm({ users, ln, onSubmit, onCancel, saving }: any) {
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label className="text-xs">الموظف *</Label>
-            <Select value={form.user_id} onValueChange={v => setForm({ ...form, user_id: v })}>
-              <SelectTrigger><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
-              <SelectContent>
-                {users.map((u: any) => (
-                  <SelectItem key={u.id} value={String(u.id)}>{ln(u.display_name_ar, u.display_name)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={users.map((u: any) => ({ value: String(u.id), label: ln(u.display_name_ar, u.display_name) || u.username }))}
+              value={form.user_id}
+              onValueChange={v => setForm({ ...form, user_id: v })}
+              placeholder="اختر الموظف"
+              searchPlaceholder="ابحث عن موظف..."
+            />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">القسم *</Label>
@@ -1868,14 +1848,13 @@ function AddActionForm({ users, ln, onSubmit, onCancel, saving }: any) {
           </div>
           <div className="space-y-1">
             <Label className="text-xs">المنفذ</Label>
-            <Select value={form.performed_by} onValueChange={v => setForm({ ...form, performed_by: v })}>
-              <SelectTrigger><SelectValue placeholder="اختر المنفذ" /></SelectTrigger>
-              <SelectContent>
-                {users.map((u: any) => (
-                  <SelectItem key={u.id} value={String(u.id)}>{ln(u.display_name_ar, u.display_name)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={users.map((u: any) => ({ value: String(u.id), label: ln(u.display_name_ar, u.display_name) || u.username }))}
+              value={form.performed_by}
+              onValueChange={v => setForm({ ...form, performed_by: v })}
+              placeholder="اختر المنفذ"
+              searchPlaceholder="ابحث عن موظف..."
+            />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">الموعد النهائي</Label>

@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import { SearchableSelect } from "../components/ui/searchable-select";
 import {
   Tabs,
   TabsContent,
@@ -3723,7 +3724,16 @@ export default function Definitions() {
                     </div>
                     <div>
                       <Label htmlFor="sales_rep_id">{t("definitions.customers.salesRep")}</Label>
-                      <Select
+                      <SearchableSelect
+                        options={[
+                          { value: "none", label: t("definitions.form.noRep") },
+                          ...(Array.isArray(salesReps) ? salesReps.map((rep: any) => ({
+                            value: rep.id.toString(),
+                            label: rep.display_name_ar && rep.display_name 
+                              ? `${rep.display_name_ar} (${rep.display_name})`
+                              : rep.display_name_ar || rep.display_name || rep.username
+                          })) : [])
+                        ]}
                         value={customerForm.sales_rep_id?.toString() || "none"}
                         onValueChange={(value) =>
                           setCustomerForm({
@@ -3731,25 +3741,9 @@ export default function Definitions() {
                             sales_rep_id: value === "none" ? "" : value,
                           })
                         }
-                      >
-                        <SelectTrigger className="mt-1" data-testid="select-sales-rep">
-                          <SelectValue placeholder={t("definitions.form.selectRep")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">{t("definitions.form.noRep")}</SelectItem>
-                          {Array.isArray(salesReps) &&
-                            salesReps.map((rep: any) => (
-                              <SelectItem
-                                key={rep.id}
-                                value={rep.id.toString()}
-                              >
-                                {rep.display_name_ar && rep.display_name 
-                                  ? `${rep.display_name_ar} (${rep.display_name})`
-                                  : rep.display_name_ar || rep.display_name || rep.username}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder={t("definitions.form.selectRep")}
+                        searchPlaceholder="ابحث عن مندوب..."
+                      />
                     </div>
                     <div>
                       <Label htmlFor="address">{t("definitions.customers.address")}</Label>
