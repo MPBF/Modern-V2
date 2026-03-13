@@ -4463,6 +4463,8 @@ export class DatabaseStorage implements IStorage {
         root_cause: quality_issues.root_cause,
         corrective_action: quality_issues.corrective_action,
         preventive_action: quality_issues.preventive_action,
+        estimated_loss: quality_issues.estimated_loss,
+        loss_details: quality_issues.loss_details,
         detected_by: quality_issues.detected_by,
         resolved_by: quality_issues.resolved_by,
         detected_at: quality_issues.detected_at,
@@ -4513,6 +4515,8 @@ export class DatabaseStorage implements IStorage {
         root_cause: quality_issues.root_cause,
         corrective_action: quality_issues.corrective_action,
         preventive_action: quality_issues.preventive_action,
+        estimated_loss: quality_issues.estimated_loss,
+        loss_details: quality_issues.loss_details,
         detected_by: quality_issues.detected_by,
         resolved_by: quality_issues.resolved_by,
         detected_at: quality_issues.detected_at,
@@ -4547,6 +4551,7 @@ export class DatabaseStorage implements IStorage {
         responsibility_type: quality_issue_responsibles.responsibility_type,
         action_taken: quality_issue_responsibles.action_taken,
         penalty_type: quality_issue_responsibles.penalty_type,
+        deduction_amount: quality_issue_responsibles.deduction_amount,
         notes: quality_issue_responsibles.notes,
         created_at: quality_issue_responsibles.created_at,
         user_name: users.display_name,
@@ -4597,6 +4602,11 @@ export class DatabaseStorage implements IStorage {
       updated_at: new Date(),
     }).where(eq(quality_issues.id, id)).returning();
     return issue || null;
+  }
+
+  async deleteQualityIssue(id: number): Promise<boolean> {
+    const result = await db.delete(quality_issues).where(eq(quality_issues.id, id)).returning();
+    return result.length > 0;
   }
 
   async addQualityIssueResponsible(data: InsertQualityIssueResponsible): Promise<QualityIssueResponsible> {

@@ -3729,6 +3729,18 @@ Do not include quotes or explanations.`;
     }
   });
 
+  app.delete("/api/quality-issues/:id", requireAuth, requirePermission('manage_quality'), async (req: AuthRequest, res) => {
+    try {
+      const id = parseRouteParam(req.params.id, "id");
+      const deleted = await storage.deleteQualityIssue(id);
+      if (!deleted) return res.status(404).json({ message: "لم يتم العثور على المشكلة" });
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting quality issue:", error);
+      res.status(500).json({ message: "خطأ في حذف مشكلة الجودة" });
+    }
+  });
+
   app.post("/api/quality-issues/:id/responsibles", requireAuth, requirePermission('manage_quality'), async (req: AuthRequest, res) => {
     try {
       const issueId = parseRouteParam(req.params.id, "id");
