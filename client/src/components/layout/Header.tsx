@@ -15,7 +15,7 @@ export default function Header() {
 
   return (
     <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex items-center justify-between px-4 py-3 pt-[0px] pb-[0px] font-bold">
         <div className="flex items-center gap-4">
           <div className="flex items-center justify-center w-20 h-20 rounded-lg overflow-hidden">
             <img
