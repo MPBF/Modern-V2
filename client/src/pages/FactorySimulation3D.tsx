@@ -25,12 +25,22 @@ import {
   Users, X, ChevronDown, ChevronUp, Circle, Camera, Share2, Download, Clock, MessageSquare, Copy, List
 } from 'lucide-react';
 
-const HALL_WIDTH = 20;
-const HALL_LENGTH = 50;
+const DEFAULT_HALL_WIDTH = 20;
+const DEFAULT_HALL_LENGTH = 50;
 const WALL_HEIGHT = 8;
 const GATE_WIDTH = 5;
 const GATE_HEIGHT = 5;
 const MOVE_STEP = 0.5;
+const METERS_TO_CM = 100;
+
+const MACHINE_BASE_DIMS: Record<string, { width: number; depth: number; height: number }> = {
+  film: { width: 3.0, depth: 2.2, height: 6.0 },
+  printing: { width: 4.0, depth: 2.2, height: 3.2 },
+  cutting: { width: 3.5, depth: 2.0, height: 3.1 },
+  mixer: { width: 1.5, depth: 1.5, height: 3.4 },
+  pallet: { width: 1.5, depth: 1.5, height: 0.2 },
+  inline_printer: { width: 2.2, depth: 1.6, height: 2.0 },
+};
 
 const COLOR_PRESETS = [
   '#2563eb', '#7c3aed', '#059669', '#dc2626', '#d97706',
@@ -835,7 +845,7 @@ function WoodenPallet({ machine, isSelected }: { machine: Machine; isSelected: b
   );
 }
 
-function HallStructure({ showStructure }: { showStructure: boolean }) {
+function HallStructure({ showStructure, hallWidth, hallLength }: { showStructure: boolean; hallWidth: number; hallLength: number }) {
   if (!showStructure) return null;
   const wallThickness = 0.2;
   const wallColor = "#94a3b8";
@@ -844,67 +854,90 @@ function HallStructure({ showStructure }: { showStructure: boolean }) {
   const roofOpacity = 0.2;
   return (
     <group>
-      <mesh position={[HALL_WIDTH / 2, WALL_HEIGHT / 2, 0]}>
-        <boxGeometry args={[wallThickness, WALL_HEIGHT, HALL_LENGTH]} />
+      <mesh position={[hallWidth / 2, WALL_HEIGHT / 2, 0]}>
+        <boxGeometry args={[wallThickness, WALL_HEIGHT, hallLength]} />
         <meshStandardMaterial color={wallColor} transparent opacity={wallOpacity} side={THREE.DoubleSide} />
       </mesh>
-      <mesh position={[-HALL_WIDTH / 2, WALL_HEIGHT / 2, 0]}>
-        <boxGeometry args={[wallThickness, WALL_HEIGHT, HALL_LENGTH]} />
+      <mesh position={[-hallWidth / 2, WALL_HEIGHT / 2, 0]}>
+        <boxGeometry args={[wallThickness, WALL_HEIGHT, hallLength]} />
         <meshStandardMaterial color={wallColor} transparent opacity={wallOpacity} side={THREE.DoubleSide} />
       </mesh>
-      <mesh position={[0, WALL_HEIGHT / 2, HALL_LENGTH / 2]}>
-        <boxGeometry args={[HALL_WIDTH, WALL_HEIGHT, wallThickness]} />
+      <mesh position={[0, WALL_HEIGHT / 2, hallLength / 2]}>
+        <boxGeometry args={[hallWidth, WALL_HEIGHT, wallThickness]} />
         <meshStandardMaterial color={wallColor} transparent opacity={wallOpacity} side={THREE.DoubleSide} />
       </mesh>
-      <mesh position={[-(HALL_WIDTH / 2 - (HALL_WIDTH - GATE_WIDTH) / 4), WALL_HEIGHT / 2, -HALL_LENGTH / 2]}>
-        <boxGeometry args={[(HALL_WIDTH - GATE_WIDTH) / 2, WALL_HEIGHT, wallThickness]} />
+      <mesh position={[-(hallWidth / 2 - (hallWidth - GATE_WIDTH) / 4), WALL_HEIGHT / 2, -hallLength / 2]}>
+        <boxGeometry args={[(hallWidth - GATE_WIDTH) / 2, WALL_HEIGHT, wallThickness]} />
         <meshStandardMaterial color={wallColor} transparent opacity={wallOpacity} side={THREE.DoubleSide} />
       </mesh>
-      <mesh position={[(HALL_WIDTH / 2 - (HALL_WIDTH - GATE_WIDTH) / 4), WALL_HEIGHT / 2, -HALL_LENGTH / 2]}>
-        <boxGeometry args={[(HALL_WIDTH - GATE_WIDTH) / 2, WALL_HEIGHT, wallThickness]} />
+      <mesh position={[(hallWidth / 2 - (hallWidth - GATE_WIDTH) / 4), WALL_HEIGHT / 2, -hallLength / 2]}>
+        <boxGeometry args={[(hallWidth - GATE_WIDTH) / 2, WALL_HEIGHT, wallThickness]} />
         <meshStandardMaterial color={wallColor} transparent opacity={wallOpacity} side={THREE.DoubleSide} />
       </mesh>
-      <mesh position={[0, WALL_HEIGHT - (WALL_HEIGHT - GATE_HEIGHT) / 2, -HALL_LENGTH / 2]}>
+      <mesh position={[0, WALL_HEIGHT - (WALL_HEIGHT - GATE_HEIGHT) / 2, -hallLength / 2]}>
         <boxGeometry args={[GATE_WIDTH, WALL_HEIGHT - GATE_HEIGHT, wallThickness]} />
         <meshStandardMaterial color={wallColor} transparent opacity={wallOpacity} side={THREE.DoubleSide} />
       </mesh>
-      <mesh position={[-GATE_WIDTH / 2, GATE_HEIGHT / 2, -HALL_LENGTH / 2]}>
+      <mesh position={[-GATE_WIDTH / 2, GATE_HEIGHT / 2, -hallLength / 2]}>
         <boxGeometry args={[0.15, GATE_HEIGHT, 0.15]} />
         <meshStandardMaterial color="#f59e0b" metalness={0.6} />
       </mesh>
-      <mesh position={[GATE_WIDTH / 2, GATE_HEIGHT / 2, -HALL_LENGTH / 2]}>
+      <mesh position={[GATE_WIDTH / 2, GATE_HEIGHT / 2, -hallLength / 2]}>
         <boxGeometry args={[0.15, GATE_HEIGHT, 0.15]} />
         <meshStandardMaterial color="#f59e0b" metalness={0.6} />
       </mesh>
-      <mesh position={[0, GATE_HEIGHT, -HALL_LENGTH / 2]}>
+      <mesh position={[0, GATE_HEIGHT, -hallLength / 2]}>
         <boxGeometry args={[GATE_WIDTH + 0.3, 0.2, 0.2]} />
         <meshStandardMaterial color="#f59e0b" metalness={0.6} />
       </mesh>
-      <Html position={[0, GATE_HEIGHT + 0.8, -HALL_LENGTH / 2]} center>
+      <Html position={[0, GATE_HEIGHT + 0.8, -hallLength / 2]} center>
         <div className="bg-amber-500/90 text-black px-3 py-1 rounded text-[10px] font-bold shadow-lg pointer-events-none whitespace-nowrap">
           البوابة الرئيسية
         </div>
       </Html>
+
+      {/* Dimension labels on walls */}
+      <Html position={[0, WALL_HEIGHT + 1.5, hallLength / 2]} center>
+        <div className="bg-blue-600/90 text-white px-2 py-0.5 rounded text-[9px] font-bold shadow-lg pointer-events-none whitespace-nowrap">
+          العرض: {(hallWidth * METERS_TO_CM).toFixed(0)} سم ({hallWidth.toFixed(1)} م)
+        </div>
+      </Html>
+      <Html position={[hallWidth / 2 + 1, WALL_HEIGHT + 1.5, 0]} center>
+        <div className="bg-green-600/90 text-white px-2 py-0.5 rounded text-[9px] font-bold shadow-lg pointer-events-none whitespace-nowrap">
+          الطول: {(hallLength * METERS_TO_CM).toFixed(0)} سم ({hallLength.toFixed(1)} م)
+        </div>
+      </Html>
+      <Html position={[-hallWidth / 2 - 1, WALL_HEIGHT / 2, 0]} center>
+        <div className="bg-purple-600/90 text-white px-2 py-0.5 rounded text-[9px] font-bold shadow-lg pointer-events-none whitespace-nowrap">
+          الارتفاع: {(WALL_HEIGHT * METERS_TO_CM).toFixed(0)} سم
+        </div>
+      </Html>
+      <Html position={[0, 0.5, -hallLength / 2 - 1]} center>
+        <div className="bg-slate-700/90 text-white px-2 py-0.5 rounded text-[8px] font-mono shadow-lg pointer-events-none whitespace-nowrap">
+          المساحة: {(hallWidth * hallLength * METERS_TO_CM * METERS_TO_CM / 10000).toFixed(0)} م² ({(hallWidth * METERS_TO_CM).toFixed(0)} × {(hallLength * METERS_TO_CM).toFixed(0)} سم)
+        </div>
+      </Html>
+
       <mesh position={[0, WALL_HEIGHT + 0.5, 0]}>
-        <boxGeometry args={[HALL_WIDTH + 1, 0.15, HALL_LENGTH + 1]} />
+        <boxGeometry args={[hallWidth + 1, 0.15, hallLength + 1]} />
         <meshStandardMaterial color={roofColor} transparent opacity={roofOpacity} side={THREE.DoubleSide} />
       </mesh>
-      {[-HALL_WIDTH / 2 + 0.5, HALL_WIDTH / 2 - 0.5].map((x, i) => (
+      {[-hallWidth / 2 + 0.5, hallWidth / 2 - 0.5].map((x, i) => (
         <mesh key={`beam-${i}`} position={[x, WALL_HEIGHT + 0.2, 0]}>
-          <boxGeometry args={[0.2, 0.4, HALL_LENGTH]} />
+          <boxGeometry args={[0.2, 0.4, hallLength]} />
           <meshStandardMaterial color="#475569" transparent opacity={0.4} />
         </mesh>
       ))}
-      {Array.from({ length: 6 }).map((_, i) => (
-        <mesh key={`cross-beam-${i}`} position={[0, WALL_HEIGHT + 0.2, -HALL_LENGTH / 2 + (i + 1) * (HALL_LENGTH / 7)]}>
-          <boxGeometry args={[HALL_WIDTH, 0.3, 0.15]} />
+      {Array.from({ length: Math.max(1, Math.floor(hallLength / 8)) }).map((_, i) => (
+        <mesh key={`cross-beam-${i}`} position={[0, WALL_HEIGHT + 0.2, -hallLength / 2 + (i + 1) * (hallLength / (Math.floor(hallLength / 8) + 1))]}>
+          <boxGeometry args={[hallWidth, 0.3, 0.15]} />
           <meshStandardMaterial color="#475569" transparent opacity={0.3} />
         </mesh>
       ))}
-      {[-HALL_WIDTH / 2, HALL_WIDTH / 2].map((x) => (
-        [0, 1, 2, 3].map((i) => (
+      {[-hallWidth / 2, hallWidth / 2].map((x) => (
+        Array.from({ length: Math.max(1, Math.floor(hallLength / 12)) }).map((_, i) => (
           <group key={`pillar-${x}-${i}`}>
-            <mesh position={[x + (x > 0 ? -0.15 : 0.15), WALL_HEIGHT / 2, -HALL_LENGTH / 2 + (i + 1) * (HALL_LENGTH / 5)]}>
+            <mesh position={[x + (x > 0 ? -0.15 : 0.15), WALL_HEIGHT / 2, -hallLength / 2 + (i + 1) * (hallLength / (Math.floor(hallLength / 12) + 1))]}>
               <boxGeometry args={[0.25, WALL_HEIGHT, 0.25]} />
               <meshStandardMaterial color="#78716c" metalness={0.5} transparent opacity={0.5} />
             </mesh>
@@ -915,12 +948,14 @@ function HallStructure({ showStructure }: { showStructure: boolean }) {
   );
 }
 
-function FloorMarkings() {
+function FloorMarkings({ hallWidth, hallLength }: { hallWidth: number; hallLength: number }) {
+  const laneCount = Math.max(3, Math.floor(hallWidth / 4));
+  const lanes = Array.from({ length: laneCount }, (_, i) => -hallWidth / 2 + (i + 1) * (hallWidth / (laneCount + 1)));
   return (
     <group>
-      {[-8, -4, 0, 4, 8].map((x, i) => (
+      {lanes.map((x, i) => (
         <mesh key={`lane-${i}`} position={[x, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.05, HALL_LENGTH - 2]} />
+          <planeGeometry args={[0.05, hallLength - 2]} />
           <meshBasicMaterial color="#94a3b8" transparent opacity={0.3} />
         </mesh>
       ))}
@@ -928,22 +963,136 @@ function FloorMarkings() {
   );
 }
 
+function GlowingBadge({ label, color }: { label: string; color: string }) {
+  return (
+    <Html position={[0, 1.2, 0]} center>
+      <div 
+        className="px-2 py-0.5 rounded-full text-[7px] font-bold pointer-events-none whitespace-nowrap border animate-pulse shadow-lg"
+        style={{ 
+          backgroundColor: color + '30', 
+          borderColor: color,
+          color: color,
+          boxShadow: `0 0 8px ${color}80, 0 0 16px ${color}40`,
+          textShadow: `0 0 4px ${color}`
+        }}
+      >
+        {label}
+      </div>
+    </Html>
+  );
+}
+
 function RollMesh({ roll, position }: { roll: ActiveRoll; position: [number, number, number] }) {
+  const isPrinted = roll.stage === 'cutting' || roll.stage === 'done';
+  const rollColor = roll.roll_color || '#808080';
+  
   return (
     <group position={position}>
       <mesh castShadow rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.4, 0.4, 0.8, 32]} />
-        <meshStandardMaterial color={roll.roll_color || '#808080'} roughness={0.3} metalness={0.2} />
+        <meshStandardMaterial 
+          color={rollColor} 
+          roughness={0.25} 
+          metalness={0.15}
+          emissive={isPrinted ? rollColor : '#000000'}
+          emissiveIntensity={isPrinted ? 0.15 : 0}
+        />
       </mesh>
       <mesh rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.15, 0.15, 0.85, 16]} />
         <meshStandardMaterial color="#6b7280" metalness={0.8} />
       </mesh>
+      {roll.color_name && (
+        <Html position={[0, -0.6, 0]} center>
+          <div className="px-1 py-0.5 rounded text-[6px] font-bold pointer-events-none whitespace-nowrap"
+            style={{ backgroundColor: rollColor + 'CC', color: '#fff', border: `1px solid ${rollColor}` }}>
+            {roll.color_name}
+          </div>
+        </Html>
+      )}
+      {isPrinted && (
+        <GlowingBadge label="✓ تمت الطباعة" color="#22c55e" />
+      )}
       <Html position={[0, 0.8, 0]} center>
-        <div className="bg-black/80 text-white px-1.5 py-0.5 rounded text-[7px] font-mono pointer-events-none whitespace-nowrap border border-white/10">
-          {roll.roll_number} • {parseFloat(roll.weight_kg).toFixed(1)}kg
+        <div className="bg-black/85 text-white px-1.5 py-0.5 rounded text-[7px] font-mono pointer-events-none whitespace-nowrap border border-white/15 backdrop-blur-sm">
+          <span style={{ color: rollColor }}>●</span> {roll.roll_number} • {parseFloat(roll.weight_kg).toFixed(1)}kg
         </div>
       </Html>
+      {isPrinted && (
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.45, 0.45, 0.82, 32]} />
+          <meshStandardMaterial color="#22c55e" transparent opacity={0.12} emissive="#22c55e" emissiveIntensity={0.3} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+function BundlePackage({ rolls, position }: { rolls: ActiveRoll[]; position: [number, number, number] }) {
+  const mainColor = rolls[0]?.roll_color || '#6b7280';
+  const orderNum = rolls[0]?.production_order_number || '';
+  const customerName = rolls[0]?.customer_name || '';
+  const totalWeight = rolls.reduce((sum, r) => sum + parseFloat(r.weight_kg || '0'), 0);
+  
+  return (
+    <group position={position}>
+      <mesh castShadow position={[0, 0.15, 0]}>
+        <boxGeometry args={[1.8, 0.08, 1.4]} />
+        <meshStandardMaterial color="#92400e" roughness={0.8} />
+      </mesh>
+      
+      {rolls.slice(0, 4).map((roll, idx) => {
+        const row = Math.floor(idx / 2);
+        const col = idx % 2;
+        return (
+          <mesh key={roll.id} castShadow position={[(col - 0.5) * 0.7, 0.45 + row * 0.5, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.28, 0.28, 0.55, 24]} />
+            <meshStandardMaterial color={roll.roll_color || mainColor} roughness={0.3} metalness={0.15} />
+          </mesh>
+        );
+      })}
+      
+      {rolls.length > 4 && (
+        <mesh castShadow position={[0, 0.45 + Math.ceil(Math.min(rolls.length, 4) / 2) * 0.5, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.28, 0.28, 0.55, 24]} />
+          <meshStandardMaterial color={mainColor} roughness={0.3} metalness={0.15} />
+        </mesh>
+      )}
+      
+      <mesh castShadow position={[0, 0.03, 0]}>
+        <boxGeometry args={[1.9, 0.06, 1.5]} />
+        <meshStandardMaterial color="#78350f" roughness={0.9} />
+      </mesh>
+      {[-0.65, 0, 0.65].map((z, i) => (
+        <mesh key={`board-${i}`} position={[0, 0.09, z]} castShadow>
+          <boxGeometry args={[1.9, 0.04, 0.2]} />
+          <meshStandardMaterial color="#a16207" roughness={0.8} />
+        </mesh>
+      ))}
+      
+      {[-0.5, 0.5].map((x, i) => (
+        <group key={`strap-${i}`}>
+          <mesh position={[x, 0.6, 0]}>
+            <boxGeometry args={[0.05, 1.0, 1.5]} />
+            <meshStandardMaterial color="#fbbf24" metalness={0.4} roughness={0.5} />
+          </mesh>
+        </group>
+      ))}
+      
+      <Html position={[0, 1.5, 0]} center>
+        <div className="pointer-events-none whitespace-nowrap text-center">
+          <div className="bg-amber-600/95 text-white px-2 py-1 rounded-t text-[8px] font-bold shadow-lg border border-amber-500/50 flex items-center gap-1.5">
+            <span className="bg-white/20 px-1 rounded text-[7px]">📦</span>
+            بندل جاهز للاستلام
+          </div>
+          <div className="bg-black/85 text-white px-2 py-0.5 rounded-b text-[7px] font-mono border border-white/10 border-t-0">
+            <div>{orderNum} • {rolls.length} رول</div>
+            <div className="text-slate-400">{customerName} • {totalWeight.toFixed(1)} كجم</div>
+          </div>
+        </div>
+      </Html>
+      
+      <pointLight position={[0, 1.2, 0]} color="#fbbf24" intensity={0.5} distance={3} />
     </group>
   );
 }
@@ -951,10 +1100,24 @@ function RollMesh({ roll, position }: { roll: ActiveRoll; position: [number, num
 function DraggableGroup({ machine, isSelected, onSelect, onDrag, rolls }: { machine: Machine; isSelected: boolean; onSelect: () => void; onDrag: (id: string, pos: [number, number, number]) => void; rolls: ActiveRoll[] }) {
   const { handlePointerDown, handlePointerUp, handlePointerMove } = useDraggable(machine.id, isSelected, onDrag);
   
+  const machineDbId = machine.dbId || machine.id;
   const machineRolls = rolls.filter(r => {
-    const dbId = machine.dbId || machine.id;
-    return r.film_machine_id === dbId || r.printing_machine_id === dbId || r.cutting_machine_id === dbId;
+    return r.film_machine_id === machineDbId || r.printing_machine_id === machineDbId || r.cutting_machine_id === machineDbId;
   });
+
+  const activeRollsForMachine = machineRolls.filter(r => r.stage !== 'done');
+  
+  const doneRolls = (machine.type === 'cutting') 
+    ? machineRolls.filter(r => r.stage === 'done' && r.cutting_machine_id === machineDbId) 
+    : [];
+  
+  const bundlesByOrder: Record<string, ActiveRoll[]> = {};
+  doneRolls.forEach(r => {
+    const key = r.production_order_number || 'unknown';
+    if (!bundlesByOrder[key]) bundlesByOrder[key] = [];
+    bundlesByOrder[key].push(r);
+  });
+  const bundleEntries = Object.entries(bundlesByOrder);
 
   return (
     <group 
@@ -982,13 +1145,16 @@ function DraggableGroup({ machine, isSelected, onSelect, onDrag, rolls }: { mach
           {machine.type === 'inline_printer' && machine.attachedTo && (
             <span className="mr-1.5 bg-green-500/80 text-white px-1 rounded text-[7px]">متصلة</span>
           )}
-          {machineRolls.length > 0 && (
-            <span className="mr-1.5 bg-emerald-500/80 text-white px-1 rounded text-[7px]">{machineRolls.length}</span>
+          {activeRollsForMachine.length > 0 && (
+            <span className="mr-1.5 bg-emerald-500/80 text-white px-1 rounded text-[7px]">{activeRollsForMachine.length} رول</span>
+          )}
+          {bundleEntries.length > 0 && (
+            <span className="mr-1.5 bg-amber-500/80 text-white px-1 rounded text-[7px]">{bundleEntries.length} بندل</span>
           )}
         </div>
       </Html>
 
-      {machineRolls.slice(0, 6).map((roll, idx) => {
+      {activeRollsForMachine.slice(0, 6).map((roll, idx) => {
         const col = idx % 3;
         const row = Math.floor(idx / 3);
         return (
@@ -999,13 +1165,21 @@ function DraggableGroup({ machine, isSelected, onSelect, onDrag, rolls }: { mach
           />
         );
       })}
-      {machineRolls.length > 6 && (
+      {activeRollsForMachine.length > 6 && (
         <Html position={[0, 1.2, 3 + 2 * 1.4]} center>
           <div className="bg-amber-500/90 text-black px-1.5 py-0.5 rounded text-[8px] font-bold pointer-events-none whitespace-nowrap">
-            +{machineRolls.length - 6} رول
+            +{activeRollsForMachine.length - 6} رول
           </div>
         </Html>
       )}
+
+      {bundleEntries.map(([orderNum, orderRolls], bIdx) => (
+        <BundlePackage
+          key={`bundle-${orderNum}`}
+          rolls={orderRolls}
+          position={[bIdx * 2.5 - (bundleEntries.length - 1) * 1.25, 0, -3 - bIdx * 0.5]}
+        />
+      ))}
     </group>
   );
 }
@@ -1246,8 +1420,26 @@ export default function FactorySimulation3D() {
   const [showSnapshotList, setShowSnapshotList] = useState(false);
   const [snapshotName, setSnapshotName] = useState('');
   const [snapshotComment, setSnapshotComment] = useState('');
+  const [hallWidth, setHallWidth] = useState(DEFAULT_HALL_WIDTH);
+  const [hallLength, setHallLength] = useState(DEFAULT_HALL_LENGTH);
+  const [showHallResize, setShowHallResize] = useState(false);
+  const prevHallDims = useRef({ w: DEFAULT_HALL_WIDTH, l: DEFAULT_HALL_LENGTH });
   const nameInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (hallWidth < prevHallDims.current.w || hallLength < prevHallDims.current.l) {
+      setMachines(prev => prev.map(m => {
+        const newX = Math.max(-hallWidth / 2 + 2, Math.min(hallWidth / 2 - 2, m.position[0]));
+        const newZ = Math.max(-hallLength / 2 + 2, Math.min(hallLength / 2 - 2, m.position[2]));
+        if (newX !== m.position[0] || newZ !== m.position[2]) {
+          return { ...m, position: [newX, m.position[1], newZ] as [number, number, number] };
+        }
+        return m;
+      }));
+    }
+    prevHallDims.current = { w: hallWidth, l: hallLength };
+  }, [hallWidth, hallLength]);
 
   const { data: activeRolls = [] } = useQuery<ActiveRoll[]>({
     queryKey: ['/api/factory-3d/active-rolls'],
@@ -1453,11 +1645,11 @@ export default function FactorySimulation3D() {
     if (!selectedId) return;
     updateMachines(prev => prev.map(m => {
       if (m.id !== selectedId) return m;
-      const newX = Math.max(-HALL_WIDTH / 2 + 2, Math.min(HALL_WIDTH / 2 - 2, m.position[0] + dx));
-      const newZ = Math.max(-HALL_LENGTH / 2 + 2, Math.min(HALL_LENGTH / 2 - 2, m.position[2] + dz));
+      const newX = Math.max(-hallWidth / 2 + 2, Math.min(hallWidth / 2 - 2, m.position[0] + dx));
+      const newZ = Math.max(-hallLength / 2 + 2, Math.min(hallLength / 2 - 2, m.position[2] + dz));
       return { ...m, position: [newX, 0, newZ] as [number, number, number] };
     }));
-  }, [selectedId, updateMachines]);
+  }, [selectedId, updateMachines, hallWidth, hallLength]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1504,8 +1696,8 @@ export default function FactorySimulation3D() {
   };
 
   const handleDrag = (id: string, pos: [number, number, number]) => {
-    const clampedX = Math.max(-HALL_WIDTH / 2 + 2, Math.min(HALL_WIDTH / 2 - 2, pos[0]));
-    const clampedZ = Math.max(-HALL_LENGTH / 2 + 2, Math.min(HALL_LENGTH / 2 - 2, pos[2]));
+    const clampedX = Math.max(-hallWidth / 2 + 2, Math.min(hallWidth / 2 - 2, pos[0]));
+    const clampedZ = Math.max(-hallLength / 2 + 2, Math.min(hallLength / 2 - 2, pos[2]));
 
     updateMachines(prev => {
       const draggedMachine = prev.find(m => m.id === id);
@@ -1697,26 +1889,37 @@ export default function FactorySimulation3D() {
                     </Button>
                   </div>
 
-                  {showScalePanel && (
+                  {showScalePanel && (() => {
+                    const baseDims = MACHINE_BASE_DIMS[selectedMachine.type] || { width: 2, depth: 2, height: 2 };
+                    const actualW = (baseDims.width * selectedMachine.scale[0] * METERS_TO_CM).toFixed(0);
+                    const actualH = (baseDims.height * selectedMachine.scale[1] * METERS_TO_CM).toFixed(0);
+                    const actualD = (baseDims.depth * selectedMachine.scale[2] * METERS_TO_CM).toFixed(0);
+                    return (
                     <div className="mb-2 p-2 bg-slate-800/60 rounded-md border border-slate-700/30 space-y-2.5">
+                      <div className="bg-slate-700/40 rounded p-1.5 text-center border border-slate-600/30">
+                        <div className="text-[8px] text-slate-400 mb-0.5">الأبعاد الفعلية</div>
+                        <div className="text-[10px] font-mono text-cyan-400 font-bold">
+                          {actualW} × {actualD} × {actualH} سم
+                        </div>
+                      </div>
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <Label className="text-[9px] text-slate-400">العرض (X)</Label>
-                          <span className="text-[9px] text-slate-500">{selectedMachine.scale[0].toFixed(1)}x</span>
+                          <span className="text-[9px] text-cyan-400 font-mono">{actualW} سم <span className="text-slate-500">({selectedMachine.scale[0].toFixed(1)}x)</span></span>
                         </div>
                         <Slider value={[selectedMachine.scale[0]]} min={0.3} max={3} step={0.1} onValueChange={([v]) => updateScale(0, v)} className="h-4" />
                       </div>
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <Label className="text-[9px] text-slate-400">الارتفاع (Y)</Label>
-                          <span className="text-[9px] text-slate-500">{selectedMachine.scale[1].toFixed(1)}x</span>
+                          <span className="text-[9px] text-cyan-400 font-mono">{actualH} سم <span className="text-slate-500">({selectedMachine.scale[1].toFixed(1)}x)</span></span>
                         </div>
                         <Slider value={[selectedMachine.scale[1]]} min={0.3} max={3} step={0.1} onValueChange={([v]) => updateScale(1, v)} className="h-4" />
                       </div>
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <Label className="text-[9px] text-slate-400">الطول (Z)</Label>
-                          <span className="text-[9px] text-slate-500">{selectedMachine.scale[2].toFixed(1)}x</span>
+                          <Label className="text-[9px] text-slate-400">العمق (Z)</Label>
+                          <span className="text-[9px] text-cyan-400 font-mono">{actualD} سم <span className="text-slate-500">({selectedMachine.scale[2].toFixed(1)}x)</span></span>
                         </div>
                         <Slider value={[selectedMachine.scale[2]]} min={0.3} max={3} step={0.1} onValueChange={([v]) => updateScale(2, v)} className="h-4" />
                       </div>
@@ -1727,7 +1930,8 @@ export default function FactorySimulation3D() {
                         إعادة للحجم الأصلي
                       </Button>
                     </div>
-                  )}
+                    );
+                  })()}
 
                   {showColorPanel && (
                     <div className="mb-2 p-2 bg-slate-800/60 rounded-md border border-slate-700/30">
@@ -1955,15 +2159,87 @@ export default function FactorySimulation3D() {
               <div className="w-px h-4 bg-slate-700" />
               <div className="flex items-center gap-2 text-[10px] text-slate-400">
                 <Box size={12} className="text-amber-400" />
-                <span>{activeRolls.length} رول نشط</span>
+                <span>{activeRolls.filter(r => r.stage !== 'done').length} رول نشط</span>
+              </div>
+              <div className="w-px h-4 bg-slate-700" />
+              <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                <Package size={12} className="text-orange-400" />
+                <span>{activeRolls.filter(r => r.stage === 'done').length} جاهز للاستلام</span>
               </div>
               <div className="w-px h-4 bg-slate-700" />
               <div className="flex items-center gap-2 text-[10px] text-slate-400">
                 <Users size={12} className="text-cyan-400" />
                 <span>{productionUsers.filter(u => getAttendanceInfo(u).label === 'حاضر').length}/{productionUsers.length}</span>
               </div>
+              <div className="w-px h-4 bg-slate-700" />
+              <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                <Ruler size={12} className="text-purple-400" />
+                <span>{(hallWidth * METERS_TO_CM).toFixed(0)}×{(hallLength * METERS_TO_CM).toFixed(0)} سم</span>
+              </div>
             </div>
           </div>
+
+          {showHallResize && (
+            <div className="absolute top-3 left-3 z-30 w-[300px]">
+              <Card className="bg-slate-900/95 border-slate-700/60 shadow-2xl backdrop-blur-xl">
+                <CardContent className="p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-white">
+                      <Maximize2 size={15} className="text-blue-400" />
+                      <span className="font-bold text-xs">أبعاد المستودع</span>
+                    </div>
+                    <Button size="icon" variant="ghost" onClick={() => setShowHallResize(false)} className="h-6 w-6 text-slate-400 hover:text-white">
+                      <X size={12} />
+                    </Button>
+                  </div>
+
+                  <div className="bg-slate-800/60 rounded-lg p-2.5 border border-slate-700/30">
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <div className="bg-blue-500/10 rounded p-1.5 text-center border border-blue-500/20">
+                        <div className="text-[8px] text-blue-300/60">العرض</div>
+                        <div className="text-[12px] font-bold text-blue-400 font-mono">{(hallWidth * METERS_TO_CM).toFixed(0)} سم</div>
+                        <div className="text-[8px] text-slate-500">({hallWidth.toFixed(1)} م)</div>
+                      </div>
+                      <div className="bg-green-500/10 rounded p-1.5 text-center border border-green-500/20">
+                        <div className="text-[8px] text-green-300/60">الطول</div>
+                        <div className="text-[12px] font-bold text-green-400 font-mono">{(hallLength * METERS_TO_CM).toFixed(0)} سم</div>
+                        <div className="text-[8px] text-slate-500">({hallLength.toFixed(1)} م)</div>
+                      </div>
+                    </div>
+                    <div className="bg-purple-500/10 rounded p-1.5 text-center border border-purple-500/20 mb-2">
+                      <div className="text-[8px] text-purple-300/60">المساحة الإجمالية</div>
+                      <div className="text-[12px] font-bold text-purple-400 font-mono">{(hallWidth * hallLength).toFixed(0)} م²</div>
+                      <div className="text-[8px] text-slate-500">({(hallWidth * hallLength * METERS_TO_CM * METERS_TO_CM / 10000).toFixed(0)} م² = {(hallWidth * METERS_TO_CM).toFixed(0)} × {(hallLength * METERS_TO_CM).toFixed(0)} سم)</div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label className="text-[9px] text-slate-400">العرض</Label>
+                      <span className="text-[9px] text-blue-400 font-mono">{(hallWidth * METERS_TO_CM).toFixed(0)} سم</span>
+                    </div>
+                    <Slider value={[hallWidth]} min={10} max={60} step={1} onValueChange={([v]) => setHallWidth(v)} className="h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label className="text-[9px] text-slate-400">الطول</Label>
+                      <span className="text-[9px] text-green-400 font-mono">{(hallLength * METERS_TO_CM).toFixed(0)} سم</span>
+                    </div>
+                    <Slider value={[hallLength]} min={20} max={120} step={1} onValueChange={([v]) => setHallLength(v)} className="h-4" />
+                  </div>
+
+                  <div className="flex gap-1.5">
+                    <Button size="sm" variant="ghost" onClick={() => { setHallWidth(DEFAULT_HALL_WIDTH); setHallLength(DEFAULT_HALL_LENGTH); }} className="flex-1 text-[8px] h-6 text-slate-500 hover:text-slate-300 border border-slate-700/30">
+                      إعادة الافتراضي
+                    </Button>
+                    <Button size="sm" onClick={() => setShowHallResize(false)} className="flex-1 text-[8px] h-6 bg-blue-600/80 hover:bg-blue-500 text-white">
+                      تم
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-1.5">
             <TooltipProvider>
@@ -2006,6 +2282,18 @@ export default function FactorySimulation3D() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="text-xs">إلغاء التحديد</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    size="icon" variant="secondary"
+                    onClick={() => setShowHallResize(!showHallResize)}
+                    className={`w-9 h-9 backdrop-blur-xl border shadow-xl ${showHallResize ? 'bg-blue-600/80 border-blue-500/50 hover:bg-blue-600' : 'bg-slate-900/90 border-slate-700/50 hover:bg-slate-800'}`}
+                  >
+                    <Ruler size={14} className={showHallResize ? 'text-white' : 'text-slate-300'} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="text-xs">تغيير أبعاد المستودع</TooltipContent>
               </Tooltip>
               <div className="w-full h-px bg-slate-700/50 my-0.5" />
               <Tooltip>
@@ -2072,7 +2360,7 @@ export default function FactorySimulation3D() {
             <Suspense fallback={null}>
               <PerspectiveCamera 
                 makeDefault 
-                position={viewMode === '3d' ? [18, 16, 18] : [0, 45, 0.1]} 
+                position={viewMode === '3d' ? [Math.max(18, hallWidth), 16, Math.max(18, hallLength * 0.4)] : [0, Math.max(45, hallLength * 0.9), 0.1]} 
                 fov={viewMode === '3d' ? 50 : 35}
               />
               <OrbitControls 
@@ -2081,7 +2369,7 @@ export default function FactorySimulation3D() {
                 enablePan={true}
                 maxPolarAngle={viewMode === 'top' ? 0 : Math.PI / 2.1}
                 minDistance={5}
-                maxDistance={60}
+                maxDistance={Math.max(60, hallLength * 1.5)}
               />
               
               <ambientLight intensity={0.5} />
@@ -2091,14 +2379,14 @@ export default function FactorySimulation3D() {
 
               <group>
                 <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow onClick={(e) => { e.stopPropagation(); setSelectedId(null); setShowDetailPanel(false); }}>
-                  <planeGeometry args={[HALL_WIDTH, HALL_LENGTH]} />
+                  <planeGeometry args={[hallWidth, hallLength]} />
                   <meshStandardMaterial color="#e8edf3" roughness={0.8} />
                 </mesh>
                 
-                <gridHelper args={[HALL_LENGTH, 50, "#b0bec5", "#cfd8dc"]} position={[0, 0.005, 0]} />
+                <gridHelper args={[Math.max(hallWidth, hallLength), Math.max(hallWidth, hallLength)  * 2, "#b0bec5", "#cfd8dc"]} position={[0, 0.005, 0]} />
                 
-                <HallStructure showStructure={showStructure} />
-                <FloorMarkings />
+                <HallStructure showStructure={showStructure} hallWidth={hallWidth} hallLength={hallLength} />
+                <FloorMarkings hallWidth={hallWidth} hallLength={hallLength} />
 
                 {machines.map((m) => (
                   <DraggableGroup 
