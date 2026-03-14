@@ -21,7 +21,7 @@ import {
   AlertTriangle, Plus, Search, Eye, Filter, Shield, ShieldAlert, ShieldCheck, ShieldX,
   Users, ClipboardList, MessageSquare, CheckCircle2, XCircle, Clock, AlertCircle,
   FileText, UserCheck, Trash2, Edit, ChevronDown, ChevronUp, Activity,
-  Printer, MoreHorizontal, DollarSign, ArrowRight, CircleDot, Ban,
+  Printer, MoreHorizontal, DollarSign, ArrowRight, Ban,
 } from "lucide-react";
 
 const SOURCE_OPTIONS = [
@@ -92,6 +92,69 @@ const ACTION_TYPE_OPTIONS = [
   { value: "follow_up", label: "متابعة" },
   { value: "rework", label: "إعادة تصنيع" },
 ];
+
+const ACTION_TAKEN_OPTIONS = [
+  { value: "verbal_warning_given", label: "تم إنذاره شفوياً" },
+  { value: "written_warning_given", label: "تم إنذاره كتابياً" },
+  { value: "salary_deduction", label: "تم خصم من الراتب" },
+  { value: "additional_training", label: "تم إلحاقه بتدريب إضافي" },
+  { value: "task_reassignment", label: "تم نقله لمهمة أخرى" },
+  { value: "supervision_increased", label: "تم تكثيف الإشراف عليه" },
+  { value: "work_suspended", label: "تم إيقافه عن العمل" },
+  { value: "formal_investigation", label: "تم فتح تحقيق رسمي" },
+  { value: "performance_review", label: "تم مراجعة أدائه" },
+  { value: "no_action", label: "لم يتخذ إجراء" },
+];
+
+const CORRECTIVE_ACTION_OPTIONS = [
+  { value: "rework_product", label: "إعادة تصنيع المنتج" },
+  { value: "scrap_product", label: "إتلاف المنتج المعيب" },
+  { value: "sort_and_inspect", label: "فرز وفحص الإنتاج" },
+  { value: "machine_adjustment", label: "ضبط الماكينة" },
+  { value: "machine_maintenance", label: "صيانة الماكينة" },
+  { value: "material_replacement", label: "تغيير الخامات" },
+  { value: "process_update", label: "تحديث إجراءات العمل" },
+  { value: "quality_checkpoint_added", label: "إضافة نقطة فحص جديدة" },
+  { value: "employee_training", label: "تدريب الموظفين" },
+  { value: "supplier_notification", label: "إبلاغ المورّد" },
+  { value: "customer_replacement", label: "إرسال بديل للعميل" },
+  { value: "customer_compensation", label: "تعويض العميل مالياً" },
+  { value: "root_cause_analysis", label: "تحليل السبب الجذري" },
+  { value: "sop_revision", label: "تعديل إجراءات التشغيل القياسية" },
+];
+
+const PREVENTIVE_ACTION_OPTIONS = [
+  { value: "employee_training", label: "تدريب الموظفين المعنيين" },
+  { value: "sop_update", label: "تحديث إجراءات العمل القياسية" },
+  { value: "inspection_point", label: "إضافة نقطة فحص جديدة" },
+  { value: "quality_control_improvement", label: "تحسين نظام الرقابة" },
+  { value: "supplier_change", label: "تغيير المورّد/الخامات" },
+  { value: "equipment_maintenance", label: "صيانة المعدات" },
+  { value: "periodic_audit", label: "فحص دوري منتظم" },
+  { value: "calibration", label: "معايرة أجهزة القياس" },
+  { value: "environmental_control", label: "ضبط ظروف التشغيل" },
+  { value: "documentation_improvement", label: "تحسين التوثيق والسجلات" },
+];
+
+const CUSTOMER_ACTION_OPTIONS = [
+  { value: "customer_contacted", label: "تم التواصل مع العميل" },
+  { value: "replacement_sent", label: "تم إرسال بديل للعميل" },
+  { value: "financial_compensation", label: "تم تعويض العميل مالياً" },
+  { value: "discount_next_order", label: "تم منح خصم على الطلبية القادمة" },
+  { value: "apology_letter", label: "تم إرسال اعتذار رسمي" },
+  { value: "visit_scheduled", label: "تمت جدولة زيارة للعميل" },
+  { value: "quality_report_sent", label: "تم إرسال تقرير الجودة للعميل" },
+  { value: "no_customer_impact", label: "لا يوجد تأثير على العميل" },
+];
+
+const DEPARTMENT_USER_MAPPING: Record<string, string[]> = {
+  film: ["film", "extruder", "extrusion"],
+  printing: ["printing", "print"],
+  cutting: ["cutting", "cut"],
+  quality: ["quality", "qc", "inspection"],
+  warehouse: ["warehouse", "store"],
+  management: ["admin", "management", "manager", "hr"],
+};
 
 const WORKFLOW_STEPS = [
   { key: "registered", label: "تسجيل المشكلة", icon: FileText, check: () => true },
@@ -1126,33 +1189,11 @@ function IssueDetailDialog({ issueId, open, onClose, users, ln }: any) {
                   <Shield className="h-4 w-4" />
                   الإجراءات الوقائية لمنع تكرار المشكلة
                 </h3>
-                <EditableSection
-                  title="الإجراء الوقائي"
+                <PreventiveActionSelector
                   value={issue.preventive_action || ""}
-                  field="preventive_action"
                   onSave={(data: any) => updateIssueMutation.mutate(data)}
                   saving={updateIssueMutation.isPending}
-                  placeholder="صف الإجراءات الوقائية التي تم اتخاذها لمنع تكرار هذه المشكلة مستقبلاً..."
                 />
-              </div>
-
-              <div className="bg-muted/30 rounded-lg p-4 space-y-3">
-                <h4 className="font-medium text-sm">إجراءات وقائية مقترحة:</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                  {[
-                    "تدريب الموظفين المعنيين",
-                    "تحديث إجراءات العمل القياسية",
-                    "إضافة نقطة فحص جديدة",
-                    "تحسين نظام الرقابة",
-                    "تغيير المورّد/الخامات",
-                    "صيانة المعدات",
-                  ].map(suggestion => (
-                    <div key={suggestion} className="flex items-center gap-2 text-muted-foreground">
-                      <CircleDot className="h-3 w-3 shrink-0" />
-                      {suggestion}
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           </TabsContent>
@@ -1238,13 +1279,10 @@ function IssueDetailDialog({ issueId, open, onClose, users, ln }: any) {
                 </div>
               )}
 
-              <EditableSection
-                title="الإجراء المتخذ مع العميل"
+              <CustomerActionSelector
                 value={issue.customer_action_taken || ""}
-                field="customer_action_taken"
                 onSave={(data: any) => updateIssueMutation.mutate(data)}
                 saving={updateIssueMutation.isPending}
-                placeholder="مثال: تم التواصل مع العميل وتعويضه بكمية بديلة..."
               />
             </div>
           </TabsContent>
@@ -1729,6 +1767,148 @@ function EditableSection({ title, value, field, onSave, saving, placeholder, isI
   );
 }
 
+function PreventiveActionSelector({ value, onSave, saving }: any) {
+  const [editing, setEditing] = useState(false);
+  const parseSelected = (val: string) => {
+    if (!val) return [];
+    return PREVENTIVE_ACTION_OPTIONS
+      .filter(opt => val.includes(opt.label))
+      .map(opt => opt.value);
+  };
+  const [selected, setSelected] = useState<string[]>(() => parseSelected(value));
+
+  const handleSave = () => {
+    const labels = selected.map(v => PREVENTIVE_ACTION_OPTIONS.find(o => o.value === v)?.label).filter(Boolean);
+    onSave({ preventive_action: labels.join(" | ") });
+    setEditing(false);
+  };
+
+  const handleCancel = () => {
+    setSelected(parseSelected(value));
+    setEditing(false);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-semibold">الإجراءات الوقائية</Label>
+        {!editing ? (
+          <Button variant="ghost" size="sm" onClick={() => { setSelected(parseSelected(value)); setEditing(true); }}>
+            <Edit className="h-3 w-3 ml-1" />
+            تعديل
+          </Button>
+        ) : (
+          <div className="flex gap-1">
+            <Button size="sm" onClick={handleSave} disabled={saving}>حفظ</Button>
+            <Button variant="ghost" size="sm" onClick={handleCancel}>إلغاء</Button>
+          </div>
+        )}
+      </div>
+      {editing ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          {PREVENTIVE_ACTION_OPTIONS.map(opt => (
+            <label key={opt.value} className="flex items-center gap-2 p-2 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
+              <input
+                type="checkbox"
+                checked={selected.includes(opt.value)}
+                onChange={e => {
+                  if (e.target.checked) setSelected([...selected, opt.value]);
+                  else setSelected(selected.filter(v => v !== opt.value));
+                }}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-muted/30 rounded-lg p-3 text-sm min-h-[40px]">
+          {value ? (
+            <div className="flex flex-wrap gap-1">
+              {value.split(" | ").map((item: string, i: number) => (
+                <Badge key={i} variant="outline" className="bg-blue-50 dark:bg-blue-950">{item}</Badge>
+              ))}
+            </div>
+          ) : (
+            <span className="text-muted-foreground">لم يتم تحديد إجراءات وقائية بعد</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CustomerActionSelector({ value, onSave, saving }: any) {
+  const [editing, setEditing] = useState(false);
+  const parseSelected = (val: string) => {
+    if (!val) return [];
+    return CUSTOMER_ACTION_OPTIONS
+      .filter(opt => val.includes(opt.label))
+      .map(opt => opt.value);
+  };
+  const [selected, setSelected] = useState<string[]>(() => parseSelected(value));
+
+  const handleSave = () => {
+    const labels = selected.map(v => CUSTOMER_ACTION_OPTIONS.find(o => o.value === v)?.label).filter(Boolean);
+    onSave({ customer_action_taken: labels.join(" | ") });
+    setEditing(false);
+  };
+
+  const handleCancel = () => {
+    setSelected(parseSelected(value));
+    setEditing(false);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-semibold">الإجراء المتخذ مع العميل</Label>
+        {!editing ? (
+          <Button variant="ghost" size="sm" onClick={() => { setSelected(parseSelected(value)); setEditing(true); }}>
+            <Edit className="h-3 w-3 ml-1" />
+            تعديل
+          </Button>
+        ) : (
+          <div className="flex gap-1">
+            <Button size="sm" onClick={handleSave} disabled={saving}>حفظ</Button>
+            <Button variant="ghost" size="sm" onClick={handleCancel}>إلغاء</Button>
+          </div>
+        )}
+      </div>
+      {editing ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          {CUSTOMER_ACTION_OPTIONS.map(opt => (
+            <label key={opt.value} className="flex items-center gap-2 p-2 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
+              <input
+                type="checkbox"
+                checked={selected.includes(opt.value)}
+                onChange={e => {
+                  if (e.target.checked) setSelected([...selected, opt.value]);
+                  else setSelected(selected.filter(v => v !== opt.value));
+                }}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-muted/30 rounded-lg p-3 text-sm min-h-[40px]">
+          {value ? (
+            <div className="flex flex-wrap gap-1">
+              {value.split(" | ").map((item: string, i: number) => (
+                <Badge key={i} variant="outline" className="bg-green-50 dark:bg-green-950">{item}</Badge>
+              ))}
+            </div>
+          ) : (
+            <span className="text-muted-foreground">لم يتم تحديد إجراء مع العميل بعد</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AddResponsibleForm({ users, ln, onSubmit, onCancel, saving }: any) {
   const [form, setForm] = useState({
     user_id: "",
@@ -1740,29 +1920,47 @@ function AddResponsibleForm({ users, ln, onSubmit, onCancel, saving }: any) {
     notes: "",
   });
 
+  const filteredUsers = useMemo(() => {
+    if (!form.department) return [];
+    const keywords = DEPARTMENT_USER_MAPPING[form.department] || [];
+    if (keywords.length === 0) return users;
+    const matched = users.filter((u: any) => {
+      const roleName = (u.role_name || "").toLowerCase();
+      const sectionName = (u.section_name || "").toLowerCase();
+      const dept = (u.department || "").toLowerCase();
+      return keywords.some((kw: string) =>
+        roleName.includes(kw) || sectionName.includes(kw) || dept.includes(kw)
+      );
+    });
+    return matched.length > 0 ? matched : users;
+  }, [form.department, users]);
+
+  const usersToShow = form.department ? filteredUsers : users;
+
   return (
     <Card className="border-2 border-dashed border-primary/30">
       <CardContent className="p-4 space-y-3">
         <h4 className="font-semibold text-sm">إضافة متسبب جديد</h4>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <Label className="text-xs">الموظف *</Label>
-            <SearchableSelect
-              options={users.map((u: any) => ({ value: String(u.id), label: ln(u.display_name_ar, u.display_name) || u.username }))}
-              value={form.user_id}
-              onValueChange={v => setForm({ ...form, user_id: v })}
-              placeholder="اختر الموظف"
-              searchPlaceholder="ابحث عن موظف..."
-            />
-          </div>
-          <div className="space-y-1">
             <Label className="text-xs">القسم *</Label>
-            <Select value={form.department} onValueChange={v => setForm({ ...form, department: v })}>
-              <SelectTrigger><SelectValue placeholder="اختر القسم" /></SelectTrigger>
+            <Select value={form.department} onValueChange={v => setForm({ ...form, department: v, user_id: "" })}>
+              <SelectTrigger><SelectValue placeholder="اختر القسم أولاً" /></SelectTrigger>
               <SelectContent>
                 {DEPARTMENT_OPTIONS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">الموظف *</Label>
+            <SearchableSelect
+              options={usersToShow.map((u: any) => ({ value: String(u.id), label: ln(u.display_name_ar, u.display_name) || u.username }))}
+              value={form.user_id}
+              onValueChange={v => setForm({ ...form, user_id: v })}
+              placeholder={form.department ? "اختر الموظف" : "اختر القسم أولاً"}
+              searchPlaceholder="ابحث عن موظف..."
+              disabled={!form.department}
+            />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">نوع المسؤولية</Label>
@@ -1776,6 +1974,15 @@ function AddResponsibleForm({ users, ln, onSubmit, onCancel, saving }: any) {
             </Select>
           </div>
           <div className="space-y-1">
+            <Label className="text-xs">الإجراء المتخذ</Label>
+            <Select value={form.action_taken} onValueChange={v => setForm({ ...form, action_taken: v })}>
+              <SelectTrigger><SelectValue placeholder="اختر الإجراء" /></SelectTrigger>
+              <SelectContent>
+                {ACTION_TAKEN_OPTIONS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
             <Label className="text-xs">العقوبة</Label>
             <Select value={form.penalty_type} onValueChange={v => setForm({ ...form, penalty_type: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -1784,25 +1991,21 @@ function AddResponsibleForm({ users, ln, onSubmit, onCancel, saving }: any) {
               </SelectContent>
             </Select>
           </div>
-        </div>
-        {form.penalty_type === "deduction" && (
-          <div className="space-y-1">
-            <Label className="text-xs">مبلغ الخصم (ر.س)</Label>
-            <Input
-              value={form.deduction_amount}
-              onChange={e => setForm({ ...form, deduction_amount: e.target.value })}
-              placeholder="أدخل مبلغ الخصم..."
-              type="text"
-            />
-          </div>
-        )}
-        <div className="space-y-1">
-          <Label className="text-xs">الإجراء المتخذ مع المتسبب</Label>
-          <Textarea value={form.action_taken} onChange={e => setForm({ ...form, action_taken: e.target.value })} rows={2} placeholder="مثال: تم إنذاره شفوياً..." />
+          {form.penalty_type === "deduction" && (
+            <div className="space-y-1">
+              <Label className="text-xs">مبلغ الخصم (ر.س)</Label>
+              <Input
+                value={form.deduction_amount}
+                onChange={e => setForm({ ...form, deduction_amount: e.target.value })}
+                placeholder="أدخل مبلغ الخصم..."
+                type="text"
+              />
+            </div>
+          )}
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">ملاحظات</Label>
-          <Input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="ملاحظات إضافية..." />
+          <Label className="text-xs">ملاحظات إضافية</Label>
+          <Input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="ملاحظات إضافية (اختياري)..." />
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={onCancel}>إلغاء</Button>
@@ -1811,6 +2014,10 @@ function AddResponsibleForm({ users, ln, onSubmit, onCancel, saving }: any) {
             disabled={!form.user_id || !form.department || saving}
             onClick={() => {
               const data: any = { ...form, user_id: parseInt(form.user_id) };
+              if (data.action_taken) {
+                const actionLabel = ACTION_TAKEN_OPTIONS.find(a => a.value === data.action_taken)?.label;
+                if (actionLabel) data.action_taken = actionLabel;
+              }
               if (!data.deduction_amount) delete data.deduction_amount;
               onSubmit(data);
             }}
@@ -1830,19 +2037,59 @@ function AddActionForm({ users, ln, onSubmit, onCancel, saving }: any) {
     performed_by: "",
     status: "pending",
     due_date: "",
+    extra_notes: "",
   });
+
+  const ACTION_DESCRIPTION_MAP: Record<string, typeof CORRECTIVE_ACTION_OPTIONS> = {
+    corrective: CORRECTIVE_ACTION_OPTIONS,
+    preventive: PREVENTIVE_ACTION_OPTIONS,
+    customer_compensation: CUSTOMER_ACTION_OPTIONS,
+    investigation: [
+      { value: "root_cause_analysis", label: "تحليل السبب الجذري" },
+      { value: "data_collection", label: "جمع البيانات والأدلة" },
+      { value: "witness_interviews", label: "مقابلة الشهود" },
+      { value: "process_review", label: "مراجعة إجراءات العمل" },
+      { value: "equipment_inspection", label: "فحص المعدات" },
+      { value: "material_testing", label: "اختبار الخامات" },
+    ],
+    follow_up: [
+      { value: "verify_corrective_action", label: "التحقق من تنفيذ الإجراء التصحيحي" },
+      { value: "recheck_quality", label: "إعادة فحص الجودة" },
+      { value: "monitor_production", label: "مراقبة خط الإنتاج" },
+      { value: "customer_followup", label: "متابعة مع العميل" },
+      { value: "document_results", label: "توثيق النتائج" },
+    ],
+    rework: [
+      { value: "rework_product", label: "إعادة تصنيع المنتج" },
+      { value: "reprint", label: "إعادة الطباعة" },
+      { value: "recut", label: "إعادة التقطيع" },
+      { value: "resize", label: "إعادة التحجيم" },
+      { value: "repackage", label: "إعادة التعبئة" },
+      { value: "scrap_and_redo", label: "إتلاف وإعادة الإنتاج بالكامل" },
+    ],
+  };
+  const actionDescriptionOptions = ACTION_DESCRIPTION_MAP[form.action_type] || CORRECTIVE_ACTION_OPTIONS;
 
   return (
     <Card className="border-2 border-dashed border-primary/30">
       <CardContent className="p-4 space-y-3">
         <h4 className="font-semibold text-sm">إضافة إجراء جديد</h4>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label className="text-xs">نوع الإجراء *</Label>
-            <Select value={form.action_type} onValueChange={v => setForm({ ...form, action_type: v })}>
+            <Select value={form.action_type} onValueChange={v => setForm({ ...form, action_type: v, description: "" })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {ACTION_TYPE_OPTIONS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">الإجراء المحدد *</Label>
+            <Select value={form.description} onValueChange={v => setForm({ ...form, description: v })}>
+              <SelectTrigger><SelectValue placeholder="اختر الإجراء" /></SelectTrigger>
+              <SelectContent>
+                {actionDescriptionOptions.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -1866,8 +2113,8 @@ function AddActionForm({ users, ln, onSubmit, onCancel, saving }: any) {
           </div>
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">وصف الإجراء *</Label>
-          <Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} placeholder="اشرح الإجراء بالتفصيل..." />
+          <Label className="text-xs">ملاحظات إضافية</Label>
+          <Input value={form.extra_notes} onChange={e => setForm({ ...form, extra_notes: e.target.value })} placeholder="تفاصيل إضافية (اختياري)..." />
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={onCancel}>إلغاء</Button>
@@ -1875,7 +2122,10 @@ function AddActionForm({ users, ln, onSubmit, onCancel, saving }: any) {
             size="sm"
             disabled={!form.description || saving}
             onClick={() => {
-              const data: any = { ...form };
+              const selectedLabel = actionDescriptionOptions.find(a => a.value === form.description)?.label || form.description;
+              const fullDescription = form.extra_notes ? `${selectedLabel} - ${form.extra_notes}` : selectedLabel;
+              const data: any = { ...form, description: fullDescription };
+              delete data.extra_notes;
               if (data.performed_by) data.performed_by = parseInt(data.performed_by);
               else delete data.performed_by;
               if (data.due_date) data.due_date = new Date(data.due_date).toISOString();
