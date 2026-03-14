@@ -15,7 +15,7 @@ export default function Sidebar() {
 
   return (
     <aside className={`fixed top-16 bottom-0 bg-white dark:bg-gray-900 shadow-sm w-64 hidden lg:block z-10 overflow-y-auto ${isRTL ? 'right-0 border-l border-gray-200 dark:border-gray-700' : 'left-0 border-r border-gray-200 dark:border-gray-700'}`}>
-      <nav className="p-4">
+      <nav className="p-4 ml-[14px] mr-[14px] mt-[22px] mb-[22px] pt-[0px] pb-[0px] pl-[0px] pr-[0px] font-normal">
         <div className="space-y-2">
           {accessibleModules.map((module) => {
             const Icon = module.icon;
