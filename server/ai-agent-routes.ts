@@ -590,7 +590,11 @@ ${defaultGreeting ? `رسالة الترحيب: ${defaultGreeting}\n` : ""}
 4. أنشئ العرض بـ create_quote ثم PDF بـ generate_quote_pdf
 5. اسأل المستخدم: هل يريد الإرسال عبر واتساب أو بريد إلكتروني؟
 
-**عند الإرسال عبر الواتساب:**
+**عند إرسال رسالة واتساب عامة:**
+1. اطلب رقم الجوال ونص الرسالة
+2. استخدم send_whatsapp_message
+
+**عند إرسال عرض سعر عبر الواتساب:**
 1. تأكد من وجود PDF (generate_quote_pdf أولاً)
 2. اطلب رقم الجوال مع رمز الدولة
 3. استخدم send_quote_whatsapp
@@ -755,6 +759,22 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           quote_id: { type: "number", description: "رقم معرف عرض السعر (ID)" }
         },
         required: ["quote_id"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_whatsapp_message",
+      description: "إرسال رسالة واتساب نصية عامة إلى أي رقم. يتطلب رقم الجوال ونص الرسالة",
+      parameters: {
+        type: "object",
+        properties: {
+          phone_number: { type: "string", description: "رقم جوال المستلم (مع رمز الدولة، مثال: +966501234567)" },
+          message: { type: "string", description: "نص الرسالة المراد إرسالها" },
+          title: { type: "string", description: "عنوان الرسالة (اختياري)" }
+        },
+        required: ["phone_number", "message"]
       }
     }
   },
@@ -1272,6 +1292,63 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
             pdf_url: fullPdfUrl,
             download_link: `[تحميل ملف PDF](${fullPdfUrl})`,
             message: `تم إنشاء ملف PDF لعرض السعر ${quote.document_number}.\n\nرابط التحميل: ${fullPdfUrl}`
+          });
+        }
+      }
+
+      case "send_whatsapp_message": {
+        const phoneNumber = args.phone_number as string;
+        const messageText = args.message as string;
+        const messageTitle = (args.title as string) || "رسالة من الوكيل الذكي";
+        
+        let formattedPhone = phoneNumber.replace(/[\s\-\(\)]/g, "");
+        if (!formattedPhone.startsWith("+")) {
+          if (formattedPhone.startsWith("05")) {
+            formattedPhone = "+966" + formattedPhone.substring(1);
+          } else if (formattedPhone.startsWith("5")) {
+            formattedPhone = "+966" + formattedPhone;
+          } else if (formattedPhone.startsWith("966")) {
+            formattedPhone = "+" + formattedPhone;
+          }
+        }
+        
+        try {
+          const { NotificationService } = await import("./services/notification-service");
+          const { storage } = await import("./storage");
+          const notifService = new NotificationService(storage);
+          const result = await notifService.sendWhatsAppMessage(
+            formattedPhone,
+            messageText,
+            {
+              title: messageTitle,
+              context_type: "ai_agent",
+              context_id: "general",
+            }
+          );
+          
+          if (result.success) {
+            return JSON.stringify({
+              success: true,
+              message: `تم إرسال الرسالة بنجاح إلى ${formattedPhone} عبر الواتساب`,
+              messageId: result.messageId,
+            });
+          } else {
+            const whatsappWebLink = `https://wa.me/${formattedPhone.replace('+', '')}?text=${encodeURIComponent(messageText)}`;
+            return JSON.stringify({
+              success: false,
+              error: result.error || "فشل في إرسال الرسالة",
+              message: "لم يتم إرسال الرسالة تلقائياً. يمكنك استخدام الرابط التالي للإرسال يدوياً:",
+              whatsapp_link: whatsappWebLink,
+            });
+          }
+        } catch (error) {
+          console.error("WhatsApp general send error:", error);
+          const whatsappWebLink = `https://wa.me/${formattedPhone.replace('+', '')}?text=${encodeURIComponent(messageText)}`;
+          return JSON.stringify({
+            success: false,
+            error: "خدمة الواتساب غير متاحة حالياً",
+            message: "يمكنك استخدام الرابط التالي للإرسال يدوياً:",
+            whatsapp_link: whatsappWebLink,
           });
         }
       }
