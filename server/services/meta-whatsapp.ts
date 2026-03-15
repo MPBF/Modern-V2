@@ -1,11 +1,13 @@
 import type { IStorage } from "../storage";
 import { logger } from "../lib/logger";
+import { createHmac } from "crypto";
 
 export interface MetaWhatsAppConfig {
   accessToken: string;
   phoneNumberId: string;
   businessAccountId: string;
   apiVersion: string;
+  appSecret?: string;
 }
 
 export interface WhatsAppTemplateMessage {
@@ -48,6 +50,7 @@ export class MetaWhatsAppService {
       businessAccountId:
         process.env.META_BUSINESS_ACCOUNT_ID || "795259496521200",
       apiVersion: "v21.0",
+      appSecret: process.env.META_APP_SECRET || "",
       ...config,
     };
 
@@ -60,6 +63,28 @@ export class MetaWhatsAppService {
     } else {
       logger.info("✅ Meta WhatsApp API service initialized successfully");
     }
+  }
+
+  private generateAppSecretProof(): string | null {
+    if (!this.config.appSecret) return null;
+    return createHmac("sha256", this.config.appSecret)
+      .update(this.config.accessToken)
+      .digest("hex");
+  }
+
+  private getAuthHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${this.config.accessToken}`,
+      "Content-Type": "application/json",
+    };
+    return headers;
+  }
+
+  private appendAppSecretProof(url: string): string {
+    const proof = this.generateAppSecretProof();
+    if (!proof) return url;
+    const separator = url.includes("?") ? "&" : "?";
+    return `${url}${separator}appsecret_proof=${proof}`;
   }
 
   /**
@@ -95,14 +120,12 @@ export class MetaWhatsAppService {
         },
       };
 
-      const response = await fetch(
-        `${this.baseUrl}/${this.config.phoneNumberId}/messages`,
-        {
+      const apiUrl = this.appendAppSecretProof(
+        `${this.baseUrl}/${this.config.phoneNumberId}/messages`
+      );
+      const response = await fetch(apiUrl, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${this.config.accessToken}`,
-            "Content-Type": "application/json",
-          },
+          headers: this.getAuthHeaders(),
           body: JSON.stringify(messageData),
         },
       );
@@ -179,9 +202,10 @@ export class MetaWhatsAppService {
     formData.append("type", mimeType);
     formData.append("file", blob, filename);
 
-    const response = await fetch(
-      `${this.baseUrl}/${this.config.phoneNumberId}/media`,
-      {
+    const mediaUrl = this.appendAppSecretProof(
+      `${this.baseUrl}/${this.config.phoneNumberId}/media`
+    );
+    const response = await fetch(mediaUrl, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${this.config.accessToken}`,
@@ -247,14 +271,12 @@ export class MetaWhatsAppService {
         document: documentPayload,
       };
 
-      const response = await fetch(
-        `${this.baseUrl}/${this.config.phoneNumberId}/messages`,
-        {
+      const docApiUrl = this.appendAppSecretProof(
+        `${this.baseUrl}/${this.config.phoneNumberId}/messages`
+      );
+      const response = await fetch(docApiUrl, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${this.config.accessToken}`,
-            "Content-Type": "application/json",
-          },
+          headers: this.getAuthHeaders(),
           body: JSON.stringify(messageData),
         },
       );
@@ -370,14 +392,12 @@ export class MetaWhatsAppService {
         ];
       }
 
-      const response = await fetch(
-        `${this.baseUrl}/${this.config.phoneNumberId}/messages`,
-        {
+      const tplApiUrl = this.appendAppSecretProof(
+        `${this.baseUrl}/${this.config.phoneNumberId}/messages`
+      );
+      const response = await fetch(tplApiUrl, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${this.config.accessToken}`,
-            "Content-Type": "application/json",
-          },
+          headers: this.getAuthHeaders(),
           body: JSON.stringify(messageData),
         },
       );
@@ -452,9 +472,10 @@ export class MetaWhatsAppService {
         throw new Error("Meta WhatsApp API غير مُعد بشكل صحيح");
       }
 
-      const response = await fetch(
-        `${this.baseUrl}/${this.config.phoneNumberId}?fields=display_phone_number,verified_name,quality_rating`,
-        {
+      const phoneInfoUrl = this.appendAppSecretProof(
+        `${this.baseUrl}/${this.config.phoneNumberId}?fields=display_phone_number,verified_name,quality_rating`
+      );
+      const response = await fetch(phoneInfoUrl, {
           headers: {
             Authorization: `Bearer ${this.config.accessToken}`,
           },
@@ -483,9 +504,10 @@ export class MetaWhatsAppService {
         throw new Error("Meta WhatsApp API غير مُعد بشكل صحيح");
       }
 
-      const response = await fetch(
-        `${this.baseUrl}/${this.config.businessAccountId}/message_templates?fields=name,status,language,components`,
-        {
+      const templatesUrl = this.appendAppSecretProof(
+        `${this.baseUrl}/${this.config.businessAccountId}/message_templates?fields=name,status,language,components`
+      );
+      const response = await fetch(templatesUrl, {
           headers: {
             Authorization: `Bearer ${this.config.accessToken}`,
           },
