@@ -78,8 +78,45 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
+  const pwaSnippet = `
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#3984F6" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="MPBF Next" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+  `;
+
+  const swSnippet = `
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker
+            .register("/sw.js")
+            .then(function (registration) {
+              console.log("SW registered: ", registration);
+            })
+            .catch(function (registrationError) {
+              console.log("SW registration failed: ", registrationError);
+            });
+        });
+      }
+    </script>
+  `;
+
   app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+    const indexPath = path.resolve(distPath, "index.html");
+    let html = fs.readFileSync(indexPath, "utf-8");
+
+    if (!html.includes('rel="manifest"')) {
+      html = html.replace("</head>", `${pwaSnippet}\n</head>`);
+    }
+    if (!html.includes('register("/sw.js")') && !html.includes("register('/sw.js')")) {
+      html = html.replace("</body>", `${swSnippet}\n</body>`);
+    }
+
+    res.setHeader("Content-Type", "text/html");
+    res.send(html);
   });
 }

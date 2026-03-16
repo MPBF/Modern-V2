@@ -69,9 +69,20 @@ app.use(compression({
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: false, limit: "50mb" }));
 
+const publicRoot = path.resolve(import.meta.dirname, "..", "public");
+const distPublic = path.resolve(import.meta.dirname, "public");
+
+function resolvePublicFile(filename: string): string | null {
+  const rootPath = path.resolve(publicRoot, filename);
+  if (fs.existsSync(rootPath)) return rootPath;
+  const distPath = path.resolve(distPublic, filename);
+  if (fs.existsSync(distPath)) return distPath;
+  return null;
+}
+
 app.get("/sw.js", (_req, res) => {
-  const swPath = path.resolve(import.meta.dirname, "..", "public", "sw.js");
-  if (fs.existsSync(swPath)) {
+  const swPath = resolvePublicFile("sw.js");
+  if (swPath) {
     res.setHeader("Content-Type", "application/javascript");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Service-Worker-Allowed", "/");
@@ -81,8 +92,8 @@ app.get("/sw.js", (_req, res) => {
   }
 });
 app.get("/manifest.json", (_req, res) => {
-  const manifestPath = path.resolve(import.meta.dirname, "..", "public", "manifest.json");
-  if (fs.existsSync(manifestPath)) {
+  const manifestPath = resolvePublicFile("manifest.json");
+  if (manifestPath) {
     res.setHeader("Content-Type", "application/manifest+json");
     res.setHeader("Cache-Control", "no-cache");
     res.sendFile(manifestPath);
@@ -90,7 +101,9 @@ app.get("/manifest.json", (_req, res) => {
     res.status(404).send("Not found");
   }
 });
-app.use("/icons", express.static(path.resolve(import.meta.dirname, "..", "public", "icons")));
+const iconsRoot = path.resolve(publicRoot, "icons");
+const iconsDist = path.resolve(distPublic, "icons");
+app.use("/icons", express.static(fs.existsSync(iconsRoot) ? iconsRoot : iconsDist));
 app.get("/favicon-32x32.png", (_req, res) => {
   res.sendFile(path.resolve(import.meta.dirname, "..", "public", "favicon-32x32.png"));
 });
