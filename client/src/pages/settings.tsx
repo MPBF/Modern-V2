@@ -417,7 +417,100 @@ function SystemSection() {
           </div>
         </CardContent>
       </Card>
+
+      <PwaInstallCard />
     </div>
+  );
+}
+
+function PwaInstallCard() {
+  const { toast } = useToast();
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [swStatus, setSwStatus] = useState<string>("جاري الفحص...");
+
+  useEffect(() => {
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches ||
+      (navigator as any).standalone === true;
+    if (isStandalone) {
+      setIsInstalled(true);
+      setSwStatus("التطبيق مثبت ويعمل");
+      return;
+    }
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistration().then((reg) => {
+        if (reg) {
+          setSwStatus("Service Worker مسجل وفعّال");
+        } else {
+          setSwStatus("Service Worker غير مسجل");
+        }
+      });
+    } else {
+      setSwStatus("المتصفح لا يدعم Service Worker");
+    }
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", () => setIsInstalled(true));
+
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (deferredPrompt) {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        setIsInstalled(true);
+        toast({ title: "تم تثبيت التطبيق بنجاح" });
+      }
+      setDeferredPrompt(null);
+    } else {
+      toast({
+        title: "تعليمات التثبيت",
+        description: "افتح القائمة (⋮) في Chrome واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»",
+      });
+    }
+  };
+
+  const handleClearPwaDismissed = () => {
+    localStorage.removeItem("mpbf_pwa_dismissed");
+    toast({ title: "تم إعادة تفعيل إشعار التثبيت" });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Download className="h-5 w-5" /> تطبيق PWA</CardTitle>
+        <CardDescription>تثبيت التطبيق على جهازك للوصول السريع</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-base">حالة التطبيق</Label>
+            <p className="text-sm text-muted-foreground">{swStatus}</p>
+          </div>
+          <Badge variant={isInstalled ? "default" : "secondary"}>
+            {isInstalled ? "مثبت" : "غير مثبت"}
+          </Badge>
+        </div>
+        {!isInstalled && (
+          <div className="flex gap-2">
+            <Button onClick={handleInstall} className="gap-2">
+              <Download className="w-4 h-4" />
+              {deferredPrompt ? "تثبيت التطبيق" : "عرض تعليمات التثبيت"}
+            </Button>
+            <Button variant="outline" onClick={handleClearPwaDismissed}>
+              إعادة تفعيل إشعار التثبيت
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

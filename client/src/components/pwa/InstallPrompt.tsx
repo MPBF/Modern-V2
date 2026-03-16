@@ -30,21 +30,21 @@ export default function InstallPrompt() {
       return;
     }
 
-    const dismissed = localStorage.getItem("mpbf_pwa_dismissed");
-    if (dismissed) {
-      const dismissedTime = parseInt(dismissed, 10);
-      if (Date.now() - dismissedTime < 7 * 24 * 60 * 60 * 1000) {
-        return;
-      }
-    }
-
     if (isIOS()) {
+      const dismissed = localStorage.getItem("mpbf_pwa_dismissed");
+      if (dismissed) {
+        const dismissedTime = parseInt(dismissed, 10);
+        if (Date.now() - dismissedTime < 7 * 24 * 60 * 60 * 1000) {
+          return;
+        }
+      }
       setShowIOSGuide(true);
       return;
     }
 
     const handler = (e: Event) => {
       e.preventDefault();
+      console.log("[PWA] beforeinstallprompt fired");
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       setShowPrompt(true);
     };
