@@ -56,6 +56,8 @@ import {
   insertDisplaySlideSchema,
   user_settings,
   roles,
+  inventory,
+  items,
 } from "@shared/schema";
 import { eq, sql, and, gte, lte } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -3591,6 +3593,28 @@ Do not include quotes or explanations.`;
       res.json(adminDecision);
     } catch (error) {
       res.status(400).json({ message: "بيانات غير صحيحة" });
+    }
+  });
+
+  app.get("/api/warehouse-items", requireAuth, async (req, res) => {
+    try {
+      const inventoryData = await db
+        .select({
+          id: inventory.id,
+          item_id: inventory.item_id,
+          name: items.name,
+          name_ar: items.name_ar,
+          quantity: inventory.current_stock,
+          unit: inventory.unit,
+          min_quantity: inventory.min_stock,
+          category: items.category_id,
+        })
+        .from(inventory)
+        .leftJoin(items, eq(inventory.item_id, items.id));
+      res.json(inventoryData);
+    } catch (error) {
+      console.error("[API Error] warehouse-items:", error);
+      res.json([]);
     }
   });
 
