@@ -625,18 +625,18 @@ export class MetaWhatsAppService {
         text: message.text?.body || "غير نصية",
       });
 
-      // حفظ الرسالة الواردة في قاعدة البيانات
+      const phoneFormatted = message.from?.startsWith("+") ? message.from : `+${message.from}`;
       const notificationData = {
         title: "رسالة واردة",
         message: message.text?.body || "رسالة غير نصية",
         type: "whatsapp" as const,
-        priority: "normal",
+        priority: "normal" as const,
         recipient_type: "system" as const,
-        phone_number: message.from,
+        phone_number: phoneFormatted,
         status: "received" as const,
-        external_id: message.id,
+        twilio_sid: message.id,
         external_status: "received",
-        received_at: new Date(),
+        delivered_at: new Date(),
         context_type: "incoming_message",
       };
 

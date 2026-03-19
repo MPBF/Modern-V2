@@ -4726,6 +4726,8 @@
     "statuses": {
       "sent": "تم الإرسال",
       "delivered": "تم التسليم",
+      "received": "مستلمة",
+      "read": "مقروءة",
       "failed": "فشل",
       "pending": "قيد الانتظار"
     },

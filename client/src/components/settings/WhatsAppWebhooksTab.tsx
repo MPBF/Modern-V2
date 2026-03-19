@@ -51,7 +51,7 @@ export default function WhatsAppWebhooksTab() {
 
   const notificationsList = Array.isArray(notifications) ? notifications : [];
   const recentWebhookMessages = notificationsList
-    .filter((n: any) => n.channel === "whatsapp")
+    .filter((n: any) => n.type === "whatsapp" || n.channel === "whatsapp")
     .slice(0, 10);
 
   const sendTestMessage = useMutation({
@@ -508,15 +508,25 @@ export default function WhatsAppWebhooksTab() {
                       {msg.status === "sent" ? (
                         <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
                           <CheckCircle className="h-3 w-3 ml-1" />
-                          {msg.status}
+                          {t('notifications.statuses.sent')}
+                        </Badge>
+                      ) : msg.status === "delivered" ? (
+                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                          <CheckCircle className="h-3 w-3 ml-1" />
+                          {t('notifications.statuses.delivered')}
+                        </Badge>
+                      ) : msg.status === "received" ? (
+                        <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100">
+                          <CheckCircle className="h-3 w-3 ml-1" />
+                          {t('notifications.statuses.received', 'مستلمة')}
                         </Badge>
                       ) : msg.status === "failed" ? (
                         <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100">
                           <XCircle className="h-3 w-3 ml-1" />
-                          {msg.status}
+                          {t('notifications.statuses.failed')}
                         </Badge>
                       ) : (
-                        <Badge variant="outline">{msg.status}</Badge>
+                        <Badge variant="outline">{t('notifications.statuses.pending')}</Badge>
                       )}
                     </div>
                     <span className="text-xs text-gray-500">

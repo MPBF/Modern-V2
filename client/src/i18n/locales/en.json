@@ -4223,6 +4223,8 @@
     "statuses": {
       "sent": "Sent",
       "delivered": "Delivered",
+      "received": "Received",
+      "read": "Read",
       "failed": "Failed",
       "pending": "Pending"
     },
