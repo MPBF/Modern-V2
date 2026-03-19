@@ -3839,8 +3839,88 @@ export class DatabaseStorage implements IStorage {
     return { cleaned: 0 };
   }
 
-  async exportTableData(tableName: string): Promise<any[]> {
-    return [];
+  async exportTableData(tableName: string, format: string = "csv"): Promise<any> {
+    const tableMap: Record<string, any> = {
+      customers, categories, sections, items, customer_products, users, roles,
+      machines, locations, suppliers, orders, production_orders, rolls, cuts,
+      inventory, inventory_movements, warehouse_receipts, warehouse_transactions,
+      maintenance_requests, maintenance_actions, spare_parts, consumable_parts,
+      waste, quality_checks, attendance, notifications,
+    };
+
+    const table = tableMap[tableName];
+    if (!table) {
+      throw new Error(`الجدول غير موجود: ${tableName}`);
+    }
+
+    const rows = await db.select().from(table);
+
+    if (rows.length === 0) {
+      if (format === "json") return JSON.stringify([], null, 2);
+      if (format === "csv") return "\uFEFF";
+      if (format === "excel") {
+        const workbook = new ExcelJS.Workbook();
+        workbook.addWorksheet(tableName);
+        const buffer = await workbook.xlsx.writeBuffer();
+        return Buffer.from(buffer as ArrayBuffer);
+      }
+      return "[]";
+    }
+
+    const safeRows = tableName === "users"
+      ? rows.map((r: any) => { const { password, ...rest } = r; return rest; })
+      : rows;
+
+    if (format === "json") {
+      return JSON.stringify(safeRows, null, 2);
+    }
+
+    if (format === "csv") {
+      const headers = Object.keys(safeRows[0] as Record<string, unknown>);
+      const csvRows = [headers.join(",")];
+      for (const row of safeRows) {
+        const r = row as Record<string, unknown>;
+        csvRows.push(
+          headers.map((h) => {
+            const val = r[h];
+            if (val === null || val === undefined) return "";
+            const str = typeof val === "object" ? JSON.stringify(val) : String(val);
+            return str.includes(",") || str.includes('"') || str.includes("\n")
+              ? `"${str.replace(/"/g, '""')}"` : str;
+          }).join(",")
+        );
+      }
+      return "\uFEFF" + csvRows.join("\n");
+    }
+
+    if (format === "excel") {
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "نظام إدارة الطلبات";
+      workbook.created = new Date();
+      const sheet = workbook.addWorksheet(tableName, { views: [{ rightToLeft: true }] });
+
+      const headers = Object.keys(safeRows[0] as Record<string, unknown>);
+      const headerRow = sheet.addRow(headers);
+      headerRow.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4472C4" } };
+
+      for (const row of safeRows) {
+        const r = row as Record<string, unknown>;
+        sheet.addRow(headers.map((h) => {
+          const val = r[h];
+          if (val === null || val === undefined) return "";
+          if (typeof val === "object") return JSON.stringify(val);
+          return val;
+        }));
+      }
+
+      headers.forEach((_, i) => { sheet.getColumn(i + 1).width = 20; });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      return Buffer.from(buffer as ArrayBuffer);
+    }
+
+    return JSON.stringify(safeRows, null, 2);
   }
 
   async importTableData(tableName: string, data: any[]): Promise<any> {

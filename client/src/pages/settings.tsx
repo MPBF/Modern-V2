@@ -618,18 +618,20 @@ function DatabaseSection() {
 
   const exportTableMutation = useMutation({
     mutationFn: async ({ tableName, format }: { tableName: string; format: string }) => {
-      const res = await apiRequest(`/api/database/export/${tableName}?format=${format}`);
-      return { data: await res.text(), tableName, format };
+      const res = await fetch(`/api/database/export/${tableName}?format=${format}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      return { blob, tableName, format };
     },
-    onSuccess: ({ data, tableName, format }) => {
+    onSuccess: ({ blob, tableName, format }) => {
       const ext = format === "json" ? "json" : format === "excel" ? "xlsx" : "csv";
-      const mime = format === "json" ? "application/json" : format === "excel" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "text/csv";
-      const blob = new Blob([data], { type: mime });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = `${tableName}-${new Date().toISOString().split("T")[0]}.${ext}`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast({ title: `تم تصدير جدول ${tableName}` });
     },
