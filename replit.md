@@ -63,6 +63,11 @@ The application supports PWA installation on mobile devices:
 
 ## Recent Changes
 
+### Bug Fixes - Performance, Validation & Dead Code (March 20, 2026)
+- **Fixed `storage.getRoles()` bypassing cache in 5 routes**: Login, `/api/me`, user creation, monthly attendance editor, and mobile login were calling `storage.getRoles()` directly instead of using `getCachedRoles()` (60s TTL cache). Each call hit the database unnecessarily. Now all use the shared cache, with `getCachedRoles()` exported from `session-auth.ts`.
+- **Added roll stage transition validation**: `PATCH /api/rolls/:id` was accepting any `stage` value without validating it followed the allowed workflow sequence (film → printing → cutting → done). Now enforces valid transitions and rejects invalid ones with a descriptive Arabic error message.
+- **Removed dead pagination code in `/api/rolls`**: The endpoint constructed `limit` and `offset` options from query params but never passed them to the storage calls. Removed the unused code since no frontend code uses these parameters.
+
 ### Bug Fixes - Server Crash & Error Message Leaks (March 12, 2026)
 - **Fixed server crash from `throw err` in error middleware**: The global error handling middleware in `server/index.ts` had `throw err` after sending the response, causing uncaught exceptions that crashed the entire Node.js process. Removed the throw and added proper error logging instead.
 - **Fixed error message leak in global error handler**: The global error middleware was sending `err.message` directly to clients. Now sends a generic Arabic error message.

@@ -25,7 +25,7 @@ const TOKEN_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 const ROLES_CACHE_TTL_MS = 60 * 1000;
 let rolesCache: { data: any[] | null; fetchedAt: number } = { data: null, fetchedAt: 0 };
 
-async function getCachedRoles() {
+export async function getCachedRoles() {
   const now = Date.now();
   if (rolesCache.data && now - rolesCache.fetchedAt < ROLES_CACHE_TTL_MS) {
     return rolesCache.data;

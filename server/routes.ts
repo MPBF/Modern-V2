@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import multer from "multer";
 import * as XLSX from "xlsx";
 import { requireAuth, requirePermission, requireAdmin, type AuthRequest } from "./middleware/auth";
-import { generateMobileToken, revokeMobileToken, invalidateRolesCache } from "./middleware/session-auth";
+import { generateMobileToken, revokeMobileToken, invalidateRolesCache, getCachedRoles } from "./middleware/session-auth";
 import { logger } from "./lib/logger";
 
 // Configure multer for file uploads
@@ -260,7 +260,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         let permissions: string[] = [];
 
         if (user.role_id) {
-          const roles = await storage.getRoles();
+          const roles = await getCachedRoles();
           const userRole = roles.find(r => r.id === user.role_id);
 
           if (userRole) {
@@ -366,7 +366,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       let permissions: string[] = [];
       
       if (user.role_id) {
-        const roles = await storage.getRoles();
+        const roles = await getCachedRoles();
         const userRole = roles.find(r => r.id === user.role_id);
         
         if (userRole) {
@@ -2078,12 +2078,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // Rolls routes with pagination support
   app.get("/api/rolls", requireAuth, async (req, res) => {
     try {
-      const { stage, limit, offset } = req.query;
-      const options = {
-        limit: limit ? Math.min(Math.max(parseInt(limit as string) || 50, 1), 500) : undefined,
-        offset: offset ? Math.max(parseInt(offset as string) || 0, 0) : undefined,
-        stage: stage as string,
-      };
+      const { stage } = req.query;
 
       if (stage) {
         const rolls = await storage.getRollsByStage(stage as string);
@@ -2125,6 +2120,30 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
       // Handle stage transitions securely with employee tracking
       if (stage) {
+        const validStages = ["film", "printing", "cutting", "done"];
+        if (!validStages.includes(stage)) {
+          return res.status(400).json({ message: "مرحلة غير صالحة" });
+        }
+
+        const currentRoll = await storage.getRollById(id);
+        if (!currentRoll) {
+          return res.status(404).json({ message: "الرول غير موجود" });
+        }
+
+        const allowedTransitions: Record<string, string[]> = {
+          film: ["printing"],
+          printing: ["cutting"],
+          cutting: ["done"],
+          done: [],
+        };
+
+        const currentStage = currentRoll.stage || "film";
+        if (!allowedTransitions[currentStage]?.includes(stage)) {
+          return res.status(400).json({ 
+            message: `لا يمكن الانتقال من مرحلة "${currentStage}" إلى مرحلة "${stage}"` 
+          });
+        }
+
         safeUpdates.stage = stage;
         const userId = getAuthUserId(req);
 
@@ -4358,7 +4377,7 @@ Do not include quotes or explanations.`;
             roleId = parseInt(roleMatch[1], 10);
           } else {
             // If it's a role name like 'admin', convert to role ID
-            const roles = await storage.getRoles();
+            const roles = await getCachedRoles();
             const role = roles.find(
               (r) =>
                 r.name === req.body.role_id || r.name_ar === req.body.role_id,
@@ -7303,7 +7322,7 @@ Do not include quotes or explanations.`;
       }
 
       // Get user's role and section
-      const allRoles = await storage.getRoles();
+      const allRoles = await getCachedRoles();
       const allSections = await storage.getSections();
       const role = user.role_id ? allRoles.find(r => r.id === user.role_id) : null;
       const sectionKey = user.section_id ? `SEC${String(user.section_id).padStart(2, '0')}` : null;
@@ -10824,7 +10843,7 @@ Do not include quotes or explanations.`;
       let permissions: string[] = [];
 
       if (user.role_id) {
-        const roles = await storage.getRoles();
+        const roles = await getCachedRoles();
         const userRole = roles.find(r => r.id === user.role_id);
         if (userRole) {
           roleName = userRole.name || "user";
