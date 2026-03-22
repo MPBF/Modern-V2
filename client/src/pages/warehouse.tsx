@@ -182,30 +182,23 @@ function FinishedGoodsSection({ onCreateVoucherIn, onCreateVoucherOut }: { onCre
 
   return (
     <div className="space-y-4">
-      <Tabs defaultValue="delivery-hall" className="space-y-4">
+      <Tabs defaultValue="fp-del" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="delivery-hall">
+          <TabsTrigger value="fp-del">
             <Truck className="h-4 w-4 ml-1" />
-            تسليم العملاء
+            {t('warehouse.production.fpDelVouchers')}
           </TabsTrigger>
           <TabsTrigger value="fp-rec">
             <ArrowDownToLine className="h-4 w-4 ml-1" />
             {t('warehouse.production.fpRecVouchers')}
           </TabsTrigger>
-          <TabsTrigger value="fp-del">
-            <Truck className="h-4 w-4 ml-1" />
-            {t('warehouse.production.fpDelVouchers')}
-          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="delivery-hall">
+        <TabsContent value="fp-del">
           <DeliveryHallContent />
         </TabsContent>
         <TabsContent value="fp-rec">
           <VouchersList type="finished-goods-in" title={t('warehouse.production.fpRecVouchersTitle')} />
-        </TabsContent>
-        <TabsContent value="fp-del">
-          <VouchersList type="finished-goods-out" title={t('warehouse.production.fpDelVouchersTitle')} />
         </TabsContent>
       </Tabs>
     </div>
