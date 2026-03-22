@@ -113,6 +113,14 @@ import {
   generateNextId,
 } from "@shared/validation-utils";
 
+const safeJsonParse = (value: string, paramName: string): any => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    throw Object.assign(new Error(`${paramName} يحتوي على بيانات غير صالحة`), { statusCode: 400 });
+  }
+};
+
 // Helper functions for safe route parameter parsing
 const parseRouteParam = (
   param: string | undefined,
@@ -2662,9 +2670,9 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const filters = {
         dateFrom: req.query.date_from as string,
         dateTo: req.query.date_to as string,
-        customerId: req.query.customer_id ? JSON.parse(req.query.customer_id as string) : undefined,
-        productId: req.query.product_id ? JSON.parse(req.query.product_id as string) : undefined,
-        status: req.query.status ? JSON.parse(req.query.status as string) : undefined,
+        customerId: req.query.customer_id ? safeJsonParse(req.query.customer_id as string, "customer_id") : undefined,
+        productId: req.query.product_id ? safeJsonParse(req.query.product_id as string, "product_id") : undefined,
+        status: req.query.status ? safeJsonParse(req.query.status as string, "status") : undefined,
         sectionId: req.query.section_id as string,
         machineId: req.query.machine_id as string,
         operatorId: req.query.operator_id ? parseInt(req.query.operator_id as string) : undefined,
@@ -2672,7 +2680,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       
       const summary = await storage.getProductionSummary(filters);
       res.json({ success: true, data: summary });
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.statusCode === 400) {
+        return res.status(400).json({ message: error.message, success: false });
+      }
       console.error("Production summary error:", error);
       res.status(500).json({ message: "خطأ في جلب ملخص الإنتاج", success: false });
     }
@@ -2684,13 +2695,16 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const filters = {
         dateFrom: req.query.date_from as string,
         dateTo: req.query.date_to as string,
-        customerId: req.query.customer_id ? JSON.parse(req.query.customer_id as string) : undefined,
-        productId: req.query.product_id ? JSON.parse(req.query.product_id as string) : undefined,
+        customerId: req.query.customer_id ? safeJsonParse(req.query.customer_id as string, "customer_id") : undefined,
+        productId: req.query.product_id ? safeJsonParse(req.query.product_id as string, "product_id") : undefined,
       };
       
       const data = await storage.getProductionByDate(filters);
       res.json({ success: true, data });
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.statusCode === 400) {
+        return res.status(400).json({ message: error.message, success: false });
+      }
       console.error("Production by date error:", error);
       res.status(500).json({ message: "خطأ في جلب بيانات الإنتاج اليومية", success: false });
     }
@@ -2702,7 +2716,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const filters = {
         dateFrom: req.query.date_from as string,
         dateTo: req.query.date_to as string,
-        customerId: req.query.customer_id ? JSON.parse(req.query.customer_id as string) : undefined,
+        customerId: req.query.customer_id ? safeJsonParse(req.query.customer_id as string, "customer_id") : undefined,
       };
       
       const data = await storage.getProductionByProduct(filters);
@@ -5074,7 +5088,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/training-certificates", requireAuth, async (req, res) => {
+  app.post("/api/hr/training-certificates", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const certificate = await storage.createTrainingCertificate(req.body);
       res.json(certificate);
@@ -5100,7 +5114,7 @@ Do not include quotes or explanations.`;
     },
   );
 
-  app.put("/api/hr/training-certificates/:id", requireAuth, async (req, res) => {
+  app.put("/api/hr/training-certificates/:id", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "id");
       const certificate = await storage.updateTrainingCertificate(id, req.body);
@@ -5168,7 +5182,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/performance-criteria", requireAuth, async (req, res) => {
+  app.post("/api/hr/performance-criteria", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const criteria = await storage.createPerformanceCriteria(req.body);
       res.json(criteria);
@@ -5189,7 +5203,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/leave-types", requireAuth, async (req, res) => {
+  app.post("/api/hr/leave-types", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const leaveType = await storage.createLeaveType(req.body);
       res.json(leaveType);
@@ -5261,7 +5275,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/hr/leave-balances", requireAuth, async (req, res) => {
+  app.post("/api/hr/leave-balances", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const balance = await storage.createLeaveBalance(req.body);
       res.json(balance);
