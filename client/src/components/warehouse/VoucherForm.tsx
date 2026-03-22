@@ -134,13 +134,17 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
     },
   });
 
-  const { data: items = [] } = useQuery({
+  const { data: allItems = [] } = useQuery({
     queryKey: ["/api/items"],
     queryFn: async () => {
       const res = await fetch("/api/items");
       return res.json();
     },
   });
+
+  const items = (type === "raw-material-in" || type === "raw-material-out")
+    ? (Array.isArray(allItems) ? allItems : []).filter((item: any) => item.category_id === "CAT10")
+    : (Array.isArray(allItems) ? allItems : []);
 
   const { data: locations = [] } = useQuery({
     queryKey: ["/api/locations"],
