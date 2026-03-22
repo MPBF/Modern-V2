@@ -9336,6 +9336,17 @@ Do not include quotes or explanations.`;
     }
   });
 
+  app.delete("/api/warehouse/vouchers/finished-goods-in/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseRouteParam(req.params.id, "id");
+      await (storage as any).deleteFinishedGoodsVoucherIn(id);
+      res.json({ message: "تم حذف السند وإرجاع الكميات بنجاح" });
+    } catch (error: any) {
+      console.error("Error deleting finished goods in voucher:", error);
+      res.status(400).json({ message: error.message || "خطأ في حذف سند الاستلام" });
+    }
+  });
+
   // سندات إخراج المواد التامة
   app.get("/api/warehouse/vouchers/finished-goods-out", requireAuth, async (req, res) => {
     try {

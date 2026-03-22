@@ -2343,9 +2343,15 @@ export class DatabaseStorage implements IStorage {
       if (!po) {
         throw new Error("أمر الإنتاج غير موجود");
       }
-      const targetQty = parseFloat(String(po.quantity_kg));
+
+      const cutWeightResult = await db.execute(sql`
+        SELECT COALESCE(SUM(cut_weight_total_kg), 0) AS total_cut_weight
+        FROM rolls
+        WHERE production_order_id = ${poId} AND stage = 'done'
+      `);
+      const totalCutWeight = parseFloat(String((cutWeightResult.rows[0] as any)?.total_cut_weight || '0'));
       const alreadyReceived = parseFloat(String(po.warehouse_received_kg || '0'));
-      const remaining = targetQty - alreadyReceived;
+      const remaining = totalCutWeight - alreadyReceived;
       const receiveQty = parseFloat(String(data.weight_kg || data.quantity || '0'));
 
       if (remaining <= 0) {
@@ -2398,6 +2404,47 @@ export class DatabaseStorage implements IStorage {
       }
 
       return v;
+    });
+  }
+
+  async deleteFinishedGoodsVoucherIn(id: number): Promise<void> {
+    const [voucher] = await db.select().from(finished_goods_vouchers_in).where(eq(finished_goods_vouchers_in.id, id));
+    if (!voucher) {
+      throw new Error("السند غير موجود");
+    }
+
+    const qty = parseFloat(String(voucher.weight_kg || voucher.quantity || '0'));
+    const poId = voucher.production_order_id;
+
+    await db.transaction(async (tx) => {
+      if (poId && qty > 0) {
+        await tx
+          .update(production_orders)
+          .set({
+            warehouse_received_kg: sql`GREATEST(0, CAST(${production_orders.warehouse_received_kg} AS NUMERIC) - ${qty})`,
+          })
+          .where(eq(production_orders.id, poId));
+      }
+
+      if (voucher.item_id && qty > 0) {
+        const locId = voucher.location_id;
+        const conditions = locId
+          ? and(eq(inventory.item_id, voucher.item_id), eq(inventory.location_id, locId))
+          : eq(inventory.item_id, voucher.item_id);
+        const existing = await tx.select().from(inventory).where(conditions as any);
+
+        if (existing.length > 0) {
+          await tx
+            .update(inventory)
+            .set({
+              current_stock: sql`GREATEST(0, CAST(${inventory.current_stock} AS NUMERIC) - ${qty})`,
+              last_updated: new Date(),
+            })
+            .where(eq(inventory.id, existing[0].id));
+        }
+      }
+
+      await tx.delete(finished_goods_vouchers_in).where(eq(finished_goods_vouchers_in.id, id));
     });
   }
 

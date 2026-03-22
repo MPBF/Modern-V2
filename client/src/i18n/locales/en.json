@@ -1135,7 +1135,12 @@
       "rawMaterialInTitle": "Raw Material In Title",
       "rawMaterialOutTitle": "Raw Material Out Title",
       "finishedGoodsInTitle": "Finished Goods In Title",
-      "finishedGoodsOutTitle": "Finished Goods Out Title"
+      "finishedGoodsOutTitle": "Finished Goods Out Title",
+      "confirmDelete": "Delete Voucher",
+      "confirmDeleteTitle": "Confirm Voucher Deletion",
+      "confirmDeleteDesc": "Are you sure you want to delete voucher {{number}}? The received quantities will be returned to the production hall.",
+      "deleteSuccess": "Voucher deleted successfully",
+      "deleteSuccessDesc": "Voucher deleted and quantities returned to production hall"
     },
     "dashboard": {
       "rawMaterialInVouchers": "Raw Material Receipt Vouchers",
@@ -1305,7 +1310,9 @@
       "waitingReceipt": "waiting for receipt",
       "receiptFromProduction": "Receipt from production hall - Production order",
       "productionOrder": "Production Order",
+      "product": "Product",
       "remaining": "Remaining",
+      "weightExceedsRemaining": "Weight exceeds available quantity for receipt",
       "receivedWeight": "Received Weight",
       "enterReceivedWeight": "Enter Received Weight",
       "notesOptional": "Notes Optional",

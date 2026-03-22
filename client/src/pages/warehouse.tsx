@@ -260,7 +260,7 @@ function ProductionHallContent({ onCreateVoucher }: { onCreateVoucher: () => voi
   const ln = useLocalizedName();
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
-  const [receiptWeight, setReceiptWeight] = useState("");
+  const [receiptWeights, setReceiptWeights] = useState<Record<string, string>>({});
   const [receiptNotes, setReceiptNotes] = useState("");
   const [selectedReceiptOrderId, setSelectedReceiptOrderId] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -315,21 +315,6 @@ function ProductionHallContent({ onCreateVoucher }: { onCreateVoucher: () => voi
       if (!response.ok) throw new Error("Receipt save failed");
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/warehouse/production-hall"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/warehouse/vouchers", "finished-goods-in"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/warehouse/vouchers/stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
-      setReceiptDialogOpen(false);
-      setSelectedOrders(new Set());
-      setReceiptWeight("");
-      setReceiptNotes("");
-      setSelectedReceiptOrderId(null);
-      toast({ title: t('warehouse.production.receiptSuccess'), description: t('warehouse.production.fpRecCreated') });
-    },
-    onError: () => {
-      toast({ title: t('warehouse.toast.error'), description: t('warehouse.production.receiptFailed'), variant: "destructive" });
-    },
   });
 
   const handleSelectOrder = (productionOrderId: string) => {
@@ -344,14 +329,20 @@ function ProductionHallContent({ onCreateVoucher }: { onCreateVoucher: () => voi
 
   const openReceiptForOrder = (productionOrderId: string) => {
     setSelectedReceiptOrderId(productionOrderId);
+    setReceiptWeights({});
     setReceiptDialogOpen(true);
   };
 
+  const receiptTargetOrders = useMemo(() => {
+    const targetIds = selectedReceiptOrderId
+      ? [selectedReceiptOrderId]
+      : Array.from(selectedOrders);
+    return targetIds
+      .map((id) => processedOrders.find((o: any) => o.production_order_id.toString() === id))
+      .filter(Boolean);
+  }, [selectedReceiptOrderId, selectedOrders, processedOrders]);
+
   const handleReceiptSubmit = async () => {
-    if (!receiptWeight || parseFloat(receiptWeight) <= 0) {
-      toast({ title: t('warehouse.toast.error'), description: t('warehouse.production.enterReceiptWeight'), variant: "destructive" });
-      return;
-    }
     if (!user?.id) {
       toast({ title: t('warehouse.toast.error'), description: t('warehouse.production.loginRequired'), variant: "destructive" });
       return;
@@ -366,24 +357,35 @@ function ProductionHallContent({ onCreateVoucher }: { onCreateVoucher: () => voi
       return;
     }
 
+    const ordersWithWeights = targetOrders
+      .map((id) => {
+        const weight = parseFloat(receiptWeights[id] || "0");
+        const order = processedOrders.find((o: any) => o.production_order_id.toString() === id);
+        return { id, weight, order };
+      })
+      .filter((o) => o.weight > 0);
+
+    if (ordersWithWeights.length === 0) {
+      toast({ title: t('warehouse.toast.error'), description: t('warehouse.production.enterReceiptWeight'), variant: "destructive" });
+      return;
+    }
+
+    for (const { id, weight, order } of ordersWithWeights) {
+      if (order && weight > order.remaining_to_receive) {
+        toast({ title: t('warehouse.toast.error'), description: `${t('warehouse.production.weightExceedsRemaining')} (${order.production_order_number})`, variant: "destructive" });
+        return;
+      }
+    }
+
     try {
-      const nextNumRes = await fetch("/api/warehouse/vouchers/next-number/FP-Rec");
-      const { next_number } = await nextNumRes.json();
+      for (let index = 0; index < ordersWithWeights.length; index++) {
+        const { id: productionOrderId, weight, order } = ordersWithWeights[index];
 
-      const totalWeight = parseFloat(receiptWeight);
-      const numOrders = targetOrders.length;
-      const baseWeight = Math.floor((totalWeight * 1000) / numOrders) / 1000;
-      const remainder = totalWeight - baseWeight * numOrders;
-
-      for (let index = 0; index < targetOrders.length; index++) {
-        const productionOrderId = targetOrders[index];
-        const weight = index === numOrders - 1 ? baseWeight + remainder : baseWeight;
-        const order = processedOrders.find((o: any) => o.production_order_id.toString() === productionOrderId);
-
-        const voucherNum = index === 0 ? next_number : undefined;
+        const nextNumRes = await fetch("/api/warehouse/vouchers/next-number/FP-Rec");
+        const { next_number } = await nextNumRes.json();
 
         await receiptMutation.mutateAsync({
-          voucher_number: voucherNum,
+          voucher_number: next_number,
           voucher_type: "production_receipt",
           production_order_id: parseInt(productionOrderId),
           order_id: order?.order_id,
@@ -395,8 +397,19 @@ function ProductionHallContent({ onCreateVoucher }: { onCreateVoucher: () => voi
           product_description: order?.product_name_ar || order?.product_name,
         });
       }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/warehouse/production-hall"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/warehouse/vouchers", "finished-goods-in"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/warehouse/vouchers/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      setReceiptDialogOpen(false);
+      setSelectedOrders(new Set());
+      setReceiptWeights({});
+      setReceiptNotes("");
+      setSelectedReceiptOrderId(null);
+      toast({ title: t('warehouse.production.receiptSuccess'), description: t('warehouse.production.fpRecCreated') });
     } catch {
-      // handled by mutation onError
+      toast({ title: t('warehouse.toast.error'), description: t('warehouse.production.receiptFailed'), variant: "destructive" });
     }
   };
 
@@ -419,14 +432,14 @@ function ProductionHallContent({ onCreateVoucher }: { onCreateVoucher: () => voi
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Dialog open={receiptDialogOpen} onOpenChange={(open) => { setReceiptDialogOpen(open); if (!open) setSelectedReceiptOrderId(null); }}>
+              <Dialog open={receiptDialogOpen} onOpenChange={(open) => { setReceiptDialogOpen(open); if (!open) { setSelectedReceiptOrderId(null); setReceiptWeights({}); } }}>
                 <DialogTrigger asChild>
                   <Button disabled={selectedOrders.size === 0} className="bg-blue-600 hover:bg-blue-700">
                     <ArrowDownToLine className="h-4 w-4 ml-2" />
                     {t('warehouse.production.receiveSelected')} ({selectedOrders.size})
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>{t('warehouse.production.createFpRecTitle')}</DialogTitle>
                     <DialogDescription>
@@ -434,24 +447,41 @@ function ProductionHallContent({ onCreateVoucher }: { onCreateVoucher: () => voi
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
-                    {selectedReceiptOrderId && (
-                      <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-sm">
-                        <span className="font-medium">{t('warehouse.production.productionOrder')}: </span>
-                        {processedOrders.find((o: any) => o.production_order_id.toString() === selectedReceiptOrderId)?.production_order_number}
-                        <span className="mx-2">|</span>
-                        <span className="font-medium">{t('warehouse.production.remaining')}: </span>
-                        {processedOrders.find((o: any) => o.production_order_id.toString() === selectedReceiptOrderId)?.remaining_to_receive.toFixed(2)} {t('warehouse.units.kilo')}
-                      </div>
-                    )}
-                    <div>
-                      <label className="text-sm font-medium">{t('warehouse.production.receivedWeight')} ({t('warehouse.units.kilo')}) *</label>
-                      <Input
-                        type="number"
-                        step="0.001"
-                        value={receiptWeight}
-                        onChange={(e) => setReceiptWeight(e.target.value)}
-                        placeholder={t('warehouse.production.enterReceivedWeight')}
-                      />
+                    <div className="border rounded-lg overflow-hidden dark:border-gray-700">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 dark:bg-gray-800">
+                          <tr>
+                            <th className="py-2 px-3 text-start font-medium">{t('warehouse.production.productionOrder')}</th>
+                            <th className="py-2 px-3 text-start font-medium">{t('warehouse.production.product')}</th>
+                            <th className="py-2 px-3 text-start font-medium">{t('warehouse.production.remaining')} ({t('warehouse.units.kilo')})</th>
+                            <th className="py-2 px-3 text-start font-medium">{t('warehouse.production.receivedWeight')} ({t('warehouse.units.kilo')}) *</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {receiptTargetOrders.map((order: any) => {
+                            const orderId = order.production_order_id.toString();
+                            return (
+                              <tr key={orderId} className="border-t dark:border-gray-700">
+                                <td className="py-2 px-3 font-medium">{order.production_order_number}</td>
+                                <td className="py-2 px-3">{order.product_name_ar || order.product_name}</td>
+                                <td className="py-2 px-3">{order.remaining_to_receive.toFixed(2)}</td>
+                                <td className="py-2 px-3">
+                                  <Input
+                                    type="number"
+                                    step="0.001"
+                                    min="0"
+                                    max={order.remaining_to_receive}
+                                    value={receiptWeights[orderId] || ""}
+                                    onChange={(e) => setReceiptWeights((prev) => ({ ...prev, [orderId]: e.target.value }))}
+                                    placeholder={t('warehouse.production.enterReceivedWeight')}
+                                    className="w-32"
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                     <div>
                       <label className="text-sm font-medium">{t('warehouse.labels.notes')}</label>

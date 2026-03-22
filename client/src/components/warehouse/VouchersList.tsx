@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from 'react-i18next';
 import {
   Card,
@@ -16,7 +16,19 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { Eye, Printer, Package, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
+import { Eye, Printer, Package, ArrowDownToLine, ArrowUpFromLine, Trash2 } from "lucide-react";
+import { useToast } from "../../hooks/use-toast";
 
 interface VouchersListProps {
   type: "raw-material-in" | "raw-material-out" | "finished-goods-in" | "finished-goods-out";
@@ -26,10 +38,35 @@ interface VouchersListProps {
 
 export function VouchersList({ type, title, onView }: VouchersListProps) {
   const { t } = useTranslation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: rawData, isLoading } = useQuery<any>({
     queryKey: ["/api/warehouse/vouchers", type],
   });
   const vouchers: any[] = Array.isArray(rawData) ? rawData : (rawData?.data ?? []);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/warehouse/vouchers/${type}/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || "فشل في حذف السند");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/warehouse/vouchers", type] });
+      queryClient.invalidateQueries({ queryKey: ["/api/warehouse/vouchers/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/warehouse/production-hall"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      toast({ title: t('warehouse.vouchers.deleteSuccess'), description: t('warehouse.vouchers.deleteSuccessDesc') });
+    },
+    onError: (error: any) => {
+      toast({ title: t('warehouse.toast.error'), description: error.message, variant: "destructive" });
+    },
+  });
 
   const getVoucherTypeLabel = (voucherType: string) => {
     const labels: Record<string, string> = {
@@ -101,34 +138,34 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">{t('warehouse.vouchers.voucherNumber')}</TableHead>
-                <TableHead className="text-right">{t('warehouse.vouchers.type')}</TableHead>
-                <TableHead className="text-right">{t('warehouse.vouchers.date')}</TableHead>
-                <TableHead className="text-right">{t('warehouse.vouchers.quantity')}</TableHead>
-                <TableHead className="text-right">{t('warehouse.vouchers.status')}</TableHead>
-                <TableHead className="text-right">{t('warehouse.vouchers.actions')}</TableHead>
+                <TableHead className="text-center">{t('warehouse.vouchers.voucherNumber')}</TableHead>
+                <TableHead className="text-center">{t('warehouse.vouchers.type')}</TableHead>
+                <TableHead className="text-center">{t('warehouse.vouchers.date')}</TableHead>
+                <TableHead className="text-center">{t('warehouse.vouchers.quantity')}</TableHead>
+                <TableHead className="text-center">{t('warehouse.vouchers.status')}</TableHead>
+                <TableHead className="text-center">{t('warehouse.vouchers.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {vouchers.map((voucher: any) => (
                 <TableRow key={voucher.id}>
-                  <TableCell className="font-medium">
+                  <TableCell className="text-center font-medium">
                     {voucher.voucher_number}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     {getVoucherTypeLabel(voucher.voucher_type)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     {new Date(voucher.voucher_date).toLocaleDateString("en-US")}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     {parseFloat(voucher.quantity || 0).toLocaleString("en-US")} {voucher.unit || t('warehouse.units.kilo')}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     {getStatusBadge(voucher.status)}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
+                  <TableCell className="text-center">
+                    <div className="flex gap-1 justify-center">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -139,6 +176,32 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                       <Button variant="ghost" size="sm">
                         <Printer className="h-4 w-4" />
                       </Button>
+                      {type === "finished-goods-in" && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>{t('warehouse.vouchers.confirmDeleteTitle')}</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                {t('warehouse.vouchers.confirmDeleteDesc', { number: voucher.voucher_number })}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter className="gap-2">
+                              <AlertDialogCancel>{t('warehouse.buttons.cancel')}</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteMutation.mutate(voucher.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                {deleteMutation.isPending ? t('common.processing') : t('warehouse.vouchers.confirmDelete')}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
