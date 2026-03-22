@@ -315,22 +315,26 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
             <table className="details-table">
               <thead>
                 <tr>
-                  <th>أمر الإنتاج</th>
-                  <th>المنتج</th>
-                  <th>الوزن (كجم)</th>
+                  <th style={{ textAlign: 'center' }}>أمر الإنتاج</th>
+                  <th style={{ textAlign: 'center' }}>رقم الطلب</th>
+                  <th style={{ textAlign: 'center' }}>العميل</th>
+                  <th style={{ textAlign: 'center' }}>المنتج</th>
+                  <th style={{ textAlign: 'center' }}>الوزن (كجم)</th>
                 </tr>
               </thead>
               <tbody>
                 {printItems.map((item: any, idx: number) => (
                   <tr key={idx}>
-                    <td style={{ fontWeight: 600 }}>{item.production_order_number || `PO-${item.production_order_id}`}</td>
-                    <td>{item.product_description || '-'}</td>
-                    <td>{parseFloat(String(item.weight_kg || 0)).toLocaleString("en-US")}</td>
+                    <td style={{ fontWeight: 600, textAlign: 'center' }}>{item.production_order_number || `PO-${item.production_order_id}`}</td>
+                    <td style={{ textAlign: 'center' }}>{item.order_number || '-'}</td>
+                    <td style={{ textAlign: 'center' }}>{item.customer_name || '-'}</td>
+                    <td style={{ textAlign: 'center' }}>{item.product_description || '-'}</td>
+                    <td style={{ textAlign: 'center' }}>{parseFloat(String(item.weight_kg || 0)).toLocaleString("en-US")}</td>
                   </tr>
                 ))}
                 <tr style={{ fontWeight: 700, backgroundColor: '#f0f0f0' }}>
-                  <td colSpan={2}>الإجمالي</td>
-                  <td>{printItems.reduce((s: number, it: any) => s + parseFloat(String(it.weight_kg || 0)), 0).toLocaleString("en-US")}</td>
+                  <td colSpan={4} style={{ textAlign: 'center' }}>الإجمالي</td>
+                  <td style={{ textAlign: 'center' }}>{printItems.reduce((s: number, it: any) => s + parseFloat(String(it.weight_kg || 0)), 0).toLocaleString("en-US")}</td>
                 </tr>
               </tbody>
             </table>
@@ -500,22 +504,26 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
-                          <th className="py-2 px-3 text-start font-medium">أمر الإنتاج</th>
-                          <th className="py-2 px-3 text-start font-medium">المنتج</th>
-                          <th className="py-2 px-3 text-start font-medium">الوزن (كجم)</th>
+                          <th className="py-2 px-3 text-center font-medium">أمر الإنتاج</th>
+                          <th className="py-2 px-3 text-center font-medium">رقم الطلب</th>
+                          <th className="py-2 px-3 text-center font-medium">العميل</th>
+                          <th className="py-2 px-3 text-center font-medium">المنتج</th>
+                          <th className="py-2 px-3 text-center font-medium">الوزن (كجم)</th>
                         </tr>
                       </thead>
                       <tbody>
                         {parsedItems.map((item: any, idx: number) => (
                           <tr key={idx} className="border-t dark:border-gray-700">
-                            <td className="py-2 px-3 font-medium">{item.production_order_number || `PO-${item.production_order_id}`}</td>
-                            <td className="py-2 px-3">{item.product_description || '-'}</td>
-                            <td className="py-2 px-3">{parseFloat(String(item.weight_kg || 0)).toLocaleString("en-US")}</td>
+                            <td className="py-2 px-3 text-center font-medium">{item.production_order_number || `PO-${item.production_order_id}`}</td>
+                            <td className="py-2 px-3 text-center">{item.order_number || '-'}</td>
+                            <td className="py-2 px-3 text-center">{item.customer_name || '-'}</td>
+                            <td className="py-2 px-3 text-center">{item.product_description || '-'}</td>
+                            <td className="py-2 px-3 text-center">{parseFloat(String(item.weight_kg || 0)).toLocaleString("en-US")}</td>
                           </tr>
                         ))}
                         <tr className="border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800 font-semibold">
-                          <td className="py-2 px-3" colSpan={2}>الإجمالي</td>
-                          <td className="py-2 px-3">{parsedItems.reduce((s: number, it: any) => s + parseFloat(String(it.weight_kg || 0)), 0).toLocaleString("en-US")}</td>
+                          <td className="py-2 px-3 text-center" colSpan={4}>الإجمالي</td>
+                          <td className="py-2 px-3 text-center">{parsedItems.reduce((s: number, it: any) => s + parseFloat(String(it.weight_kg || 0)), 0).toLocaleString("en-US")}</td>
                         </tr>
                       </tbody>
                     </table>

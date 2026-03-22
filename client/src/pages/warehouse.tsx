@@ -386,6 +386,8 @@ function ProductionHallContent({ onCreateVoucher }: { onCreateVoucher: () => voi
         weight_kg: weight.toString(),
         product_description: order?.product_name_ar || order?.product_name || '',
         customer_id: order?.customer_id,
+        customer_name: order?.customer_name_ar || order?.customer_name || '',
+        order_number: order?.order_number || '',
       }));
 
       await receiptMutation.mutateAsync({

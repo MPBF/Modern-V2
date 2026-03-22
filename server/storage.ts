@@ -2383,6 +2383,8 @@ export class DatabaseStorage implements IStorage {
           weight_kg: weight,
           product_description: item.product_description || '',
           customer_id: item.customer_id || data.customer_id,
+          customer_name: item.customer_name || '',
+          order_number: item.order_number || '',
           item_id: item.item_id || data.item_id,
         });
       }
