@@ -1,0 +1,464 @@
+Unused files (252)
+.agents/skills/brainstorming/scripts/helper.js                                              
+.agents/skills/brainstorming/scripts/index.js                                               
+.local/skills/artifacts/artifacts/automation/files/src/global.d.ts                          
+.local/skills/artifacts/artifacts/automation/files/src/mastra/agents/agent.ts               
+.local/skills/artifacts/artifacts/automation/files/src/mastra/index.ts                      
+.local/skills/artifacts/artifacts/automation/files/src/mastra/inngest/client.ts             
+.local/skills/artifacts/artifacts/automation/files/src/mastra/inngest/index.ts              
+.local/skills/artifacts/artifacts/automation/files/src/mastra/storage/index.ts              
+.local/skills/artifacts/artifacts/automation/files/src/mastra/tools/exampleTool.ts          
+.local/skills/artifacts/artifacts/automation/files/src/mastra/workflows/workflow.ts         
+.local/skills/artifacts/artifacts/automation/files/src/triggers/cronTriggers.ts             
+.local/skills/artifacts/artifacts/automation/files/src/triggers/exampleConnectorTrigger.ts  
+.local/skills/artifacts/artifacts/automation/files/src/triggers/slackTriggers.ts            
+.local/skills/artifacts/artifacts/automation/files/src/triggers/telegramTriggers.ts         
+.local/skills/artifacts/artifacts/automation/files/tests/testCronAutomation.ts              
+.local/skills/artifacts/artifacts/automation/files/tests/testWebhookAutomation.ts           
+.local/skills/artifacts/artifacts/expo/files/app/_layout.tsx                                
+.local/skills/artifacts/artifacts/expo/files/app/(tabs)/_layout.tsx                         
+.local/skills/artifacts/artifacts/expo/files/app/(tabs)/index.tsx                           
+.local/skills/artifacts/artifacts/expo/files/app/+not-found.tsx                             
+.local/skills/artifacts/artifacts/expo/files/babel.config.js                                
+.local/skills/artifacts/artifacts/expo/files/components/ErrorBoundary.tsx                   
+.local/skills/artifacts/artifacts/expo/files/components/ErrorFallback.tsx                   
+.local/skills/artifacts/artifacts/expo/files/components/KeyboardAwareScrollViewCompat.tsx   
+.local/skills/artifacts/artifacts/expo/files/constants/colors.ts                            
+.local/skills/artifacts/artifacts/expo/files/metro.config.js                                
+.local/skills/artifacts/artifacts/expo/files/scripts/build.js                               
+.local/skills/artifacts/artifacts/expo/files/server/serve.js                                
+.local/skills/artifacts/artifacts/mockup-sandbox/files/mockupPreviewPlugin.ts               
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/.generated/mockup-components.ts  
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/App.tsx                          
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/accordion.tsx      
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/alert-dialog.tsx   
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/alert.tsx          
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/aspect-ratio.tsx   
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/avatar.tsx         
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/badge.tsx          
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/breadcrumb.tsx     
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/button-group.tsx   
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/button.tsx         
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/calendar.tsx       
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/card.tsx           
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/carousel.tsx       
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/chart.tsx          
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/checkbox.tsx       
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/collapsible.tsx    
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/command.tsx        
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/context-menu.tsx   
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/dialog.tsx         
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/drawer.tsx         
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/dropdown-menu.tsx  
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/empty.tsx          
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/field.tsx          
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/form.tsx           
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/hover-card.tsx     
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/input-group.tsx    
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/input-otp.tsx      
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/input.tsx          
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/item.tsx           
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/kbd.tsx            
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/label.tsx          
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/menubar.tsx        
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/navigation-menu.tsx
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/pagination.tsx     
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/popover.tsx        
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/progress.tsx       
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/radio-group.tsx    
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/resizable.tsx      
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/scroll-area.tsx    
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/select.tsx         
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/separator.tsx      
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/sheet.tsx          
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/sidebar.tsx        
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/skeleton.tsx       
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/slider.tsx         
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/sonner.tsx         
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/spinner.tsx        
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/switch.tsx         
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/table.tsx          
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/tabs.tsx           
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/textarea.tsx       
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/toast.tsx          
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/toaster.tsx        
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/toggle-group.tsx   
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/toggle.tsx         
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/components/ui/tooltip.tsx        
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/hooks/use-mobile.tsx             
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/hooks/use-toast.ts               
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/index.css                        
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/lib/utils.ts                     
+.local/skills/artifacts/artifacts/mockup-sandbox/files/src/main.tsx                         
+.local/skills/artifacts/artifacts/mockup-sandbox/files/vite.config.ts                       
+.local/skills/artifacts/artifacts/react-vite/files/src/App.tsx                              
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/accordion.tsx          
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/alert-dialog.tsx       
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/alert.tsx              
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/aspect-ratio.tsx       
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/avatar.tsx             
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/badge.tsx              
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/breadcrumb.tsx         
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/button-group.tsx       
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/button.tsx             
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/calendar.tsx           
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/card.tsx               
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/carousel.tsx           
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/chart.tsx              
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/checkbox.tsx           
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/collapsible.tsx        
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/command.tsx            
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/context-menu.tsx       
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/dialog.tsx             
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/drawer.tsx             
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/dropdown-menu.tsx      
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/empty.tsx              
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/field.tsx              
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/form.tsx               
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/hover-card.tsx         
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/input-group.tsx        
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/input-otp.tsx          
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/input.tsx              
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/item.tsx               
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/kbd.tsx                
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/label.tsx              
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/menubar.tsx            
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/navigation-menu.tsx    
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/pagination.tsx         
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/popover.tsx            
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/progress.tsx           
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/radio-group.tsx        
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/resizable.tsx          
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/scroll-area.tsx        
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/select.tsx             
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/separator.tsx          
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/sheet.tsx              
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/sidebar.tsx            
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/skeleton.tsx           
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/slider.tsx             
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/sonner.tsx             
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/spinner.tsx            
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/switch.tsx             
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/table.tsx              
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/tabs.tsx               
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/textarea.tsx           
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/toast.tsx              
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/toaster.tsx            
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/toggle-group.tsx       
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/toggle.tsx             
+.local/skills/artifacts/artifacts/react-vite/files/src/components/ui/tooltip.tsx            
+.local/skills/artifacts/artifacts/react-vite/files/src/hooks/use-mobile.tsx                 
+.local/skills/artifacts/artifacts/react-vite/files/src/hooks/use-toast.ts                   
+.local/skills/artifacts/artifacts/react-vite/files/src/index.css                            
+.local/skills/artifacts/artifacts/react-vite/files/src/lib/utils.ts                         
+.local/skills/artifacts/artifacts/react-vite/files/src/main.tsx                             
+.local/skills/artifacts/artifacts/react-vite/files/src/pages/not-found.tsx                  
+.local/skills/artifacts/artifacts/react-vite/files/vite.config.ts                           
+.local/skills/artifacts/artifacts/slides/files/scripts/validate-slides.ts                   
+.local/skills/artifacts/artifacts/slides/files/src/App.tsx                                  
+.local/skills/artifacts/artifacts/slides/files/src/data/slidesManifestSchema.ts             
+.local/skills/artifacts/artifacts/slides/files/src/index.css                                
+.local/skills/artifacts/artifacts/slides/files/src/main.tsx                                 
+.local/skills/artifacts/artifacts/slides/files/src/pages/slides/Agenda.tsx                  
+.local/skills/artifacts/artifacts/slides/files/src/pages/slides/TitleSlide.tsx              
+.local/skills/artifacts/artifacts/slides/files/src/slideLoader.ts                           
+.local/skills/artifacts/artifacts/slides/files/vite.config.ts                               
+.local/skills/artifacts/artifacts/video-js/files/src/App.tsx                                
+.local/skills/artifacts/artifacts/video-js/files/src/components/video/index.ts              
+.local/skills/artifacts/artifacts/video-js/files/src/components/video/ReplitLoadingScene.tsx
+.local/skills/artifacts/artifacts/video-js/files/src/components/video/VideoTemplate.tsx     
+.local/skills/artifacts/artifacts/video-js/files/src/hooks/use-mobile.tsx                   
+.local/skills/artifacts/artifacts/video-js/files/src/index.css                              
+.local/skills/artifacts/artifacts/video-js/files/src/lib/utils.ts                           
+.local/skills/artifacts/artifacts/video-js/files/src/lib/video/animations.ts                
+.local/skills/artifacts/artifacts/video-js/files/src/lib/video/hooks.ts                     
+.local/skills/artifacts/artifacts/video-js/files/src/lib/video/index.ts                     
+.local/skills/artifacts/artifacts/video-js/files/src/main.tsx                               
+.local/skills/artifacts/artifacts/video-js/files/vite.config.ts                             
+.local/skills/artifacts/bootstrap-legacy.js                                                 
+.local/skills/artifacts/bootstrap.js                                                        
+client/src/components/hr/FieldTrainingPrograms.tsx                                          
+client/src/components/hr/TrainingPrograms.tsx                                               
+client/src/components/layout/MobileNav.tsx                                                  
+client/src/components/MachineCard.tsx                                                       
+client/src/components/modals/CuttingCreationModal.tsx                                       
+client/src/components/modals/PrintingCreationModal.tsx                                      
+client/src/components/production/OrderProgress.tsx                                          
+client/src/components/production/ProductionOrderActivationModal.tsx                         
+client/src/components/production/ProductionOrderFilters.tsx                                 
+client/src/components/production/ProductionOrderPrintTemplate.tsx                           
+client/src/components/QueryErrorBoundary.tsx                                                
+client/src/components/SafeSelectItem.tsx                                                    
+client/src/components/Sparkline.tsx                                                         
+client/src/components/ui/aspect-ratio.tsx                                                   
+client/src/components/ui/avatar.tsx                                                         
+client/src/components/ui/breadcrumb.tsx                                                     
+client/src/components/ui/carousel.tsx                                                       
+client/src/components/ui/chart.tsx                                                          
+client/src/components/ui/command.tsx                                                        
+client/src/components/ui/context-menu.tsx                                                   
+client/src/components/ui/hover-card.tsx                                                     
+client/src/components/ui/icon-with-tooltip.tsx                                              
+client/src/components/ui/input-otp.tsx                                                      
+client/src/components/ui/menubar.tsx                                                        
+client/src/components/ui/navigation-menu.tsx                                                
+client/src/components/ui/notification.tsx                                                   
+client/src/components/ui/pagination.tsx                                                     
+client/src/components/ui/resizable.tsx                                                      
+client/src/components/ui/sheet.tsx                                                          
+client/src/components/ui/sidebar.tsx                                                        
+client/src/components/ui/toast.tsx                                                          
+client/src/components/ui/toaster.tsx                                                        
+client/src/components/ui/toggle-group.tsx                                                   
+client/src/components/ui/toggle.tsx                                                         
+client/src/components/warehouse/WarehouseDashboard.tsx                                      
+client/src/hooks/use-debounce.ts                                                            
+client/src/hooks/use-mobile.tsx                                                             
+client/src/hooks/useRealtime.ts                                                             
+client/src/hooks/useRemainingQuantity.ts                                                    
+client/src/index-high-contrast.css                                                          
+client/src/lib/auth.ts                                                                      
+client/src/lib/authUtils.ts                                                                 
+client/src/utils/oee.ts                                                                     
+migrations/relations.ts                                                                     
+migrations/schema.ts                                                                        
+public/sw.js                                                                                
+scripts/deploy-database.js                                                                  
+scripts/deployment-workaround.js                                                            
+scripts/fix-deployment-schema.js                                                            
+scripts/hash-passwords.js                                                                   
+scripts/migrate.js                                                                          
+scripts/prepare-deployment.js                                                               
+scripts/production-migrate.js                                                               
+scripts/start-production.js                                                                 
+scripts/validate-deployment.js                                                              
+server/factory-location.ts                                                                  
+server/fonts/noto-sans-arabic-base64.ts                                                     
+server/middleware/transaction.ts                                                            
+server/pdf-generator.ts                                                                     
+server/replit_integrations/batch/index.ts                                                   
+server/replit_integrations/batch/utils.ts                                                   
+server/replit_integrations/chat/index.ts                                                    
+server/replit_integrations/chat/routes.ts                                                   
+server/replit_integrations/chat/storage.ts                                                  
+server/replit_integrations/image/client.ts                                                  
+server/replit_integrations/image/index.ts                                                   
+server/replit_integrations/image/routes.ts                                                  
+server/routes/index.ts                                                                      
+server/services/adobe-pdf/create-template.ts                                                
+server/services/error-learning-enhancer.ts                                                  
+server/services/event-trigger-service.ts                                                    
+shared/MachineSelect.tsx                                                                    
+shared/NumberInput.tsx                                                                      
+shared/ProductionOrderSelect.tsx                                                            
+Unused dependencies (37)
+@jest/globals                    package.json:23:6 
+@jridgewell/trace-mapping        package.json:24:6 
+@radix-ui/react-aspect-ratio     package.json:28:6 
+@radix-ui/react-avatar           package.json:29:6 
+@radix-ui/react-context-menu     package.json:32:6 
+@radix-ui/react-hover-card       package.json:35:6 
+@radix-ui/react-menubar          package.json:37:6 
+@radix-ui/react-navigation-menu  package.json:38:6 
+@radix-ui/react-toast            package.json:49:6 
+@radix-ui/react-toggle           package.json:50:6 
+@radix-ui/react-toggle-group     package.json:51:6 
+@types/file-saver                package.json:59:6 
+@types/jsbarcode                 package.json:61:6 
+@uppy/aws-s3                     package.json:69:6 
+@uppy/core                       package.json:70:6 
+@uppy/dashboard                  package.json:71:6 
+@uppy/drag-drop                  package.json:72:6 
+@uppy/file-input                 package.json:73:6 
+@uppy/progress-bar               package.json:74:6 
+@uppy/react                      package.json:75:6 
+cmdk                             package.json:81:6 
+docx                             package.json:85:6 
+embla-carousel-react             package.json:88:6 
+file-saver                       package.json:92:6 
+framer-motion                    package.json:93:6 
+google-auth-library              package.json:94:6 
+input-otp                        package.json:98:6 
+memorystore                      package.json:106:6
+next-themes                      package.json:109:6
+p-limit                          package.json:113:6
+p-retry                          package.json:114:6
+passport-local                   package.json:116:6
+react-qr-code                    package.json:126:6
+react-resizable-panels           package.json:127:6
+react-to-print                   package.json:128:6
+tw-animate-css                   package.json:134:6
+zod-validation-error             package.json:140:6
+Unused devDependencies (11)
+@tailwindcss/vite                 package.json:146:6
+@types/passport-local             package.json:152:6
+@typescript-eslint/eslint-plugin  package.json:156:6
+@typescript-eslint/parser         package.json:157:6
+eslint-config-prettier            package.json:163:6
+eslint-plugin-import              package.json:164:6
+eslint-plugin-react               package.json:165:6
+eslint-plugin-react-hooks         package.json:166:6
+eslint-plugin-simple-import-sort  package.json:167:6
+eslint-plugin-tailwindcss         package.json:168:6
+eslint-plugin-unused-imports      package.json:169:6
+Unused exports (104)
+MetricCard                                client/src/components/charts/index.ts:6:10                      
+MetricCard                      function  client/src/components/charts/MetricsCards.tsx:18:17             
+OrdersSearch                              client/src/components/orders/index.ts:2:21                      
+OrdersTable                               client/src/components/orders/index.ts:3:21                      
+OrdersForm                                client/src/components/orders/index.ts:4:21                      
+ProductionProgress                        client/src/components/orders/index.ts:6:21                      
+default                         function  client/src/components/production/RollLabelPrint.tsx:337:25      
+AlertDialogPortal                         client/src/components/ui/alert-dialog.tsx:145:3                 
+AlertDialogOverlay                        client/src/components/ui/alert-dialog.tsx:146:3                 
+AlertDialogTrigger                        client/src/components/ui/alert-dialog.tsx:147:3                 
+badgeVariants                             client/src/components/ui/badge.tsx:38:17                        
+DialogPortal                              client/src/components/ui/dialog.tsx:127:3                       
+DialogOverlay                             client/src/components/ui/dialog.tsx:128:3                       
+DialogClose                               client/src/components/ui/dialog.tsx:129:3                       
+DrawerPortal                              client/src/components/ui/drawer.tsx:138:3                       
+DrawerOverlay                             client/src/components/ui/drawer.tsx:139:3                       
+DrawerFooter                              client/src/components/ui/drawer.tsx:144:3                       
+DrawerDescription                         client/src/components/ui/drawer.tsx:146:3                       
+DropdownMenuCheckboxItem                  client/src/components/ui/dropdown-menu.tsx:187:3                
+DropdownMenuRadioItem                     client/src/components/ui/dropdown-menu.tsx:188:3                
+DropdownMenuShortcut                      client/src/components/ui/dropdown-menu.tsx:191:3                
+DropdownMenuGroup                         client/src/components/ui/dropdown-menu.tsx:192:3                
+DropdownMenuPortal                        client/src/components/ui/dropdown-menu.tsx:193:3                
+DropdownMenuRadioGroup                    client/src/components/ui/dropdown-menu.tsx:197:3                
+useFormField                              client/src/components/ui/form.tsx:171:3                         
+ScrollBar                                 client/src/components/ui/scroll-area.tsx:53:22                  
+SelectGroup                               client/src/components/ui/select.tsx:149:3                       
+SelectLabel                               client/src/components/ui/select.tsx:153:3                       
+SelectSeparator                           client/src/components/ui/select.tsx:155:3                       
+SelectScrollUpButton                      client/src/components/ui/select.tsx:156:3                       
+SelectScrollDownButton                    client/src/components/ui/select.tsx:157:3                       
+TableFooter                               client/src/components/ui/table.tsx:112:3                        
+TableCaption                              client/src/components/ui/table.tsx:116:3                        
+default                         function  client/src/components/warehouse/InventoryCountForm.tsx:408:16   
+default                         function  client/src/components/warehouse/VoucherForm.tsx:576:16          
+default                         function  client/src/components/warehouse/VouchersList.tsx:154:16         
+default                         function  client/src/components/warehouse/WarehouseDefinitions.tsx:1036:16
+ROLE_DEFAULT_WIDGETS                      client/src/lib/dashboard-widgets.ts:177:14                      
+getRoleCategoryFromPermissions  function  client/src/lib/dashboard-widgets.ts:228:17                      
+formatDimension                 function  client/src/lib/formatNumber.ts:58:17                            
+formatThickness                 function  client/src/lib/formatNumber.ts:68:17                            
+getQueryFn                                client/src/lib/queryClient.ts:142:14                            
+getQueryClient                  function  client/src/lib/queryClient.ts:286:17                            
+hasEditPermissions              function  client/src/utils/roleUtils.ts:31:17                             
+hasDeletePermissions            function  client/src/utils/roleUtils.ts:74:17                             
+getUserRoleName                 function  client/src/utils/roleUtils.ts:136:17                            
+isManager                       function  client/src/utils/roleUtils.ts:146:17                            
+canViewReports                  function  client/src/utils/roleUtils.ts:184:17                            
+canManageDefinitions            function  client/src/utils/roleUtils.ts:191:17                            
+canManageUsers                  function  client/src/utils/roleUtils.ts:198:17                            
+canManageRoles                  function  client/src/utils/roleUtils.ts:205:17                            
+requireUnifiedAuth              function  server/auth/sessionUser.ts:71:23                                
+optimizeDatabase                function  server/database-optimizations.ts:101:23                         
+getQueryPerformanceStats        function  server/database-optimizations.ts:119:23                         
+default                         variable  server/lib/logger.ts:132:16                                     
+measureQuery                    function  server/middleware/database-monitor.ts:162:23                    
+RequestValidationError          class     server/middleware/validation.ts:10:14                           
+requireAuth                     function  server/middleware/validation.ts:304:17                          
+requireAdmin                    function  server/middleware/validation.ts:315:23                          
+z                                         server/middleware/validation.ts:379:10                          
+ObjectNotFoundError                       server/replit_integrations/object_storage/index.ts:3:3          
+canAccessObject                           server/replit_integrations/object_storage/index.ts:15:3         
+getObjectAclPolicy                        server/replit_integrations/object_storage/index.ts:16:3         
+setObjectAclPolicy                        server/replit_integrations/object_storage/index.ts:17:3         
+getSession                      function  server/replitAuth.ts:21:17                                      
+getPDFServices                            server/services/adobe-pdf/pdf-service.ts:110:10                 
+default                         class     server/services/alert-manager.ts:498:16                         
+default                         class     server/services/data-validator.ts:997:16                        
+default                         class     server/services/system-health-monitor.ts:1191:16                
+DatabaseStorage                 class     server/storage.ts:785:14                                        
+toDecimalString                 function  shared/decimal-utils.ts:13:17                                   
+toDecimalStringSafe             function  shared/decimal-utils.ts:40:17                                   
+parseDecimal                    function  shared/decimal-utils.ts:88:17                                   
+parseDecimalSafe                function  shared/decimal-utils.ts:109:17                                  
+formatDecimalDisplay            function  shared/decimal-utils.ts:131:17                                  
+isValidDecimal                  function  shared/decimal-utils.ts:158:17                                  
+normalizeWeight                 function  shared/decimal-utils.ts:176:17                                  
+normalizePercentage             function  shared/decimal-utils.ts:185:17                                  
+default                                   shared/decimal-utils.ts:205:16                                  
+generateShortId                 function  shared/id-generator.ts:26:17                                    
+generateReadableId              function  shared/id-generator.ts:39:17                                    
+generateSequentialId            function  shared/id-generator.ts:57:17                                    
+generateCustomerId              function  shared/id-generator.ts:73:17                                    
+generateOrderNumber             function  shared/id-generator.ts:80:17                                    
+generateJobOrderNumber          function  shared/id-generator.ts:87:17                                    
+generateReadableRollId          function  shared/id-generator.ts:101:17                                   
+generateNotificationId          function  shared/id-generator.ts:139:17                                   
+generateMessageId               function  shared/id-generator.ts:147:17                                   
+resetSequenceCounter            function  shared/id-generator.ts:154:17                                   
+default                                   shared/id-generator.ts:158:16                                   
+safeParseInt                    function  shared/number-utils.ts:59:17                                    
+isPositiveNumber                function  shared/number-utils.ts:88:17                                    
+safePercentage                  function  shared/number-utils.ts:100:17                                   
+safeDivide                      function  shared/number-utils.ts:116:17                                   
+roundToDecimals                 function  shared/number-utils.ts:134:17                                   
+getPermissionsByCategory        function  shared/permissions.ts:785:17                                    
+getPermission                   function  shared/permissions.ts:790:17                                    
+validatePermissions             function  shared/permissions.ts:795:17                                    
+calculateOverrunPercentage      function  shared/quantity-utils.ts:15:17                                  
+calculateFinalQuantity          function  shared/quantity-utils.ts:42:17                                  
+formatOverrunPercentageArabic   function  shared/quantity-utils.ts:95:17                                  
+getOverrunReasonDescription     function  shared/quantity-utils.ts:107:17                                 
+coercePositiveFloat                       shared/validation-utils.ts:236:14                               
+coerceNonNegativeFloat                    shared/validation-utils.ts:249:14                               
+Unused exported types (45)
+BadgeProps               interface  client/src/components/ui/badge.tsx:28:18               
+ButtonProps              interface  client/src/components/ui/button.tsx:36:18              
+CalendarProps            type       client/src/components/ui/calendar.tsx:8:13             
+SearchableSelectOption   interface  client/src/components/ui/searchable-select.tsx:5:18    
+NavigationItem           interface  client/src/config/navigationConfig.ts:3:18             
+SSEMessage               interface  client/src/hooks/use-sse.tsx:21:18                     
+SSEConnectionState       interface  client/src/hooks/use-sse.tsx:26:18                     
+WidgetId                 type       client/src/lib/dashboard-widgets.ts:161:13             
+RoleCategory             type       client/src/lib/dashboard-widgets.ts:168:13             
+ToastMessage             type       client/src/lib/toastMessages.ts:120:13                 
+DashboardStats           interface  client/src/types/index.ts:1:18                         
+User                     interface  client/src/types/index.ts:8:18                         
+RollWithDetails          interface  client/src/types/index.ts:39:18                        
+MachineStatus            interface  client/src/types/index.ts:59:18                        
+ChatMessage              interface  client/src/types/index.ts:70:18                        
+ProductionStage          interface  client/src/types/index.ts:77:18                        
+QueryLog                 interface  server/middleware/database-monitor.ts:10:18            
+MemorySnapshot           interface  server/middleware/memory-monitor.ts:3:18               
+SystemDiagnostics        interface  server/middleware/memory-monitor.ts:14:18              
+ValidationError          interface  server/middleware/validation.ts:4:18                   
+ObjectAclPolicy          type       server/replit_integrations/object_storage/index.ts:8:3 
+ObjectAccessGroup        type       server/replit_integrations/object_storage/index.ts:9:3 
+ObjectAccessGroupType    type       server/replit_integrations/object_storage/index.ts:10:3
+ObjectAclRule            type       server/replit_integrations/object_storage/index.ts:11:3
+CodeIssue                interface  server/services/code-health-checker.ts:5:18            
+CodeHealthReport         interface  server/services/code-health-checker.ts:14:18           
+ValidationRule           interface  server/services/data-validator.ts:8:18                 
+ValidationResult         interface  server/services/data-validator.ts:34:18                
+ValidationError          interface  server/services/data-validator.ts:40:18                
+ValidationWarning        interface  server/services/data-validator.ts:49:18                
+MetaWhatsAppConfig       interface  server/services/meta-whatsapp.ts:5:18                  
+WhatsAppTemplateMessage  interface  server/services/meta-whatsapp.ts:13:18                 
+WhatsAppTextMessage      interface  server/services/meta-whatsapp.ts:31:18                 
+SSEMessage               interface  server/services/notification-manager.ts:7:18           
+NotificationData         interface  server/services/notification-service.ts:6:18           
+WhatsAppTemplate         interface  server/services/notification-service.ts:21:18          
+HealthCheckResult        interface  server/services/system-health-monitor.ts:19:18         
+AlertCondition           interface  server/services/system-health-monitor.ts:28:18         
+SmartAlert               interface  server/services/system-health-monitor.ts:35:18         
+TaqnyatConfig            interface  server/services/taqnyat-sms.ts:3:18                    
+TaqnyatSendResult        interface  server/services/taqnyat-sms.ts:9:18                    
+TaqnyatBalanceResult     interface  server/services/taqnyat-sms.ts:20:18                   
+TaqnyatSender            interface  server/services/taqnyat-sms.ts:27:18                   
+Permission               interface  shared/permissions.ts:86:18                            
+ParseIntOptions          interface  shared/validation-utils.ts:5:18                        
+Duplicate exports (8)
+InventoryCountForm|default    client/src/components/warehouse/InventoryCountForm.tsx  
+VoucherForm|default           client/src/components/warehouse/VoucherForm.tsx         
+VouchersList|default          client/src/components/warehouse/VouchersList.tsx        
+WarehouseDefinitions|default  client/src/components/warehouse/WarehouseDefinitions.tsx
+logger|default                server/lib/logger.ts                                    
+AlertManager|default          server/services/alert-manager.ts                        
+DataValidator|default         server/services/data-validator.ts                       
+SystemHealthMonitor|default   server/services/system-health-monitor.ts                
+Configuration hints (1)
