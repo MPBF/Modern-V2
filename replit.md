@@ -63,6 +63,11 @@ The application supports PWA installation on mobile devices:
 
 ## Recent Changes
 
+### Bug Fixes - Duplicate Route, Error Leaks & Access Control (March 22, 2026)
+- **Removed duplicate `POST /api/warehouse/receipts` route**: The route was registered twice (lines 8014 and 8105). The second handler was unreachable dead code with no input validation. Removed the duplicate.
+- **Fixed 4 internal error message leaks in warehouse voucher delete routes**: `DELETE` routes for raw-material-in, raw-material-out, finished-goods-in, and finished-goods-out vouchers were sending raw `error.message` to clients, potentially exposing database/SQL error details. Now return fixed Arabic error messages.
+- **Added `requireAdmin` to system settings write routes**: `PUT /api/system-settings/:key` and `POST /api/system-settings` were accessible to any authenticated user. Now require admin permission.
+
 ### Bug Fixes - Performance, Validation & Dead Code (March 20, 2026)
 - **Fixed `storage.getRoles()` bypassing cache in 5 routes**: Login, `/api/me`, user creation, monthly attendance editor, and mobile login were calling `storage.getRoles()` directly instead of using `getCachedRoles()` (60s TTL cache). Each call hit the database unnecessarily. Now all use the shared cache, with `getCachedRoles()` exported from `session-auth.ts`.
 - **Added roll stage transition validation**: `PATCH /api/rolls/:id` was accepting any `stage` value without validating it followed the allowed workflow sequence (film → printing → cutting → done). Now enforces valid transitions and rejects invalid ones with a descriptive Arabic error message.

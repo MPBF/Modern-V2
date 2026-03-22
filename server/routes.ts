@@ -7640,7 +7640,7 @@ Do not include quotes or explanations.`;
   });
 
   // Update system setting
-  app.put("/api/system-settings/:key", requireAuth, async (req, res) => {
+  app.put("/api/system-settings/:key", requireAuth, requireAdmin, async (req, res) => {
     try {
       const { setting_value } = req.body;
       if (!getAuthUserId(req)) {
@@ -7655,7 +7655,7 @@ Do not include quotes or explanations.`;
   });
 
   // Create system setting
-  app.post("/api/system-settings", requireAuth, async (req, res) => {
+  app.post("/api/system-settings", requireAuth, requireAdmin, async (req, res) => {
     try {
       const setting = await storage.createSystemSetting(req.body);
       res.status(201).json(setting);
@@ -8101,17 +8101,6 @@ Do not include quotes or explanations.`;
     }
   });
 
-  // Create warehouse receipt from production hall
-  app.post("/api/warehouse/receipts", requireAuth, async (req, res) => {
-    try {
-      const receiptData = req.body;
-      const receipt = await storage.createWarehouseReceipt(receiptData);
-      res.json(receipt);
-    } catch (error) {
-      console.error("Error creating warehouse receipt:", error);
-      res.status(500).json({ message: "خطأ في تسجيل استلام المستودع" });
-    }
-  });
 
   app.get("/api/production/order-progress/:jobOrderId", requireAuth, async (req, res) => {
     try {
@@ -9286,7 +9275,7 @@ Do not include quotes or explanations.`;
       res.json({ message: "تم حذف السند وإرجاع الكميات بنجاح" });
     } catch (error: any) {
       console.error("Error deleting raw material in voucher:", error);
-      res.status(400).json({ message: error.message || "خطأ في حذف سند إدخال المواد الخام" });
+      res.status(400).json({ message: "خطأ في حذف سند إدخال المواد الخام" });
     }
   });
 
@@ -9298,7 +9287,7 @@ Do not include quotes or explanations.`;
       res.json({ message: "تم حذف السند وإرجاع الكميات بنجاح" });
     } catch (error: any) {
       console.error("Error deleting raw material out voucher:", error);
-      res.status(400).json({ message: error.message || "خطأ في حذف سند إخراج المواد الخام" });
+      res.status(400).json({ message: "خطأ في حذف سند إخراج المواد الخام" });
     }
   });
 
@@ -9367,7 +9356,7 @@ Do not include quotes or explanations.`;
       res.json({ message: "تم حذف السند وإرجاع الكميات بنجاح" });
     } catch (error: any) {
       console.error("Error deleting finished goods in voucher:", error);
-      res.status(400).json({ message: error.message || "خطأ في حذف سند الاستلام" });
+      res.status(400).json({ message: "خطأ في حذف سند الاستلام" });
     }
   });
 
@@ -9434,7 +9423,7 @@ Do not include quotes or explanations.`;
       res.json({ message: "تم حذف السند بنجاح" });
     } catch (error: any) {
       console.error("Error deleting finished goods out voucher:", error);
-      res.status(500).json({ message: error.message || "خطأ في حذف سند التسليم" });
+      res.status(500).json({ message: "خطأ في حذف سند التسليم" });
     }
   });
 
