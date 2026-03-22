@@ -22,7 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Factory } from "lucide-react";
 import { useTranslation } from 'react-i18next';
-import FactoryLogoPath from "../../../attached_assets/MPBF11_1769101097739.png";
+import FactoryLogoPath from "../../../attached_assets/MPBF11_factory_logo.webp";
 
 export default function Login() {
   const { t } = useTranslation();

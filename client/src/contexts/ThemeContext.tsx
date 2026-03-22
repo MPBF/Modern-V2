@@ -6,14 +6,22 @@ interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
+  highContrast: boolean;
+  toggleHighContrast: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+const HIGH_CONTRAST_LINK_ID = "high-contrast-css";
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     const stored = localStorage.getItem("mpbf_theme");
     return (stored === "dark" ? "dark" : "light") as Theme;
+  });
+
+  const [highContrast, setHighContrast] = useState<boolean>(() => {
+    return localStorage.getItem("mpbf_high_contrast") === "true";
   });
 
   useEffect(() => {
@@ -26,6 +34,27 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("mpbf_theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    localStorage.setItem("mpbf_high_contrast", String(highContrast));
+
+    if (highContrast) {
+      if (!document.getElementById(HIGH_CONTRAST_LINK_ID)) {
+        const link = document.createElement("link");
+        link.id = HIGH_CONTRAST_LINK_ID;
+        link.rel = "stylesheet";
+        link.href = "/client/src/index-high-contrast.css";
+        document.head.appendChild(link);
+      }
+      document.documentElement.classList.add("high-contrast");
+    } else {
+      const existing = document.getElementById(HIGH_CONTRAST_LINK_ID);
+      if (existing) {
+        existing.remove();
+      }
+      document.documentElement.classList.remove("high-contrast");
+    }
+  }, [highContrast]);
+
   const toggleTheme = () => {
     setThemeState((prev) => (prev === "light" ? "dark" : "light"));
   };
@@ -34,8 +63,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeState(newTheme);
   };
 
+  const toggleHighContrast = () => {
+    setHighContrast((prev) => !prev);
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme, highContrast, toggleHighContrast }}>
       {children}
     </ThemeContext.Provider>
   );
