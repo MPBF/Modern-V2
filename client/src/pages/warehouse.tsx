@@ -574,6 +574,8 @@ function DeliveryHallContent() {
           )}
         </CardContent>
       </Card>
+
+      <VouchersList type="finished-goods-out" title="أرشيف سندات التسليم (FP-Del)" />
     </div>
   );
 }
