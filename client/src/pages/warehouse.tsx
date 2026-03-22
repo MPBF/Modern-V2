@@ -585,17 +585,6 @@ function RawMaterialsSection({ onCreateVoucherIn, onCreateVoucherOut }: { onCrea
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 mb-4">
-        <Button onClick={onCreateVoucherIn} className="bg-green-600 hover:bg-green-700">
-          <ArrowDownToLine className="h-4 w-4 ml-2" />
-          {t('warehouse.production.rmRecReceiptBtn')}
-        </Button>
-        <Button onClick={onCreateVoucherOut} className="bg-red-600 hover:bg-red-700">
-          <ArrowUpFromLine className="h-4 w-4 ml-2" />
-          {t('warehouse.production.rmDelIssueBtn')}
-        </Button>
-      </div>
-
       <Tabs defaultValue="rm-rec" className="space-y-4">
         <TabsList>
           <TabsTrigger value="rm-rec">
@@ -609,9 +598,21 @@ function RawMaterialsSection({ onCreateVoucherIn, onCreateVoucherOut }: { onCrea
         </TabsList>
 
         <TabsContent value="rm-rec">
+          <div className="mb-3">
+            <Button onClick={onCreateVoucherIn} className="bg-green-600 hover:bg-green-700">
+              <ArrowDownToLine className="h-4 w-4 ml-2" />
+              {t('warehouse.production.rmRecReceiptBtn')}
+            </Button>
+          </div>
           <VouchersList type="raw-material-in" title={t('warehouse.production.rmRecVouchersTitle')} />
         </TabsContent>
         <TabsContent value="rm-del">
+          <div className="mb-3">
+            <Button onClick={onCreateVoucherOut} className="bg-red-600 hover:bg-red-700">
+              <ArrowUpFromLine className="h-4 w-4 ml-2" />
+              {t('warehouse.production.rmDelIssueBtn')}
+            </Button>
+          </div>
           <VouchersList type="raw-material-out" title={t('warehouse.production.rmDelVouchersTitle')} />
         </TabsContent>
       </Tabs>
