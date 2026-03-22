@@ -63,6 +63,12 @@ The application supports PWA installation on mobile devices:
 
 ## Recent Changes
 
+### Barcode Generator Fixes (March 22, 2026)
+- **Fixed format switching breaking the barcode**: When switching barcode type (e.g., from CODE128 to EAN13), the existing value was incompatible and showed a generic error. Now auto-adjusts to a valid default value for each format.
+- **Added per-format input validation with specific messages**: Each barcode format now shows clear requirements (e.g., "EAN-13: requires 12 or 13 digits"). Messages are properly localized in both Arabic and English via i18n.
+- **Fixed pharmacode validation**: Previously accepted invalid mixed strings like "123abc". Now requires strict numeric input in range 3–131070.
+- **Added two new barcode formats**: UPC-A (US product barcodes) and Pharmacode (pharmaceutical), with full translations.
+
 ### Bug Fixes - Duplicate Route, Error Leaks & Access Control (March 22, 2026)
 - **Removed duplicate `POST /api/warehouse/receipts` route**: The route was registered twice (lines 8014 and 8105). The second handler was unreachable dead code with no input validation. Removed the duplicate.
 - **Fixed 4 internal error message leaks in warehouse voucher delete routes**: `DELETE` routes for raw-material-in, raw-material-out, finished-goods-in, and finished-goods-out vouchers were sending raw `error.message` to clients, potentially exposing database/SQL error details. Now return fixed Arabic error messages.

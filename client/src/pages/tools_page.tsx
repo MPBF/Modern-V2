@@ -1378,7 +1378,7 @@ function JobTimePlanner(): JSX.Element {
 
 // ===================== Barcode Generator =====================
 
-type BarcodeFormat = "CODE128" | "EAN13" | "EAN8" | "CODE39" | "ITF14";
+type BarcodeFormat = "CODE128" | "EAN13" | "EAN8" | "CODE39" | "ITF14" | "UPC" | "pharmacode";
 type BarcodeSize = "small" | "medium" | "large" | "xlarge" | "label50x25" | "label55x40" | "label100x150";
 
 interface BarcodeSizeData {
@@ -1401,7 +1401,36 @@ const barcodeSizeData: Record<BarcodeSize, BarcodeSizeData> = {
   label100x150: { width: 4, height: 200, fontSize: 18, displayWidth: 378, displayHeight: 567, printWidthMm: 100, printHeightMm: 150 },
 };
 
-const barcodeFormatValues: BarcodeFormat[] = ["CODE128", "EAN13", "EAN8", "CODE39", "ITF14"];
+const barcodeFormatValues: BarcodeFormat[] = ["CODE128", "EAN13", "EAN8", "CODE39", "ITF14", "UPC", "pharmacode"];
+
+const formatDefaultValues: Record<BarcodeFormat, string> = {
+  CODE128: "1234567890",
+  EAN13: "590123412345",
+  EAN8: "9638507",
+  CODE39: "ABC-1234",
+  ITF14: "1234567890123",
+  UPC: "01234567890",
+  pharmacode: "1234",
+};
+
+type BarcodeValidationKey = "ean13" | "ean8" | "itf14" | "upc" | "code39" | "pharmacode";
+
+const BARCODE_VALIDATION_RULES: Record<string, { test: (v: string) => boolean; key: BarcodeValidationKey }> = {
+  EAN13: { test: (v) => /^\d{12,13}$/.test(v), key: "ean13" },
+  EAN8: { test: (v) => /^\d{7,8}$/.test(v), key: "ean8" },
+  ITF14: { test: (v) => /^\d{13,14}$/.test(v), key: "itf14" },
+  UPC: { test: (v) => /^\d{11,12}$/.test(v), key: "upc" },
+  CODE39: { test: (v) => /^[A-Z0-9\-. $/+%]+$/i.test(v), key: "code39" },
+  pharmacode: { test: (v) => /^\d+$/.test(v) && parseInt(v, 10) >= 3 && parseInt(v, 10) <= 131070, key: "pharmacode" },
+};
+
+function validateBarcodeInput(value: string, format: BarcodeFormat, t: (key: string) => string): string | null {
+  if (!value) return null;
+  const rule = BARCODE_VALIDATION_RULES[format];
+  if (!rule) return null;
+  if (!rule.test(value)) return t(`tools.barcode.validation.${rule.key}`);
+  return null;
+}
 
 function BarcodeGenerator(): JSX.Element {
   const { t } = useTranslation();
@@ -1414,8 +1443,22 @@ function BarcodeGenerator(): JSX.Element {
   const [error, setError] = useState<string>("");
   const svgRef = useRef<SVGSVGElement>(null);
 
+  const handleFormatChange = (newFormat: BarcodeFormat) => {
+    setFormat(newFormat);
+    const validationError = validateBarcodeInput(barcodeValue, newFormat, t);
+    if (validationError) {
+      setBarcodeValue(formatDefaultValues[newFormat]);
+    }
+    setError("");
+  };
+
   useEffect(() => {
     if (svgRef.current && barcodeValue) {
+      const validationError = validateBarcodeInput(barcodeValue, format, t);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
       try {
         const sizeConfig = barcodeSizeData[size];
         JsBarcode(svgRef.current, barcodeValue, {
@@ -1543,7 +1586,7 @@ function BarcodeGenerator(): JSX.Element {
 
           <div className="space-y-2">
             <Label>{t("tools.barcode.format")}</Label>
-            <Select value={format} onValueChange={(v) => setFormat(v as BarcodeFormat)}>
+            <Select value={format} onValueChange={(v) => handleFormatChange(v as BarcodeFormat)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

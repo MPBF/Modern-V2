@@ -2561,6 +2561,14 @@
       "printNow": "Print Now",
       "invalidValue": "Invalid value for this barcode type",
       "checkFormat": "Check the value and barcode type",
+      "validation": {
+        "ean13": "EAN-13: requires exactly 12 or 13 digits",
+        "ean8": "EAN-8: requires exactly 7 or 8 digits",
+        "itf14": "ITF-14: requires exactly 13 or 14 digits",
+        "upc": "UPC: requires exactly 11 or 12 digits",
+        "code39": "Code 39: supports uppercase letters, digits, and symbols (- . $ / + %)",
+        "pharmacode": "Pharmacode: requires a number between 3 and 131070"
+      },
       "tips": "Tips",
       "tip1": "Code 128 supports any letters and numbers",
       "tip2": "EAN-13 requires 12-13 digits only",
@@ -2587,7 +2595,11 @@
         "CODE39": "Code 39",
         "CODE39Hint": "Industrial - letters and numbers",
         "ITF14": "ITF-14",
-        "ITF14Hint": "Shipping cartons (14 digits)"
+        "ITF14Hint": "Shipping cartons (14 digits)",
+        "UPC": "UPC-A",
+        "UPCHint": "US product barcode (12 digits)",
+        "pharmacode": "Pharmacode",
+        "pharmacodeHint": "Pharmaceutical barcode (number 3-131070)"
       }
     },
     "bagWeight": {
