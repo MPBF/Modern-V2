@@ -2721,7 +2721,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       
       const data = await storage.getProductionByProduct(filters);
       res.json({ success: true, data });
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.statusCode === 400) {
+        return res.status(400).json({ message: error.message, success: false });
+      }
       console.error("Production by product error:", error);
       res.status(500).json({ message: "خطأ في جلب بيانات الإنتاج حسب المنتج", success: false });
     }
