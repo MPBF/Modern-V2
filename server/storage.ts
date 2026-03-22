@@ -2377,7 +2377,7 @@ export class DatabaseStorage implements IStorage {
         po.production_order_number
       FROM raw_material_vouchers_out v
       LEFT JOIN items i ON v.item_id = i.id
-      LEFT JOIN locations l ON v.from_location_id = l.id
+      LEFT JOIN locations l ON v.location_id::varchar = l.id
       LEFT JOIN production_orders po ON v.production_order_id = po.id
       ORDER BY v.id DESC
     `);
@@ -2392,7 +2392,7 @@ export class DatabaseStorage implements IStorage {
         po.production_order_number
       FROM raw_material_vouchers_out v
       LEFT JOIN items i ON v.item_id = i.id
-      LEFT JOIN locations l ON v.from_location_id = l.id
+      LEFT JOIN locations l ON v.location_id::varchar = l.id
       LEFT JOIN production_orders po ON v.production_order_id = po.id
       WHERE v.id = ${id}
     `);
