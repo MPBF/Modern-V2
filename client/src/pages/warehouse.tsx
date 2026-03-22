@@ -378,25 +378,23 @@ function ProductionHallContent({ onCreateVoucher }: { onCreateVoucher: () => voi
     }
 
     try {
-      for (let index = 0; index < ordersWithWeights.length; index++) {
-        const { id: productionOrderId, weight, order } = ordersWithWeights[index];
+      const nextNumRes = await fetch("/api/warehouse/vouchers/next-number/FP-Rec");
+      const { next_number } = await nextNumRes.json();
 
-        const nextNumRes = await fetch("/api/warehouse/vouchers/next-number/FP-Rec");
-        const { next_number } = await nextNumRes.json();
+      const items = ordersWithWeights.map(({ id: productionOrderId, weight, order }) => ({
+        production_order_id: parseInt(productionOrderId),
+        weight_kg: weight.toString(),
+        product_description: order?.product_name_ar || order?.product_name || '',
+        customer_id: order?.customer_id,
+      }));
 
-        await receiptMutation.mutateAsync({
-          voucher_number: next_number,
-          voucher_type: "production_receipt",
-          production_order_id: parseInt(productionOrderId),
-          order_id: order?.order_id,
-          customer_id: order?.customer_id,
-          quantity: weight.toString(),
-          weight_kg: weight.toString(),
-          unit: "kg",
-          notes: receiptNotes || `${t('warehouse.production.receiptFromProduction')} ${order?.production_order_number}`,
-          product_description: order?.product_name_ar || order?.product_name,
-        });
-      }
+      await receiptMutation.mutateAsync({
+        voucher_number: next_number,
+        voucher_type: "production_receipt",
+        unit: "kg",
+        notes: receiptNotes || '',
+        items,
+      });
 
       queryClient.invalidateQueries({ queryKey: ["/api/warehouse/production-hall"] });
       queryClient.invalidateQueries({ queryKey: ["/api/warehouse/vouchers", "finished-goods-in"] });

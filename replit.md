@@ -142,6 +142,16 @@ The application supports PWA installation on mobile devices:
 - **Frontend**: Full quality management page at `/quality` with issue listing, creation dialog, detail view with tabs (details, responsibles, actions, customer), filters, and analytics dashboard
 - **API endpoints**: GET/POST/PATCH quality issues, POST/PATCH/DELETE responsibles, POST/PATCH actions, GET stats
 
+### Multi-Order Finished Goods Receipt Vouchers (March 22, 2026)
+
+**Change:** A single FP-Rec voucher can now contain multiple production orders instead of creating one voucher per order.
+- Schema: Added `receipt_time` (timestamp) and `items` (JSON text) columns to `finished_goods_vouchers_in`
+- Backend: `createFinishedGoodsVoucherIn` accepts `items[]` array with per-order `{production_order_id, weight_kg, product_description}`, validates each, deduplicates by PO ID, stores as JSON, sums total weight
+- Backend: `deleteFinishedGoodsVoucherIn` reverses `warehouse_received_kg` for each item in the JSON array
+- Frontend: `handleReceiptSubmit` sends one API call with all items instead of looping
+- VouchersList: View dialog and print layout show items table with per-order breakdown and totals
+- Backward compatible: single-order receipts (no `items` field) still work via legacy code path
+
 ### Warehouse Quantity Tracking & Validation (March 10, 2026)
 
 **Production Order → Warehouse Receipt Flow:**

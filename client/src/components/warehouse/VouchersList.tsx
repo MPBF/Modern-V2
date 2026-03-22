@@ -201,6 +201,10 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
     rows.push({ label: "رقم السند", value: v.voucher_number });
     rows.push({ label: "نوع السند", value: getVoucherTypeLabel(v.voucher_type) });
     rows.push({ label: "التاريخ", value: new Date(v.voucher_date).toLocaleDateString("ar-SA") });
+    if (v.receipt_time) {
+      const rt = new Date(v.receipt_time);
+      rows.push({ label: "وقت الاستلام", value: `${rt.toLocaleDateString("ar-SA")} ${rt.toLocaleTimeString("ar-SA", { hour: '2-digit', minute: '2-digit' })}` });
+    }
     rows.push({ label: "الحالة", value: getStatusText(v.status) });
 
     if (v.quantity) {
@@ -269,6 +273,9 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
 
   const renderPrintContent = (v: any) => {
     const details = renderVoucherDetails(v);
+    let printItems: any[] = [];
+    try { if (v.items) printItems = JSON.parse(v.items); } catch {}
+
     return (
       <div className="voucher-print">
         <div className="header">
@@ -299,6 +306,36 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
             ))}
           </tbody>
         </table>
+
+        {printItems.length > 0 && (
+          <div style={{ marginTop: '15px' }}>
+            <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '8px', borderBottom: '2px solid #333', paddingBottom: '4px' }}>
+              أوامر الإنتاج المستلمة ({printItems.length})
+            </div>
+            <table className="details-table">
+              <thead>
+                <tr>
+                  <th>أمر الإنتاج</th>
+                  <th>المنتج</th>
+                  <th>الوزن (كجم)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printItems.map((item: any, idx: number) => (
+                  <tr key={idx}>
+                    <td style={{ fontWeight: 600 }}>{item.production_order_number || `PO-${item.production_order_id}`}</td>
+                    <td>{item.product_description || '-'}</td>
+                    <td>{parseFloat(String(item.weight_kg || 0)).toLocaleString("en-US")}</td>
+                  </tr>
+                ))}
+                <tr style={{ fontWeight: 700, backgroundColor: '#f0f0f0' }}>
+                  <td colSpan={2}>الإجمالي</td>
+                  <td>{printItems.reduce((s: number, it: any) => s + parseFloat(String(it.weight_kg || 0)), 0).toLocaleString("en-US")}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {v.notes && (
           <div className="notes-section">
@@ -450,6 +487,41 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                   </div>
                 ))}
               </div>
+
+              {(() => {
+                let parsedItems: any[] = [];
+                try { if (viewVoucher.items) parsedItems = JSON.parse(viewVoucher.items); } catch {}
+                if (parsedItems.length <= 0) return null;
+                return (
+                  <div className="border rounded-lg overflow-hidden dark:border-gray-700">
+                    <div className="bg-blue-50 dark:bg-blue-900/30 px-3 py-2">
+                      <span className="font-semibold text-sm text-blue-800 dark:text-blue-200">أوامر الإنتاج المستلمة ({parsedItems.length})</span>
+                    </div>
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                          <th className="py-2 px-3 text-start font-medium">أمر الإنتاج</th>
+                          <th className="py-2 px-3 text-start font-medium">المنتج</th>
+                          <th className="py-2 px-3 text-start font-medium">الوزن (كجم)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parsedItems.map((item: any, idx: number) => (
+                          <tr key={idx} className="border-t dark:border-gray-700">
+                            <td className="py-2 px-3 font-medium">{item.production_order_number || `PO-${item.production_order_id}`}</td>
+                            <td className="py-2 px-3">{item.product_description || '-'}</td>
+                            <td className="py-2 px-3">{parseFloat(String(item.weight_kg || 0)).toLocaleString("en-US")}</td>
+                          </tr>
+                        ))}
+                        <tr className="border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800 font-semibold">
+                          <td className="py-2 px-3" colSpan={2}>الإجمالي</td>
+                          <td className="py-2 px-3">{parsedItems.reduce((s: number, it: any) => s + parseFloat(String(it.weight_kg || 0)), 0).toLocaleString("en-US")}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
 
               {viewVoucher.notes && (
                 <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">

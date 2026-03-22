@@ -2334,6 +2334,121 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createFinishedGoodsVoucherIn(data: any): Promise<FinishedGoodsVoucherIn> {
+    const receiptItems: any[] = data.items || [];
+    const now = new Date();
+
+    if (receiptItems.length > 0) {
+      let totalWeight = 0;
+      const validatedItems: any[] = [];
+
+      const mergedByPo = new Map<number, { weight: number; item: any }>();
+      for (const item of receiptItems) {
+        const poId = typeof item.production_order_id === 'string' ? parseInt(item.production_order_id) : item.production_order_id;
+        const weight = parseFloat(String(item.weight_kg || '0'));
+        if (weight <= 0) continue;
+        const existing = mergedByPo.get(poId);
+        if (existing) {
+          existing.weight += weight;
+        } else {
+          mergedByPo.set(poId, { weight, item });
+        }
+      }
+
+      for (const [poId, { weight, item }] of mergedByPo) {
+        const [po] = await db.select().from(production_orders).where(eq(production_orders.id, poId));
+        if (!po) {
+          throw new Error(`أمر الإنتاج رقم ${poId} غير موجود`);
+        }
+
+        const cutWeightResult = await db.execute(sql`
+          SELECT COALESCE(SUM(cut_weight_total_kg), 0) AS total_cut_weight
+          FROM rolls
+          WHERE production_order_id = ${poId} AND stage = 'done'
+        `);
+        const totalCutWeight = parseFloat(String((cutWeightResult.rows[0] as any)?.total_cut_weight || '0'));
+        const alreadyReceived = parseFloat(String(po.warehouse_received_kg || '0'));
+        const remaining = totalCutWeight - alreadyReceived;
+
+        if (remaining <= 0) {
+          throw new Error(`تم استلام كامل الكمية لأمر الإنتاج ${po.production_order_number} مسبقاً`);
+        }
+        if (weight > remaining + 0.01) {
+          throw new Error(`الكمية المطلوبة (${weight} كجم) تتجاوز الكمية المتبقية (${remaining.toFixed(3)} كجم) لأمر الإنتاج ${po.production_order_number}`);
+        }
+
+        totalWeight += weight;
+        validatedItems.push({
+          production_order_id: poId,
+          production_order_number: po.production_order_number,
+          weight_kg: weight,
+          product_description: item.product_description || '',
+          customer_id: item.customer_id || data.customer_id,
+          item_id: item.item_id || data.item_id,
+        });
+      }
+
+      if (validatedItems.length === 0) {
+        throw new Error("لم يتم إدخال أي كميات صالحة");
+      }
+
+      const voucherData: any = {
+        voucher_number: data.voucher_number,
+        voucher_type: data.voucher_type || 'production_receipt',
+        voucher_date: now,
+        receipt_time: now,
+        quantity: totalWeight.toString(),
+        weight_kg: totalWeight.toString(),
+        unit: data.unit || 'kg',
+        notes: data.notes || null,
+        items: JSON.stringify(validatedItems),
+        production_order_id: validatedItems.length === 1 ? validatedItems[0].production_order_id : null,
+        customer_id: data.customer_id || validatedItems[0].customer_id || null,
+        item_id: data.item_id || validatedItems[0].item_id || null,
+        created_by: data.created_by,
+        status: 'completed',
+      };
+
+      return await db.transaction(async (tx) => {
+        const [v] = await tx.insert(finished_goods_vouchers_in).values(voucherData).returning();
+
+        for (const item of validatedItems) {
+          await tx
+            .update(production_orders)
+            .set({
+              warehouse_received_kg: sql`CAST(${production_orders.warehouse_received_kg} AS NUMERIC) + ${item.weight_kg}`,
+            })
+            .where(eq(production_orders.id, item.production_order_id));
+        }
+
+        if (data.item_id) {
+          const locId = data.location_id ? (typeof data.location_id === 'string' ? parseInt(data.location_id) : data.location_id) : null;
+          const conditions = locId
+            ? and(eq(inventory.item_id, data.item_id), eq(inventory.location_id, locId))
+            : eq(inventory.item_id, data.item_id);
+          const existing = await tx.select().from(inventory).where(conditions as any);
+
+          if (existing.length > 0) {
+            await tx
+              .update(inventory)
+              .set({
+                current_stock: sql`CAST(${inventory.current_stock} AS NUMERIC) + ${totalWeight}`,
+                last_updated: new Date(),
+              })
+              .where(eq(inventory.id, existing[0].id));
+          } else {
+            await tx.insert(inventory).values({
+              item_id: data.item_id,
+              location_id: locId,
+              current_stock: String(totalWeight),
+              unit: 'كيلو',
+            } as any);
+          }
+        }
+
+        return v;
+      });
+    }
+
     const poId = data.production_order_id
       ? (typeof data.production_order_id === 'string' ? parseInt(data.production_order_id) : data.production_order_id)
       : null;
@@ -2363,6 +2478,8 @@ export class DatabaseStorage implements IStorage {
 
       data.production_order_id = poId;
     }
+
+    data.receipt_time = data.receipt_time || new Date();
 
     return await db.transaction(async (tx) => {
       const [v] = await tx.insert(finished_goods_vouchers_in).values(data).returning();
@@ -2413,20 +2530,40 @@ export class DatabaseStorage implements IStorage {
       throw new Error("السند غير موجود");
     }
 
-    const qty = parseFloat(String(voucher.weight_kg || voucher.quantity || '0'));
+    const totalQty = parseFloat(String(voucher.weight_kg || voucher.quantity || '0'));
     const poId = voucher.production_order_id;
 
+    let parsedItems: any[] = [];
+    try {
+      if (voucher.items) {
+        parsedItems = JSON.parse(voucher.items);
+      }
+    } catch {}
+
     await db.transaction(async (tx) => {
-      if (poId && qty > 0) {
+      if (parsedItems.length > 0) {
+        for (const item of parsedItems) {
+          const itemPoId = item.production_order_id;
+          const itemWeight = parseFloat(String(item.weight_kg || '0'));
+          if (itemPoId && itemWeight > 0) {
+            await tx
+              .update(production_orders)
+              .set({
+                warehouse_received_kg: sql`GREATEST(0, CAST(${production_orders.warehouse_received_kg} AS NUMERIC) - ${itemWeight})`,
+              })
+              .where(eq(production_orders.id, itemPoId));
+          }
+        }
+      } else if (poId && totalQty > 0) {
         await tx
           .update(production_orders)
           .set({
-            warehouse_received_kg: sql`GREATEST(0, CAST(${production_orders.warehouse_received_kg} AS NUMERIC) - ${qty})`,
+            warehouse_received_kg: sql`GREATEST(0, CAST(${production_orders.warehouse_received_kg} AS NUMERIC) - ${totalQty})`,
           })
           .where(eq(production_orders.id, poId));
       }
 
-      if (voucher.item_id && qty > 0) {
+      if (voucher.item_id && totalQty > 0) {
         const locId = voucher.location_id;
         const conditions = locId
           ? and(eq(inventory.item_id, voucher.item_id), eq(inventory.location_id, locId))
@@ -2437,7 +2574,7 @@ export class DatabaseStorage implements IStorage {
           await tx
             .update(inventory)
             .set({
-              current_stock: sql`GREATEST(0, CAST(${inventory.current_stock} AS NUMERIC) - ${qty})`,
+              current_stock: sql`GREATEST(0, CAST(${inventory.current_stock} AS NUMERIC) - ${totalQty})`,
               last_updated: new Date(),
             })
             .where(eq(inventory.id, existing[0].id));
