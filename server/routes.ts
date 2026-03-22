@@ -2,7 +2,48 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import bcrypt from "bcrypt";
 import multer from "multer";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+
+// Helper: add a sheet from an array of objects to a workbook
+function addJsonSheet(workbook: ExcelJS.Workbook, data: any[], sheetName: string, colWidths?: number[]) {
+  const worksheet = workbook.addWorksheet(sheetName);
+  if (data.length > 0) {
+    const headers = Object.keys(data[0]);
+    if (colWidths) {
+      worksheet.columns = headers.map((h, i) => ({ header: h, key: h, width: colWidths[i] ?? 15 }));
+    } else {
+      worksheet.addRow(headers);
+    }
+    for (const row of data) {
+      worksheet.addRow(headers.map(h => row[h] ?? ""));
+    }
+  }
+  return worksheet;
+}
+
+// Helper: parse the first sheet of an Excel buffer into an array of objects
+async function parseExcelBuffer(buffer: Buffer): Promise<Record<string, any>[]> {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer as unknown as ArrayBuffer);
+  const worksheet = workbook.worksheets[0];
+  const rows: Record<string, any>[] = [];
+  const headers: string[] = [];
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) {
+      (row.values as any[]).forEach((val, idx) => {
+        if (idx > 0) headers.push(String(val ?? ""));
+      });
+    } else {
+      const obj: Record<string, any> = {};
+      const vals = row.values as any[];
+      headers.forEach((h, i) => {
+        obj[h] = vals[i + 1] ?? null;
+      });
+      rows.push(obj);
+    }
+  });
+  return rows;
+}
 import { requireAuth, requirePermission, requireAdmin, type AuthRequest } from "./middleware/auth";
 import { generateMobileToken, revokeMobileToken, invalidateRolesCache, getCachedRoles } from "./middleware/session-auth";
 import { logger } from "./lib/logger";
@@ -6448,24 +6489,8 @@ Do not include quotes or explanations.`;
       }
       
       // Create Excel workbook
-      const ws = XLSX.utils.json_to_sheet(templateData);
-      
-      // Set column widths
-      ws["!cols"] = [
-        { wch: 12 },  // التاريخ
-        { wch: 10 },  // اليوم
-        { wch: 10 },  // رقم الموظف
-        { wch: 25 },  // اسم الموظف
-        { wch: 10 },  // الحالة
-        { wch: 12 },  // وقت الحضور
-        { wch: 12 },  // وقت الانصراف
-        { wch: 12 },  // ساعات العمل
-        { wch: 12 },  // ساعات إضافية
-        { wch: 25 },  // ملاحظات
-      ];
-      
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "حضور الموظف");
+      const wb = new ExcelJS.Workbook();
+      addJsonSheet(wb, templateData, "حضور الموظف", [12, 10, 10, 25, 10, 12, 12, 12, 12, 25]);
       
       // Add instructions sheet
       const instructionsData = [
@@ -6482,11 +6507,9 @@ Do not include quotes or explanations.`;
         { "التعليمات": "6. لا تغير رقم الموظف أو التاريخ" },
         { "التعليمات": "7. بعد الانتهاء، ارفع الملف من زر الاستيراد" },
       ];
-      const wsInstructions = XLSX.utils.json_to_sheet(instructionsData);
-      wsInstructions["!cols"] = [{ wch: 60 }];
-      XLSX.utils.book_append_sheet(wb, wsInstructions, "تعليمات");
+      addJsonSheet(wb, instructionsData, "تعليمات", [60]);
       
-      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      const buffer = Buffer.from(await wb.xlsx.writeBuffer());
       
       res.setHeader("Content-Disposition", `attachment; filename=attendance_template_${userId}_${month}.xlsx`);
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -6517,10 +6540,7 @@ Do not include quotes or explanations.`;
       }
       
       // Parse Excel file
-      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const data = XLSX.utils.sheet_to_json(worksheet) as any[];
+      const data = await parseExcelBuffer(req.file.buffer);
       
       if (!data || data.length === 0) {
         return res.status(400).json({ message: "الملف فارغ أو غير صحيح" });
@@ -6838,7 +6858,7 @@ Do not include quotes or explanations.`;
       }
       
       // Create workbook
-      const wb = XLSX.utils.book_new();
+      const wb = new ExcelJS.Workbook();
       
       // Header sheet with factory and employee info
       const headerData = [
@@ -6857,10 +6877,7 @@ Do not include quotes or explanations.`;
         { "": `إجمالي الساعات الإضافية: ${totalOvertimeHours.toFixed(1)}` },
         { "": `نسبة الحضور: ${attendanceRecords.length > 0 ? Math.round((presentDays / attendanceRecords.length) * 100) : 0}%` },
       ];
-      
-      const wsHeader = XLSX.utils.json_to_sheet(headerData);
-      wsHeader["!cols"] = [{ wch: 50 }];
-      XLSX.utils.book_append_sheet(wb, wsHeader, "ملخص التقرير");
+      addJsonSheet(wb, headerData, "ملخص التقرير", [50]);
       
       // Attendance details sheet
       const detailsData = attendanceRecords.map(r => ({
@@ -6873,15 +6890,9 @@ Do not include quotes or explanations.`;
         "ساعات إضافية": r.overtime_hours || 0,
         "ملاحظات": r.notes || ""
       }));
+      addJsonSheet(wb, detailsData, "تفاصيل الحضور", [12, 10, 10, 12, 12, 12, 12, 25]);
       
-      const wsDetails = XLSX.utils.json_to_sheet(detailsData);
-      wsDetails["!cols"] = [
-        { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, 
-        { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 25 }
-      ];
-      XLSX.utils.book_append_sheet(wb, wsDetails, "تفاصيل الحضور");
-      
-      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      const buffer = Buffer.from(await wb.xlsx.writeBuffer());
       
       const fileName = `attendance_report_${user.username}_${startDate}_${endDate}.xlsx`;
       res.setHeader("Content-Disposition", `attachment; filename=${fileName}`);
@@ -9608,11 +9619,9 @@ Do not include quotes or explanations.`;
         WHERE itm.status = 'active' ORDER BY itm.name_ar
       `);
       
-      const ws = XLSX.utils.json_to_sheet(result.rows || []);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "الأصناف");
-      
-      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      const wb = new ExcelJS.Workbook();
+      addJsonSheet(wb, result.rows || [], "الأصناف");
+      const buffer = Buffer.from(await wb.xlsx.writeBuffer());
       res.setHeader("Content-Disposition", "attachment; filename=inventory_items.xlsx");
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.send(buffer);
@@ -9630,11 +9639,9 @@ Do not include quotes or explanations.`;
         FROM suppliers WHERE is_active = true ORDER BY name_ar
       `);
       
-      const ws = XLSX.utils.json_to_sheet(result.rows || []);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "الموردين");
-      
-      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      const wb = new ExcelJS.Workbook();
+      addJsonSheet(wb, result.rows || [], "الموردين");
+      const buffer = Buffer.from(await wb.xlsx.writeBuffer());
       res.setHeader("Content-Disposition", "attachment; filename=suppliers.xlsx");
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.send(buffer);
@@ -9672,11 +9679,9 @@ Do not include quotes or explanations.`;
           return res.status(400).json({ message: "نوع السند غير صحيح" });
       }
       
-      const ws = XLSX.utils.json_to_sheet(result.rows || []);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
-      
-      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      const wb = new ExcelJS.Workbook();
+      addJsonSheet(wb, result.rows || [], sheetName);
+      const buffer = Buffer.from(await wb.xlsx.writeBuffer());
       res.setHeader("Content-Disposition", `attachment; filename=${type}_vouchers.xlsx`);
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.send(buffer);
@@ -9693,10 +9698,7 @@ Do not include quotes or explanations.`;
         return res.status(400).json({ message: "لم يتم رفع ملف" });
       }
 
-      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const data = XLSX.utils.sheet_to_json(worksheet) as any[];
+      const data = await parseExcelBuffer(req.file.buffer);
 
       let imported = 0;
       let errors: string[] = [];
@@ -9742,10 +9744,7 @@ Do not include quotes or explanations.`;
         return res.status(400).json({ message: "لم يتم رفع ملف" });
       }
 
-      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const data = XLSX.utils.sheet_to_json(worksheet) as any[];
+      const data = await parseExcelBuffer(req.file.buffer);
 
       let imported = 0;
       let errors: string[] = [];
@@ -9810,11 +9809,10 @@ Do not include quotes or explanations.`;
           return res.status(400).json({ message: "نوع القالب غير صحيح" });
       }
       
-      const ws = XLSX.utils.aoa_to_sheet([headers]);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
-      
-      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet(sheetName);
+      ws.addRow(headers);
+      const buffer = Buffer.from(await wb.xlsx.writeBuffer());
       res.setHeader("Content-Disposition", `attachment; filename=${type}_template.xlsx`);
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.send(buffer);
