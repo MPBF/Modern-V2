@@ -112,7 +112,6 @@ export function validateRequest<T extends Record<string, ZodSchema>>(
           req.body = schemas.body.parse(req.body);
           console.log("✅ Validation successful");
         } catch (error) {
-          console.log("❌ Validation failed:", error);
           if (error instanceof ZodError) {
             console.log(
               "❌ Zod validation errors:",
