@@ -726,9 +726,11 @@ export interface IStorage {
   getRawMaterialVouchersIn(): Promise<RawMaterialVoucherIn[]>;
   getRawMaterialVoucherInById(id: number): Promise<RawMaterialVoucherIn | undefined>;
   createRawMaterialVoucherIn(voucher: any): Promise<RawMaterialVoucherIn>;
+  deleteRawMaterialVoucherIn(id: number): Promise<void>;
   getRawMaterialVouchersOut(): Promise<RawMaterialVoucherOut[]>;
   getRawMaterialVoucherOutById(id: number): Promise<RawMaterialVoucherOut | undefined>;
   createRawMaterialVoucherOut(voucher: any): Promise<RawMaterialVoucherOut>;
+  deleteRawMaterialVoucherOut(id: number): Promise<void>;
   
   // Finished Goods Vouchers
   getFinishedGoodsVouchersIn(): Promise<FinishedGoodsVoucherIn[]>;
@@ -2296,32 +2298,141 @@ export class DatabaseStorage implements IStorage {
     return c;
   }
 
-  async getRawMaterialVouchersIn(): Promise<RawMaterialVoucherIn[]> {
-    return await db.select().from(raw_material_vouchers_in).orderBy(desc(raw_material_vouchers_in.id));
+  async getRawMaterialVouchersIn(): Promise<any[]> {
+    const result = await db.execute(sql`
+      SELECT v.*, 
+        s.name AS supplier_name, s.name_ar AS supplier_name_ar,
+        i.name AS item_name, i.name_ar AS item_name_ar, i.code AS item_code,
+        l.name AS location_name, l.name_ar AS location_name_ar
+      FROM raw_material_vouchers_in v
+      LEFT JOIN suppliers s ON v.supplier_id = s.id
+      LEFT JOIN items i ON v.item_id = i.id
+      LEFT JOIN locations l ON v.location_id = l.id
+      ORDER BY v.id DESC
+    `);
+    return result.rows as any[];
   }
 
-  async getRawMaterialVoucherInById(id: number): Promise<RawMaterialVoucherIn | undefined> {
-    const [v] = await db.select().from(raw_material_vouchers_in).where(eq(raw_material_vouchers_in.id, id));
-    return v;
+  async getRawMaterialVoucherInById(id: number): Promise<any | undefined> {
+    const result = await db.execute(sql`
+      SELECT v.*, 
+        s.name AS supplier_name, s.name_ar AS supplier_name_ar,
+        i.name AS item_name, i.name_ar AS item_name_ar, i.code AS item_code,
+        l.name AS location_name, l.name_ar AS location_name_ar
+      FROM raw_material_vouchers_in v
+      LEFT JOIN suppliers s ON v.supplier_id = s.id
+      LEFT JOIN items i ON v.item_id = i.id
+      LEFT JOIN locations l ON v.location_id = l.id
+      WHERE v.id = ${id}
+    `);
+    return (result.rows as any[])[0];
   }
 
   async createRawMaterialVoucherIn(data: any): Promise<RawMaterialVoucherIn> {
-    const [v] = await db.insert(raw_material_vouchers_in).values(data).returning();
-    return v;
+    return await db.transaction(async (tx) => {
+      const [v] = await tx.insert(raw_material_vouchers_in).values(data).returning();
+      if (v.item_id && v.quantity) {
+        const qty = parseFloat(String(v.quantity));
+        const locId = v.location_id || null;
+        const existingInv = await tx.execute(sql`
+          SELECT id FROM inventory WHERE item_id = ${v.item_id} AND (location_id = ${locId} OR (location_id IS NULL AND ${locId} IS NULL)) LIMIT 1
+        `);
+        if ((existingInv.rows as any[]).length > 0) {
+          await tx.execute(sql`
+            UPDATE inventory SET current_stock = current_stock + ${qty}, last_updated = NOW()
+            WHERE item_id = ${v.item_id} AND (location_id = ${locId} OR (location_id IS NULL AND ${locId} IS NULL))
+          `);
+        } else {
+          await tx.execute(sql`
+            INSERT INTO inventory (item_id, current_stock, location_id, unit, last_updated)
+            VALUES (${v.item_id}, ${qty}, ${locId}, ${v.unit || 'كيلو'}, NOW())
+          `);
+        }
+      }
+      return v;
+    });
   }
 
-  async getRawMaterialVouchersOut(): Promise<RawMaterialVoucherOut[]> {
-    return await db.select().from(raw_material_vouchers_out).orderBy(desc(raw_material_vouchers_out.id));
+  async deleteRawMaterialVoucherIn(id: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      const [v] = await tx.select().from(raw_material_vouchers_in).where(eq(raw_material_vouchers_in.id, id));
+      if (!v) throw new Error("السند غير موجود");
+      if (v.item_id && v.quantity) {
+        const qty = parseFloat(String(v.quantity));
+        const locId = v.location_id || null;
+        await tx.execute(sql`
+          UPDATE inventory SET current_stock = GREATEST(0, current_stock - ${qty}), last_updated = NOW()
+          WHERE item_id = ${v.item_id} AND (location_id = ${locId} OR (location_id IS NULL AND ${locId} IS NULL))
+        `);
+      }
+      await tx.delete(raw_material_vouchers_in).where(eq(raw_material_vouchers_in.id, id));
+    });
   }
 
-  async getRawMaterialVoucherOutById(id: number): Promise<RawMaterialVoucherOut | undefined> {
-    const [v] = await db.select().from(raw_material_vouchers_out).where(eq(raw_material_vouchers_out.id, id));
-    return v;
+  async getRawMaterialVouchersOut(): Promise<any[]> {
+    const result = await db.execute(sql`
+      SELECT v.*,
+        i.name AS item_name, i.name_ar AS item_name_ar, i.code AS item_code,
+        l.name AS location_name, l.name_ar AS location_name_ar,
+        po.production_order_number
+      FROM raw_material_vouchers_out v
+      LEFT JOIN items i ON v.item_id = i.id
+      LEFT JOIN locations l ON v.from_location_id = l.id
+      LEFT JOIN production_orders po ON v.production_order_id = po.id
+      ORDER BY v.id DESC
+    `);
+    return result.rows as any[];
+  }
+
+  async getRawMaterialVoucherOutById(id: number): Promise<any | undefined> {
+    const result = await db.execute(sql`
+      SELECT v.*,
+        i.name AS item_name, i.name_ar AS item_name_ar, i.code AS item_code,
+        l.name AS location_name, l.name_ar AS location_name_ar,
+        po.production_order_number
+      FROM raw_material_vouchers_out v
+      LEFT JOIN items i ON v.item_id = i.id
+      LEFT JOIN locations l ON v.from_location_id = l.id
+      LEFT JOIN production_orders po ON v.production_order_id = po.id
+      WHERE v.id = ${id}
+    `);
+    return (result.rows as any[])[0];
   }
 
   async createRawMaterialVoucherOut(data: any): Promise<RawMaterialVoucherOut> {
-    const [v] = await db.insert(raw_material_vouchers_out).values(data).returning();
-    return v;
+    return await db.transaction(async (tx) => {
+      const [v] = await tx.insert(raw_material_vouchers_out).values(data).returning();
+      if (v.item_id && v.quantity) {
+        const qty = parseFloat(String(v.quantity));
+        const stockCheck = await tx.execute(sql`
+          SELECT current_stock FROM inventory WHERE item_id = ${v.item_id} LIMIT 1
+        `);
+        const currentStock = parseFloat(String((stockCheck.rows as any[])[0]?.current_stock || '0'));
+        if (currentStock < qty) {
+          throw new Error(`الكمية المطلوبة (${qty}) تتجاوز المخزون المتاح (${currentStock}) للصنف ${v.item_id}`);
+        }
+        await tx.execute(sql`
+          UPDATE inventory SET current_stock = current_stock - ${qty}, last_updated = NOW()
+          WHERE item_id = ${v.item_id}
+        `);
+      }
+      return v;
+    });
+  }
+
+  async deleteRawMaterialVoucherOut(id: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      const [v] = await tx.select().from(raw_material_vouchers_out).where(eq(raw_material_vouchers_out.id, id));
+      if (!v) throw new Error("السند غير موجود");
+      if (v.item_id && v.quantity) {
+        const qty = parseFloat(String(v.quantity));
+        await tx.execute(sql`
+          UPDATE inventory SET current_stock = current_stock + ${qty}, last_updated = NOW()
+          WHERE item_id = ${v.item_id}
+        `);
+      }
+      await tx.delete(raw_material_vouchers_out).where(eq(raw_material_vouchers_out.id, id));
+    });
   }
 
   async getFinishedGoodsVouchersIn(): Promise<FinishedGoodsVoucherIn[]> {

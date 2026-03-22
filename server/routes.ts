@@ -9278,6 +9278,30 @@ Do not include quotes or explanations.`;
     }
   });
 
+  // حذف سند إدخال مواد خام
+  app.delete("/api/warehouse/vouchers/raw-material-in/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseRouteParam(req.params.id, "id");
+      await storage.deleteRawMaterialVoucherIn(id);
+      res.json({ message: "تم حذف السند وإرجاع الكميات بنجاح" });
+    } catch (error: any) {
+      console.error("Error deleting raw material in voucher:", error);
+      res.status(400).json({ message: error.message || "خطأ في حذف سند إدخال المواد الخام" });
+    }
+  });
+
+  // حذف سند إخراج مواد خام
+  app.delete("/api/warehouse/vouchers/raw-material-out/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseRouteParam(req.params.id, "id");
+      await storage.deleteRawMaterialVoucherOut(id);
+      res.json({ message: "تم حذف السند وإرجاع الكميات بنجاح" });
+    } catch (error: any) {
+      console.error("Error deleting raw material out voucher:", error);
+      res.status(400).json({ message: error.message || "خطأ في حذف سند إخراج المواد الخام" });
+    }
+  });
+
   // أوامر الإنتاج المتاحة للاستلام في المستودع
   app.get("/api/warehouse/production-orders-for-receipt", requireAuth, async (req, res) => {
     try {

@@ -233,17 +233,23 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
     if (v.barcode) {
       rows.push({ label: "الباركود", value: v.barcode });
     }
-    if (v.supplier_name) {
-      rows.push({ label: "المورد", value: v.supplier_name });
+    if (v.supplier_name_ar || v.supplier_name) {
+      rows.push({ label: "المورد", value: v.supplier_name_ar || v.supplier_name });
     }
-    if (v.customer_name) {
-      rows.push({ label: "العميل", value: v.customer_name });
+    if (v.customer_name_ar || v.customer_name) {
+      rows.push({ label: "العميل", value: v.customer_name_ar || v.customer_name });
     }
-    if (v.item_name || v.item_id) {
-      rows.push({ label: "الصنف", value: v.item_name || v.item_id });
+    if (v.item_name_ar || v.item_name || v.item_id) {
+      rows.push({ label: "الصنف", value: v.item_name_ar || v.item_name || v.item_id });
     }
-    if (v.location_name || v.location_id) {
-      rows.push({ label: "الموقع", value: v.location_name || v.location_id });
+    if (v.item_code) {
+      rows.push({ label: "كود الصنف", value: v.item_code });
+    }
+    if (v.location_name_ar || v.location_name || v.location_id) {
+      rows.push({ label: "الموقع", value: v.location_name_ar || v.location_name || v.location_id });
+    }
+    if (v.production_order_number) {
+      rows.push({ label: "أمر الإنتاج", value: v.production_order_number });
     }
     if (v.from_production_line) {
       rows.push({ label: "خط الإنتاج", value: v.from_production_line });
@@ -400,6 +406,15 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                   <TableHead className="text-center">{t('warehouse.vouchers.voucherNumber')}</TableHead>
                   <TableHead className="text-center">{t('warehouse.vouchers.type')}</TableHead>
                   <TableHead className="text-center">{t('warehouse.vouchers.date')}</TableHead>
+                  {(type === "raw-material-in" || type === "raw-material-out") && (
+                    <TableHead className="text-center">الصنف</TableHead>
+                  )}
+                  {type === "raw-material-in" && (
+                    <TableHead className="text-center">المورد</TableHead>
+                  )}
+                  {type === "raw-material-out" && (
+                    <TableHead className="text-center">الجهة</TableHead>
+                  )}
                   <TableHead className="text-center">{t('warehouse.vouchers.quantity')}</TableHead>
                   <TableHead className="text-center">{t('warehouse.vouchers.status')}</TableHead>
                   <TableHead className="text-center">{t('warehouse.vouchers.actions')}</TableHead>
@@ -417,6 +432,21 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                     <TableCell className="text-center">
                       {new Date(voucher.voucher_date).toLocaleDateString("en-US")}
                     </TableCell>
+                    {(type === "raw-material-in" || type === "raw-material-out") && (
+                      <TableCell className="text-center text-sm">
+                        {voucher.item_name_ar || voucher.item_name || voucher.item_id}
+                      </TableCell>
+                    )}
+                    {type === "raw-material-in" && (
+                      <TableCell className="text-center text-sm">
+                        {voucher.supplier_name_ar || voucher.supplier_name || '-'}
+                      </TableCell>
+                    )}
+                    {type === "raw-material-out" && (
+                      <TableCell className="text-center text-sm">
+                        {voucher.to_destination || voucher.production_order_number || '-'}
+                      </TableCell>
+                    )}
                     <TableCell className="text-center">
                       {parseFloat(voucher.quantity || 0).toLocaleString("en-US")} {voucher.unit || t('warehouse.units.kilo')}
                     </TableCell>
@@ -441,7 +471,7 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                         >
                           <Printer className="h-4 w-4" />
                         </Button>
-                        {type === "finished-goods-in" && (
+                        {(type === "finished-goods-in" || type === "finished-goods-out" || type === "raw-material-in" || type === "raw-material-out") && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
