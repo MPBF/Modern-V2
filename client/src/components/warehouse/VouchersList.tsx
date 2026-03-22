@@ -71,6 +71,7 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/warehouse/vouchers", type] });
       queryClient.invalidateQueries({ queryKey: ["/api/warehouse/vouchers/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/warehouse/production-hall"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/warehouse/delivery-hall"] });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       toast({ title: t('warehouse.vouchers.deleteSuccess'), description: t('warehouse.vouchers.deleteSuccessDesc') });
     },
@@ -204,6 +205,10 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
     if (v.receipt_time) {
       const rt = new Date(v.receipt_time);
       rows.push({ label: "وقت الاستلام", value: `${rt.toLocaleDateString("ar-SA")} ${rt.toLocaleTimeString("ar-SA", { hour: '2-digit', minute: '2-digit' })}` });
+    }
+    if (v.delivery_time) {
+      const dt = new Date(v.delivery_time);
+      rows.push({ label: "وقت التسليم", value: `${dt.toLocaleDateString("ar-SA")} ${dt.toLocaleTimeString("ar-SA", { hour: '2-digit', minute: '2-digit' })}` });
     }
     rows.push({ label: "الحالة", value: getStatusText(v.status) });
 

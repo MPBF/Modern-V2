@@ -9348,6 +9348,16 @@ Do not include quotes or explanations.`;
   });
 
   // سندات إخراج المواد التامة
+  app.get("/api/warehouse/delivery-hall", requireAuth, async (req, res) => {
+    try {
+      const orders = await (storage as any).getDeliveryHallOrders();
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching delivery hall data:", error);
+      res.status(500).json({ message: "خطأ في جلب بيانات التسليم" });
+    }
+  });
+
   app.get("/api/warehouse/vouchers/finished-goods-out", requireAuth, async (req, res) => {
     try {
       const vouchers = await storage.getFinishedGoodsVouchersOut();
@@ -9390,6 +9400,17 @@ Do not include quotes or explanations.`;
     } catch (error) {
       console.error("Error fetching finished goods out voucher:", error);
       res.status(500).json({ message: "خطأ في جلب سند إخراج المواد التامة" });
+    }
+  });
+
+  app.delete("/api/warehouse/vouchers/finished-goods-out/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseRouteParam(req.params.id, "id");
+      await (storage as any).deleteFinishedGoodsVoucherOut(id);
+      res.json({ message: "تم حذف السند بنجاح" });
+    } catch (error: any) {
+      console.error("Error deleting finished goods out voucher:", error);
+      res.status(500).json({ message: error.message || "خطأ في حذف سند التسليم" });
     }
   });
 

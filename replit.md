@@ -142,15 +142,21 @@ The application supports PWA installation on mobile devices:
 - **Frontend**: Full quality management page at `/quality` with issue listing, creation dialog, detail view with tabs (details, responsibles, actions, customer), filters, and analytics dashboard
 - **API endpoints**: GET/POST/PATCH quality issues, POST/PATCH/DELETE responsibles, POST/PATCH actions, GET stats
 
-### Multi-Order Finished Goods Receipt Vouchers (March 22, 2026)
+### Multi-Order Finished Goods Receipt & Delivery Vouchers (March 22, 2026)
 
-**Change:** A single FP-Rec voucher can now contain multiple production orders instead of creating one voucher per order.
+**Receipt (FP-Rec):** A single FP-Rec voucher can contain multiple production orders.
 - Schema: Added `receipt_time` (timestamp) and `items` (JSON text) columns to `finished_goods_vouchers_in`
-- Backend: `createFinishedGoodsVoucherIn` accepts `items[]` array with per-order `{production_order_id, weight_kg, product_description}`, validates each, deduplicates by PO ID, stores as JSON, sums total weight
-- Backend: `deleteFinishedGoodsVoucherIn` reverses `warehouse_received_kg` for each item in the JSON array
-- Frontend: `handleReceiptSubmit` sends one API call with all items instead of looping
-- VouchersList: View dialog and print layout show items table with per-order breakdown and totals
-- Backward compatible: single-order receipts (no `items` field) still work via legacy code path
+- Backend: `createFinishedGoodsVoucherIn` accepts `items[]` array, validates, deduplicates by PO ID, stores as JSON
+- Backend: `deleteFinishedGoodsVoucherIn` reverses `warehouse_received_kg` for each item
+- VouchersList: View dialog and print show items table with per-order breakdown (5 columns: أمر الإنتاج, رقم الطلب, العميل, المنتج, الوزن)
+
+**Delivery (FP-Del):** A single FP-Del voucher can contain multiple production orders for customer delivery.
+- Schema: Added `warehouse_delivered_kg` to `production_orders`, `delivery_time`/`items`/`production_order_id` to `finished_goods_vouchers_out`, made `customer_id` nullable
+- API: `GET /api/warehouse/delivery-hall` returns POs with received qty available for delivery (received - delivered)
+- Backend: `createFinishedGoodsVoucherOut` supports multi-item `items[]` array with validation against available qty
+- Backend: `deleteFinishedGoodsVoucherOut` reverses `warehouse_delivered_kg` for each item
+- Frontend: `DeliveryHallContent` component shows orders grouped by customer with selection, weight entry, driver info, and single-voucher submission
+- VouchersList: View/print shows delivery items table and `delivery_time`
 
 ### Warehouse Quantity Tracking & Validation (March 10, 2026)
 

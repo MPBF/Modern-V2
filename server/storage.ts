@@ -2666,7 +2666,128 @@ export class DatabaseStorage implements IStorage {
     return v;
   }
 
+  async getDeliveryHallOrders(): Promise<any[]> {
+    const rows = await db.execute(sql`
+      SELECT
+        po.id AS production_order_id,
+        po.production_order_number,
+        po.order_id,
+        po.quantity_kg AS quantity_required,
+        po.warehouse_received_kg,
+        po.warehouse_delivered_kg,
+        po.status AS po_status,
+        o.order_number,
+        c.id AS customer_id,
+        c.name AS customer_name,
+        c.name_ar AS customer_name_ar,
+        COALESCE(i.name, cp.id::text) AS product_name,
+        i.name_ar AS product_name_ar
+      FROM production_orders po
+      JOIN orders o ON po.order_id = o.id
+      JOIN customers c ON o.customer_id = c.id
+      JOIN customer_products cp ON po.customer_product_id = cp.id
+      LEFT JOIN items i ON cp.item_id = i.id
+      WHERE CAST(po.warehouse_received_kg AS NUMERIC) > 0
+        AND CAST(po.warehouse_delivered_kg AS NUMERIC) < CAST(po.warehouse_received_kg AS NUMERIC)
+      ORDER BY po.id
+    `);
+    return (rows.rows as any[]).map(row => ({
+      ...row,
+      production_order_id: Number(row.production_order_id),
+      order_id: Number(row.order_id),
+    }));
+  }
+
   async createFinishedGoodsVoucherOut(data: any): Promise<FinishedGoodsVoucherOut> {
+    const deliveryItems: any[] = data.items || [];
+    const now = new Date();
+
+    if (deliveryItems.length > 0) {
+      let totalWeight = 0;
+      const validatedItems: any[] = [];
+
+      const mergedByPo = new Map<number, { weight: number; item: any }>();
+      for (const item of deliveryItems) {
+        const poId = typeof item.production_order_id === 'string' ? parseInt(item.production_order_id) : item.production_order_id;
+        const weight = parseFloat(String(item.weight_kg || '0'));
+        if (weight <= 0) continue;
+        const existing = mergedByPo.get(poId);
+        if (existing) {
+          existing.weight += weight;
+        } else {
+          mergedByPo.set(poId, { weight, item });
+        }
+      }
+
+      for (const [poId, { weight, item }] of mergedByPo) {
+        const [po] = await db.select().from(production_orders).where(eq(production_orders.id, poId));
+        if (!po) {
+          throw new Error(`أمر الإنتاج رقم ${poId} غير موجود`);
+        }
+
+        const received = parseFloat(String(po.warehouse_received_kg || '0'));
+        const delivered = parseFloat(String(po.warehouse_delivered_kg || '0'));
+        const available = received - delivered;
+
+        if (available <= 0) {
+          throw new Error(`لا توجد كمية متاحة للتسليم لأمر الإنتاج ${po.production_order_number}`);
+        }
+        if (weight > available + 0.01) {
+          throw new Error(`الكمية المطلوبة (${weight} كجم) تتجاوز الكمية المتاحة (${available.toFixed(3)} كجم) لأمر الإنتاج ${po.production_order_number}`);
+        }
+
+        totalWeight += weight;
+        validatedItems.push({
+          production_order_id: poId,
+          production_order_number: po.production_order_number,
+          weight_kg: weight,
+          product_description: item.product_description || '',
+          customer_id: item.customer_id || data.customer_id,
+          customer_name: item.customer_name || '',
+          order_number: item.order_number || '',
+        });
+      }
+
+      if (validatedItems.length === 0) {
+        throw new Error("لم يتم إدخال أي كميات صالحة");
+      }
+
+      const voucherData: any = {
+        voucher_number: data.voucher_number,
+        voucher_type: data.voucher_type || 'customer_delivery',
+        voucher_date: now,
+        delivery_time: now,
+        quantity: totalWeight.toString(),
+        weight_kg: totalWeight.toString(),
+        unit: data.unit || 'kg',
+        notes: data.notes || null,
+        items: JSON.stringify(validatedItems),
+        production_order_id: validatedItems.length === 1 ? validatedItems[0].production_order_id : null,
+        customer_id: data.customer_id || validatedItems[0].customer_id || null,
+        driver_name: data.driver_name || null,
+        driver_phone: data.driver_phone || null,
+        vehicle_number: data.vehicle_number || null,
+        delivery_address: data.delivery_address || null,
+        created_by: data.created_by,
+        status: 'completed',
+      };
+
+      return await db.transaction(async (tx) => {
+        const [v] = await tx.insert(finished_goods_vouchers_out).values(voucherData).returning();
+
+        for (const item of validatedItems) {
+          await tx
+            .update(production_orders)
+            .set({
+              warehouse_delivered_kg: sql`CAST(${production_orders.warehouse_delivered_kg} AS NUMERIC) + ${item.weight_kg}`,
+            })
+            .where(eq(production_orders.id, item.production_order_id));
+        }
+
+        return v;
+      });
+    }
+
     return await db.transaction(async (tx) => {
       if (data.item_id) {
         const qty = parseFloat(String(data.weight_kg || data.quantity || '0'));
@@ -2682,6 +2803,7 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
+      data.delivery_time = data.delivery_time || new Date();
       const [v] = await tx.insert(finished_goods_vouchers_out).values(data).returning();
 
       if (data.item_id) {
@@ -2704,6 +2826,39 @@ export class DatabaseStorage implements IStorage {
       }
 
       return v;
+    });
+  }
+
+  async deleteFinishedGoodsVoucherOut(id: number): Promise<void> {
+    const [voucher] = await db.select().from(finished_goods_vouchers_out).where(eq(finished_goods_vouchers_out.id, id));
+    if (!voucher) {
+      throw new Error("السند غير موجود");
+    }
+
+    let parsedItems: any[] = [];
+    try {
+      if (voucher.items) {
+        parsedItems = JSON.parse(voucher.items);
+      }
+    } catch {}
+
+    await db.transaction(async (tx) => {
+      if (parsedItems.length > 0) {
+        for (const item of parsedItems) {
+          const itemPoId = item.production_order_id;
+          const itemWeight = parseFloat(String(item.weight_kg || '0'));
+          if (itemPoId && itemWeight > 0) {
+            await tx
+              .update(production_orders)
+              .set({
+                warehouse_delivered_kg: sql`GREATEST(0, CAST(${production_orders.warehouse_delivered_kg} AS NUMERIC) - ${itemWeight})`,
+              })
+              .where(eq(production_orders.id, itemPoId));
+          }
+        }
+      }
+
+      await tx.delete(finished_goods_vouchers_out).where(eq(finished_goods_vouchers_out.id, id));
     });
   }
 

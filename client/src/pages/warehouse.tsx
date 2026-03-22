@@ -182,19 +182,12 @@ function FinishedGoodsSection({ onCreateVoucherIn, onCreateVoucherOut }: { onCre
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 mb-4">
-        <Button onClick={onCreateVoucherIn} className="bg-blue-600 hover:bg-blue-700">
-          <ArrowDownToLine className="h-4 w-4 ml-2" />
-          {t('warehouse.production.fpRecReceiptBtn')}
-        </Button>
-        <Button onClick={onCreateVoucherOut} className="bg-orange-600 hover:bg-orange-700">
-          <Truck className="h-4 w-4 ml-2" />
-          {t('warehouse.production.fpDelDeliveryBtn')}
-        </Button>
-      </div>
-
-      <Tabs defaultValue="fp-rec" className="space-y-4">
+      <Tabs defaultValue="delivery-hall" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="delivery-hall">
+            <Truck className="h-4 w-4 ml-1" />
+            تسليم العملاء
+          </TabsTrigger>
           <TabsTrigger value="fp-rec">
             <ArrowDownToLine className="h-4 w-4 ml-1" />
             {t('warehouse.production.fpRecVouchers')}
@@ -205,6 +198,9 @@ function FinishedGoodsSection({ onCreateVoucherIn, onCreateVoucherOut }: { onCre
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="delivery-hall">
+          <DeliveryHallContent />
+        </TabsContent>
         <TabsContent value="fp-rec">
           <VouchersList type="finished-goods-in" title={t('warehouse.production.fpRecVouchersTitle')} />
         </TabsContent>
@@ -212,6 +208,379 @@ function FinishedGoodsSection({ onCreateVoucherIn, onCreateVoucherOut }: { onCre
           <VouchersList type="finished-goods-out" title={t('warehouse.production.fpDelVouchersTitle')} />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function DeliveryHallContent() {
+  const { t } = useTranslation();
+  const ln = useLocalizedName();
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [deliveryDialogOpen, setDeliveryDialogOpen] = useState(false);
+  const [deliveryWeights, setDeliveryWeights] = useState<Record<string, string>>({});
+  const [deliveryNotes, setDeliveryNotes] = useState("");
+  const [driverName, setDriverName] = useState("");
+  const [driverPhone, setDriverPhone] = useState("");
+  const [vehicleNumber, setVehicleNumber] = useState("");
+  const [selectedDeliveryOrderId, setSelectedDeliveryOrderId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  const { data: deliveryOrders = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/warehouse/delivery-hall"],
+    refetchInterval: 120000,
+    staleTime: 90000,
+  });
+
+  const processedOrders = useMemo(() => {
+    return deliveryOrders.map((order: any) => ({
+      ...order,
+      warehouse_received_kg: parseFloat(order.warehouse_received_kg) || 0,
+      warehouse_delivered_kg: parseFloat(order.warehouse_delivered_kg) || 0,
+      available_for_delivery:
+        (parseFloat(order.warehouse_received_kg) || 0) -
+        (parseFloat(order.warehouse_delivered_kg) || 0),
+    }));
+  }, [deliveryOrders]);
+
+  const groupedByOrder = useMemo(() => {
+    const groups: Record<string, { order_number: string; customer_name: string; customer_name_ar: string; items: any[] }> = {};
+    processedOrders.forEach((po: any) => {
+      const key = po.order_number || po.order_id;
+      if (!groups[key]) {
+        groups[key] = {
+          order_number: po.order_number,
+          customer_name: po.customer_name,
+          customer_name_ar: po.customer_name_ar,
+          items: [],
+        };
+      }
+      groups[key].items.push(po);
+    });
+    return Object.values(groups);
+  }, [processedOrders]);
+
+  const deliveryMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch("/api/warehouse/vouchers/finished-goods-out", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || "فشل حفظ سند التسليم");
+      }
+      return response.json();
+    },
+  });
+
+  const handleSelectOrder = (productionOrderId: string) => {
+    const newSelection = new Set(selectedOrders);
+    if (newSelection.has(productionOrderId)) {
+      newSelection.delete(productionOrderId);
+    } else {
+      newSelection.add(productionOrderId);
+    }
+    setSelectedOrders(newSelection);
+  };
+
+  const openDeliveryForOrder = (productionOrderId: string) => {
+    setSelectedDeliveryOrderId(productionOrderId);
+    setDeliveryWeights({});
+    setDeliveryDialogOpen(true);
+  };
+
+  const deliveryTargetOrders = useMemo(() => {
+    const targetIds = selectedDeliveryOrderId
+      ? [selectedDeliveryOrderId]
+      : Array.from(selectedOrders);
+    return targetIds
+      .map((id) => processedOrders.find((o: any) => o.production_order_id.toString() === id))
+      .filter(Boolean);
+  }, [selectedDeliveryOrderId, selectedOrders, processedOrders]);
+
+  const handleDeliverySubmit = async () => {
+    if (!user?.id) {
+      toast({ title: t('warehouse.toast.error'), description: "يجب تسجيل الدخول", variant: "destructive" });
+      return;
+    }
+
+    const targetOrders = selectedDeliveryOrderId
+      ? [selectedDeliveryOrderId]
+      : Array.from(selectedOrders);
+
+    if (targetOrders.length === 0) {
+      toast({ title: t('warehouse.toast.error'), description: "يرجى تحديد أمر إنتاج واحد على الأقل", variant: "destructive" });
+      return;
+    }
+
+    const ordersWithWeights = targetOrders
+      .map((id) => {
+        const weight = parseFloat(deliveryWeights[id] || "0");
+        const order = processedOrders.find((o: any) => o.production_order_id.toString() === id);
+        return { id, weight, order };
+      })
+      .filter((o) => o.weight > 0);
+
+    if (ordersWithWeights.length === 0) {
+      toast({ title: t('warehouse.toast.error'), description: "يرجى إدخال وزن التسليم", variant: "destructive" });
+      return;
+    }
+
+    for (const { weight, order } of ordersWithWeights) {
+      if (order && weight > order.available_for_delivery) {
+        toast({ title: t('warehouse.toast.error'), description: `الوزن يتجاوز الكمية المتاحة (${order.production_order_number})`, variant: "destructive" });
+        return;
+      }
+    }
+
+    try {
+      const nextNumRes = await fetch("/api/warehouse/vouchers/next-number/FP-Del");
+      const { next_number } = await nextNumRes.json();
+
+      const items = ordersWithWeights.map(({ id: productionOrderId, weight, order }) => ({
+        production_order_id: parseInt(productionOrderId),
+        weight_kg: weight.toString(),
+        product_description: order?.product_name_ar || order?.product_name || '',
+        customer_id: order?.customer_id?.toString() || '',
+        customer_name: order?.customer_name_ar || order?.customer_name || '',
+        order_number: order?.order_number || '',
+      }));
+
+      await deliveryMutation.mutateAsync({
+        voucher_number: next_number,
+        voucher_type: "customer_delivery",
+        unit: "kg",
+        notes: deliveryNotes || '',
+        driver_name: driverName || null,
+        driver_phone: driverPhone || null,
+        vehicle_number: vehicleNumber || null,
+        items,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["/api/warehouse/delivery-hall"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/warehouse/vouchers", "finished-goods-out"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/warehouse/vouchers/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      setDeliveryDialogOpen(false);
+      setSelectedOrders(new Set());
+      setDeliveryWeights({});
+      setDeliveryNotes("");
+      setDriverName("");
+      setDriverPhone("");
+      setVehicleNumber("");
+      setSelectedDeliveryOrderId(null);
+      toast({ title: "تم التسليم بنجاح", description: "تم إنشاء سند تسليم FP-Del" });
+    } catch (err: any) {
+      toast({ title: t('warehouse.toast.error'), description: err.message || "فشل التسليم", variant: "destructive" });
+    }
+  };
+
+  const allPoIds = processedOrders
+    .filter((o: any) => o.available_for_delivery > 0)
+    .map((o: any) => o.production_order_id.toString());
+
+  return (
+    <div className="space-y-4">
+      <Card className="border-orange-200 dark:border-orange-800">
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Truck className="h-5 w-5 text-orange-600" />
+                تسليم العملاء
+              </CardTitle>
+              <CardDescription className="mt-1">
+                أوامر الإنتاج المستلمة في المستودع والمتاحة للتسليم
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Dialog open={deliveryDialogOpen} onOpenChange={(open) => { setDeliveryDialogOpen(open); if (!open) { setSelectedDeliveryOrderId(null); setDeliveryWeights({}); } }}>
+                <DialogTrigger asChild>
+                  <Button disabled={selectedOrders.size === 0} className="bg-orange-600 hover:bg-orange-700">
+                    <Truck className="h-4 w-4 ml-2" />
+                    تسليم المحدد ({selectedOrders.size})
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>إنشاء سند تسليم FP-Del</DialogTitle>
+                    <DialogDescription>
+                      أدخل أوزان التسليم لكل أمر إنتاج
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="border rounded-lg overflow-hidden dark:border-gray-700">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 dark:bg-gray-800">
+                          <tr>
+                            <th className="py-2 px-3 text-center font-medium">أمر الإنتاج</th>
+                            <th className="py-2 px-3 text-center font-medium">المنتج</th>
+                            <th className="py-2 px-3 text-center font-medium">المتاح (كجم)</th>
+                            <th className="py-2 px-3 text-center font-medium">وزن التسليم (كجم) *</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {deliveryTargetOrders.map((order: any) => {
+                            const orderId = order.production_order_id.toString();
+                            return (
+                              <tr key={orderId} className="border-t dark:border-gray-700">
+                                <td className="py-2 px-3 text-center font-medium">{order.production_order_number}</td>
+                                <td className="py-2 px-3 text-center">{order.product_name_ar || order.product_name}</td>
+                                <td className="py-2 px-3 text-center">{order.available_for_delivery.toFixed(2)}</td>
+                                <td className="py-2 px-3 text-center">
+                                  <Input
+                                    type="number"
+                                    step="0.001"
+                                    min="0"
+                                    max={order.available_for_delivery}
+                                    value={deliveryWeights[orderId] || ""}
+                                    onChange={(e) => setDeliveryWeights((prev) => ({ ...prev, [orderId]: e.target.value }))}
+                                    placeholder="أدخل وزن التسليم"
+                                    className="w-32 mx-auto"
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-sm font-medium">اسم السائق</label>
+                        <Input value={driverName} onChange={(e) => setDriverName(e.target.value)} placeholder="اسم السائق" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">هاتف السائق</label>
+                        <Input value={driverPhone} onChange={(e) => setDriverPhone(e.target.value)} placeholder="رقم الهاتف" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">رقم المركبة</label>
+                        <Input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value)} placeholder="رقم المركبة" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">{t('warehouse.labels.notes')}</label>
+                      <textarea
+                        value={deliveryNotes}
+                        onChange={(e) => setDeliveryNotes(e.target.value)}
+                        placeholder="ملاحظات إضافية"
+                        className="w-full min-h-[60px] p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleDeliverySubmit} disabled={deliveryMutation.isPending} className="bg-orange-600 hover:bg-orange-700">
+                        {deliveryMutation.isPending ? "جاري الحفظ..." : "تأكيد التسليم"}
+                      </Button>
+                      <Button variant="outline" onClick={() => { setDeliveryDialogOpen(false); setSelectedDeliveryOrderId(null); }}>
+                        {t('warehouse.buttons.cancel')}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
+              <p className="mt-2 text-gray-500">{t('warehouse.loading')}</p>
+            </div>
+          ) : processedOrders.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">لا توجد أوامر إنتاج متاحة للتسليم</div>
+          ) : (
+            <>
+              <div className="flex gap-2 mb-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedOrders(new Set(allPoIds))}
+                  disabled={allPoIds.length === 0}
+                >
+                  تحديد الكل ({allPoIds.length})
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedOrders(new Set())}
+                  disabled={selectedOrders.size === 0}
+                >
+                  إلغاء التحديد
+                </Button>
+              </div>
+              {groupedByOrder.map((group) => (
+                <div key={group.order_number} className="border rounded-lg overflow-hidden mb-4">
+                  <div className="bg-orange-50 dark:bg-orange-900/20 px-4 py-2 flex justify-between items-center">
+                    <div className="flex gap-4 items-center">
+                      <span className="font-bold text-sm">{t('warehouse.production.order')}: {group.order_number}</span>
+                    </div>
+                    <div className="flex gap-4 items-center">
+                      <span className="font-bold text-sm">{group.customer_name_ar || group.customer_name}</span>
+                    </div>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 dark:bg-gray-800">
+                      <tr>
+                        <th className="py-2 px-3 w-10"></th>
+                        <th className="py-2 px-3 text-center font-medium">أمر الإنتاج</th>
+                        <th className="py-2 px-3 text-center font-medium">المنتج</th>
+                        <th className="py-2 px-3 text-center font-medium">مستلم (كجم)</th>
+                        <th className="py-2 px-3 text-center font-medium">مسلّم (كجم)</th>
+                        <th className="py-2 px-3 text-center font-medium">متاح (كجم)</th>
+                        <th className="py-2 px-3 text-center font-medium">إجراء</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.items.map((order: any) => {
+                        const isSelected = selectedOrders.has(order.production_order_id.toString());
+                        return (
+                          <tr key={order.production_order_id} className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 ${isSelected ? 'bg-orange-50 dark:bg-orange-900/20' : ''}`}>
+                            <td className="py-2 px-3 text-center">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleSelectOrder(order.production_order_id.toString())}
+                                className="h-4 w-4 rounded border-gray-300"
+                              />
+                            </td>
+                            <td className="py-2 px-3 text-center font-medium">{order.production_order_number}</td>
+                            <td className="py-2 px-3 text-center">{order.product_name_ar || order.product_name}</td>
+                            <td className="py-2 px-3 text-center">{order.warehouse_received_kg.toFixed(2)}</td>
+                            <td className="py-2 px-3 text-center">{order.warehouse_delivered_kg.toFixed(2)}</td>
+                            <td className="py-2 px-3 text-center">
+                              <Badge variant={order.available_for_delivery > 0 ? "default" : "secondary"}>
+                                {order.available_for_delivery.toFixed(2)}
+                              </Badge>
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              {order.available_for_delivery > 0 && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                                  onClick={() => openDeliveryForOrder(order.production_order_id.toString())}
+                                >
+                                  <Truck className="h-3 w-3 ml-1" />
+                                  تسليم
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -458,6 +458,10 @@ export const production_orders = pgTable(
     warehouse_received_kg: decimal("warehouse_received_kg", { precision: 10, scale: 2 })
       .notNull()
       .default("0"),
+    // الكمية المسلّمة للعملاء من المستودع
+    warehouse_delivered_kg: decimal("warehouse_delivered_kg", { precision: 10, scale: 2 })
+      .notNull()
+      .default("0"),
 
     status: varchar("status", { length: 30 }).notNull().default("pending"),
     created_at: timestamp("created_at").notNull().defaultNow(),
@@ -3332,13 +3336,15 @@ export const finished_goods_vouchers_out = pgTable("finished_goods_vouchers_out"
   id: serial("id").primaryKey(),
   voucher_number: varchar("voucher_number", { length: 50 }).notNull().unique(),
   voucher_date: timestamp("voucher_date").default(sql`CURRENT_TIMESTAMP`),
+  delivery_time: timestamp("delivery_time").default(sql`CURRENT_TIMESTAMP`),
   voucher_type: varchar("voucher_type", { length: 50 }).default("customer_delivery"),
   item_id: varchar("item_id", { length: 100 }),
   quantity: decimal("quantity", { precision: 15, scale: 3 }).default("0"),
   unit: varchar("unit", { length: 50 }).default("كيلو"),
   barcode: varchar("barcode", { length: 100 }),
   batch_number: varchar("batch_number", { length: 100 }),
-  customer_id: varchar("customer_id", { length: 100 }).notNull(),
+  customer_id: varchar("customer_id", { length: 100 }),
+  production_order_id: integer("production_order_id"),
   driver_name: varchar("driver_name", { length: 255 }),
   driver_phone: varchar("driver_phone", { length: 50 }),
   vehicle_number: varchar("vehicle_number", { length: 100 }),
@@ -3347,6 +3353,7 @@ export const finished_goods_vouchers_out = pgTable("finished_goods_vouchers_out"
   pieces_count: integer("pieces_count"),
   location_id: integer("location_id"),
   notes: text("notes"),
+  items: text("items"),
   status: varchar("status", { length: 50 }).default("completed"),
   created_by: integer("created_by"),
   created_at: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
