@@ -126,7 +126,7 @@ function spacer(before = 200, after = 100): Paragraph {
 
 export async function createQuoteTemplate(): Promise<Buffer> {
   const logoPath = path.join(process.cwd(), "server", "fonts", "factory-logo.png");
-  const logoBuffer = fs.readFileSync(logoPath);
+  const logoBuffer = await fs.promises.readFile(logoPath);
 
   const doc = new Document({
     styles: {
@@ -436,7 +436,7 @@ function generateItemRows(maxItems: number): TableRow[] {
 async function main() {
   const templateBuffer = await createQuoteTemplate();
   const outputPath = path.join(process.cwd(), "server", "services", "adobe-pdf", "templates", "quote-template-ar.docx");
-  fs.writeFileSync(outputPath, templateBuffer);
+  await fs.promises.writeFile(outputPath, templateBuffer);
   console.log(`Quote template saved to: ${outputPath}`);
   console.log(`File size: ${(templateBuffer.length / 1024).toFixed(1)} KB`);
 }

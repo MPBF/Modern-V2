@@ -1443,7 +1443,7 @@ export default function FactorySimulation3D() {
 
   const { data: activeRolls = [] } = useQuery<ActiveRoll[]>({
     queryKey: ['/api/factory-3d/active-rolls'],
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   });
 
   const { data: savedLayout } = useQuery<any>({

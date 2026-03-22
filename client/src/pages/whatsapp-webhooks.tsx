@@ -46,7 +46,7 @@ export default function WhatsAppWebhooks() {
   // استعلام الإشعارات لعرض سجل webhook
   const { data: notifications, refetch: refetchNotifications } = useQuery({
     queryKey: ["/api/notifications"],
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   });
 
   const notificationsList = Array.isArray(notifications) ? notifications : [];

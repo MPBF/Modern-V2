@@ -3061,15 +3061,17 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
   app.get("/api/pdf/templates", requireAuth, async (req, res) => {
     try {
-      const fs = await import("fs");
+      const fs = await import("fs/promises");
       const path = await import("path");
       const templatesDir = path.join(process.cwd(), "server", "services", "adobe-pdf", "templates");
       
-      if (!fs.existsSync(templatesDir)) {
+      try {
+        await fs.access(templatesDir);
+      } catch {
         return res.json({ templates: [], success: true });
       }
 
-      const files = fs.readdirSync(templatesDir).filter((f: string) => f.endsWith(".docx"));
+      const files = (await fs.readdir(templatesDir)).filter((f: string) => f.endsWith(".docx"));
       res.json({ templates: files, success: true });
     } catch (error) {
       console.error("[API Error]", error);

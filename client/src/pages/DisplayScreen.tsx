@@ -583,17 +583,17 @@ export default function DisplayScreen() {
 
   const { data: recentProduction = [] } = useQuery<ProductionOrder[]>({
     queryKey: ["/api/display/live/recent-production"],
-    refetchInterval: 20000,
+    refetchInterval: 60000,
   });
 
   const { data: latestRolls = [] } = useQuery<RollData[]>({
     queryKey: ["/api/display/live/latest-rolls"],
-    refetchInterval: 15000,
+    refetchInterval: 45000,
   });
 
   const { data: productionStats } = useQuery<ProductionStats>({
     queryKey: ["/api/display/live/production-stats"],
-    refetchInterval: 15000,
+    refetchInterval: 45000,
   });
 
   const currentSlide = slides[currentSlideIndex];

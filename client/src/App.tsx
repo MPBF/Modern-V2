@@ -1,52 +1,65 @@
+import { lazy, Suspense } from "react";
 import { Route, Switch, Redirect } from "wouter";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 
 import Login from "./pages/login";
-import Dashboard from "./pages/dashboard";
-import Orders from "./pages/orders";
-import Production from "./pages/production";
-import ProductionOrdersManagement from "./pages/ProductionOrdersManagement";
-import ProductionQueues from "./pages/ProductionQueues";
-import Quality from "./pages/quality";
-import Warehouse from "./pages/warehouse";
-import Maintenance from "./pages/maintenance";
-import HR from "./pages/hr";
-import Reports from "./pages/reports";
-import Settings from "./pages/settings";
-import Definitions from "./pages/definitions";
-import UserDashboard from "./pages/user-dashboard";
-import NotFound from "./pages/not-found";
-import Notifications from "./pages/notifications";
-import AlertsCenter from "./pages/AlertsCenter";
-import SystemHealth from "./pages/SystemHealth";
-import ProductionMonitoring from "./pages/production-monitoring";
-import MetaWhatsAppSetup from "./pages/meta-whatsapp-setup";
-import WhatsAppSetup from "./pages/whatsapp-setup";
-import WhatsAppTest from "./pages/whatsapp-test";
-import WhatsAppTroubleshoot from "./pages/whatsapp-troubleshoot";
-import WhatsAppProductionSetup from "./pages/whatsapp-production-setup";
-import WhatsAppFinalSetup from "./pages/whatsapp-final-setup";
-import TwilioContentTemplate from "./pages/twilio-content-template";
-import WhatsAppTemplateTest from "./pages/whatsapp-template-test";
-import WhatsAppWebhooks from "./pages/whatsapp-webhooks";
 import ProtectedRoute from "./components/ProtectedRoute";
-import ToolsPage from "./pages/tools_page";
-import FilmOperatorDashboard from "./pages/FilmOperatorDashboard";
-import PrintingOperatorDashboard from "./pages/PrintingOperatorDashboard";
-import CuttingOperatorDashboard from "./pages/CuttingOperatorDashboard";
-import ProductionDashboard from "./pages/ProductionDashboard";
-import RollSearch from "./pages/RollSearch";
-import ProductionReports from "./pages/ProductionReports";
-import SystemMonitoring from "./pages/system-monitoring";
-import AiAgent from "./pages/ai-agent";
-import AiAgentSettings from "./pages/ai-agent-settings";
-import FactorySimulation3D from "./pages/FactorySimulation3D";
-import DisplayScreen from "./pages/DisplayScreen";
-import DisplayControlPanel from "./pages/DisplayControlPanel";
-import FactoryFloor from "./pages/FactoryFloor";
-import MaterialMixing from "./pages/material-mixing";
 import { useTranslation } from "react-i18next";
 import InstallPrompt from "./components/pwa/InstallPrompt";
+
+const Dashboard = lazy(() => import("./pages/dashboard"));
+const Orders = lazy(() => import("./pages/orders"));
+const Production = lazy(() => import("./pages/production"));
+const ProductionOrdersManagement = lazy(() => import("./pages/ProductionOrdersManagement"));
+const ProductionQueues = lazy(() => import("./pages/ProductionQueues"));
+const Quality = lazy(() => import("./pages/quality"));
+const Warehouse = lazy(() => import("./pages/warehouse"));
+const Maintenance = lazy(() => import("./pages/maintenance"));
+const HR = lazy(() => import("./pages/hr"));
+const Reports = lazy(() => import("./pages/reports"));
+const Settings = lazy(() => import("./pages/settings"));
+const Definitions = lazy(() => import("./pages/definitions"));
+const UserDashboard = lazy(() => import("./pages/user-dashboard"));
+const NotFound = lazy(() => import("./pages/not-found"));
+const Notifications = lazy(() => import("./pages/notifications"));
+const AlertsCenter = lazy(() => import("./pages/AlertsCenter"));
+const SystemHealth = lazy(() => import("./pages/SystemHealth"));
+const ProductionMonitoring = lazy(() => import("./pages/production-monitoring"));
+const MetaWhatsAppSetup = lazy(() => import("./pages/meta-whatsapp-setup"));
+const WhatsAppSetup = lazy(() => import("./pages/whatsapp-setup"));
+const WhatsAppTest = lazy(() => import("./pages/whatsapp-test"));
+const WhatsAppTroubleshoot = lazy(() => import("./pages/whatsapp-troubleshoot"));
+const WhatsAppProductionSetup = lazy(() => import("./pages/whatsapp-production-setup"));
+const WhatsAppFinalSetup = lazy(() => import("./pages/whatsapp-final-setup"));
+const TwilioContentTemplate = lazy(() => import("./pages/twilio-content-template"));
+const WhatsAppTemplateTest = lazy(() => import("./pages/whatsapp-template-test"));
+const WhatsAppWebhooks = lazy(() => import("./pages/whatsapp-webhooks"));
+const ToolsPage = lazy(() => import("./pages/tools_page"));
+const FilmOperatorDashboard = lazy(() => import("./pages/FilmOperatorDashboard"));
+const PrintingOperatorDashboard = lazy(() => import("./pages/PrintingOperatorDashboard"));
+const CuttingOperatorDashboard = lazy(() => import("./pages/CuttingOperatorDashboard"));
+const ProductionDashboard = lazy(() => import("./pages/ProductionDashboard"));
+const RollSearch = lazy(() => import("./pages/RollSearch"));
+const ProductionReports = lazy(() => import("./pages/ProductionReports"));
+const SystemMonitoring = lazy(() => import("./pages/system-monitoring"));
+const AiAgent = lazy(() => import("./pages/ai-agent"));
+const AiAgentSettings = lazy(() => import("./pages/ai-agent-settings"));
+const FactorySimulation3D = lazy(() => import("./pages/FactorySimulation3D"));
+const DisplayScreen = lazy(() => import("./pages/DisplayScreen"));
+const DisplayControlPanel = lazy(() => import("./pages/DisplayControlPanel"));
+const FactoryFloor = lazy(() => import("./pages/FactoryFloor"));
+const MaterialMixing = lazy(() => import("./pages/material-mixing"));
+
+function PageLoadingFallback() {
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ textAlign: "center" }}>
+        <div className="loading-spinner" style={{ margin: "0 auto 1rem" }} />
+        <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7280" }}>جاري تحميل الصفحة...</p>
+      </div>
+    </div>
+  );
+}
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -64,248 +77,250 @@ function AppRoutes() {
   }
 
   return (
-    <Switch>
-      <Route path="/login">
-        {isAuthenticated ? <Redirect to="/" /> : <Login />}
+    <Suspense fallback={<PageLoadingFallback />}>
+      <Switch>
+        <Route path="/login">
+          {isAuthenticated ? <Redirect to="/" /> : <Login />}
       
-      </Route>
+        </Route>
 <Route path="/tools">
   <ProtectedRoute path="/tools">
     <ToolsPage />
   </ProtectedRoute>
 </Route>
      
-      <Route path="/">
-        <ProtectedRoute path="/">
-          <Dashboard />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/">
+          <ProtectedRoute path="/">
+            <Dashboard />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/orders">
-        <ProtectedRoute path="/orders">
-          <Orders />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/orders">
+          <ProtectedRoute path="/orders">
+            <Orders />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/production">
-        <ProtectedRoute path="/production">
-          <Production />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/production">
+          <ProtectedRoute path="/production">
+            <Production />
+          </ProtectedRoute>
+        </Route>
 
-      {/* Redirects from old routes to Orders page with tabs */}
-      <Route path="/production-orders-management">
-        <Redirect to="/orders?tab=production-orders" />
-      </Route>
+        {/* Redirects from old routes to Orders page with tabs */}
+        <Route path="/production-orders-management">
+          <Redirect to="/orders?tab=production-orders" />
+        </Route>
 
-      <Route path="/production-queues">
-        <Redirect to="/orders?tab=production-queues" />
-      </Route>
+        <Route path="/production-queues">
+          <Redirect to="/orders?tab=production-queues" />
+        </Route>
 
-      <Route path="/roll-search">
-        <Redirect to="/orders?tab=roll-search" />
-      </Route>
+        <Route path="/roll-search">
+          <Redirect to="/orders?tab=roll-search" />
+        </Route>
 
-      {/* Production Dashboard - Unified operators dashboard */}
-      <Route path="/production-dashboard">
-        <ProtectedRoute path="/production-dashboard">
-          <ProductionDashboard />
-        </ProtectedRoute>
-      </Route>
+        {/* Production Dashboard - Unified operators dashboard */}
+        <Route path="/production-dashboard">
+          <ProtectedRoute path="/production-dashboard">
+            <ProductionDashboard />
+          </ProtectedRoute>
+        </Route>
 
-      {/* Redirect old operator routes to new unified dashboard */}
-      <Route path="/film-operator">
-        <Redirect to="/production-dashboard" />
-      </Route>
+        {/* Redirect old operator routes to new unified dashboard */}
+        <Route path="/film-operator">
+          <Redirect to="/production-dashboard" />
+        </Route>
 
-      <Route path="/printing-operator">
-        <Redirect to="/production-dashboard" />
-      </Route>
+        <Route path="/printing-operator">
+          <Redirect to="/production-dashboard" />
+        </Route>
 
-      <Route path="/cutting-operator">
-        <Redirect to="/production-dashboard" />
-      </Route>
+        <Route path="/cutting-operator">
+          <Redirect to="/production-dashboard" />
+        </Route>
 
-      <Route path="/quality">
-        <ProtectedRoute path="/quality">
-          <Quality />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/quality">
+          <ProtectedRoute path="/quality">
+            <Quality />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/warehouse">
-        <ProtectedRoute path="/warehouse">
-          <Warehouse />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/warehouse">
+          <ProtectedRoute path="/warehouse">
+            <Warehouse />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/maintenance">
-        <ProtectedRoute path="/maintenance">
-          <Maintenance />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/maintenance">
+          <ProtectedRoute path="/maintenance">
+            <Maintenance />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/hr">
-        <ProtectedRoute path="/hr">
-          <HR />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/hr">
+          <ProtectedRoute path="/hr">
+            <HR />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/reports">
-        <ProtectedRoute path="/reports">
-          <Reports />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/reports">
+          <ProtectedRoute path="/reports">
+            <Reports />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/production-reports">
-        <Redirect to="/orders?tab=production-reports" />
-      </Route>
+        <Route path="/production-reports">
+          <Redirect to="/orders?tab=production-reports" />
+        </Route>
 
-      <Route path="/settings">
-        <ProtectedRoute path="/settings">
-          <Settings />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/settings">
+          <ProtectedRoute path="/settings">
+            <Settings />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/definitions">
-        <ProtectedRoute path="/definitions">
-          <Definitions />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/definitions">
+          <ProtectedRoute path="/definitions">
+            <Definitions />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/user-dashboard">
-        <ProtectedRoute path="/user-dashboard">
-          <UserDashboard />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/user-dashboard">
+          <ProtectedRoute path="/user-dashboard">
+            <UserDashboard />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/notifications">
-        <ProtectedRoute path="/notifications">
-          <Notifications />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/notifications">
+          <ProtectedRoute path="/notifications">
+            <Notifications />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/alerts">
-        <ProtectedRoute path="/alerts">
-          <AlertsCenter />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/alerts">
+          <ProtectedRoute path="/alerts">
+            <AlertsCenter />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/system-health">
-        <ProtectedRoute path="/system-health">
-          <SystemHealth />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/system-health">
+          <ProtectedRoute path="/system-health">
+            <SystemHealth />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/production-monitoring">
-        <ProtectedRoute path="/production-monitoring">
-          <ProductionMonitoring />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/production-monitoring">
+          <ProtectedRoute path="/production-monitoring">
+            <ProductionMonitoring />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/meta-whatsapp-setup">
-        <ProtectedRoute path="/meta-whatsapp-setup">
-          <MetaWhatsAppSetup />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/meta-whatsapp-setup">
+          <ProtectedRoute path="/meta-whatsapp-setup">
+            <MetaWhatsAppSetup />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/whatsapp-setup">
-        <ProtectedRoute path="/whatsapp-setup">
-          <WhatsAppSetup />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/whatsapp-setup">
+          <ProtectedRoute path="/whatsapp-setup">
+            <WhatsAppSetup />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/whatsapp-test">
-        <ProtectedRoute path="/whatsapp-test">
-          <WhatsAppTest />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/whatsapp-test">
+          <ProtectedRoute path="/whatsapp-test">
+            <WhatsAppTest />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/whatsapp-troubleshoot">
-        <ProtectedRoute path="/whatsapp-troubleshoot">
-          <WhatsAppTroubleshoot />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/whatsapp-troubleshoot">
+          <ProtectedRoute path="/whatsapp-troubleshoot">
+            <WhatsAppTroubleshoot />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/whatsapp-production-setup">
-        <ProtectedRoute path="/whatsapp-production-setup">
-          <WhatsAppProductionSetup />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/whatsapp-production-setup">
+          <ProtectedRoute path="/whatsapp-production-setup">
+            <WhatsAppProductionSetup />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/whatsapp-final-setup">
-        <ProtectedRoute path="/whatsapp-final-setup">
-          <WhatsAppFinalSetup />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/whatsapp-final-setup">
+          <ProtectedRoute path="/whatsapp-final-setup">
+            <WhatsAppFinalSetup />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/twilio-content">
-        <ProtectedRoute path="/twilio-content">
-          <TwilioContentTemplate />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/twilio-content">
+          <ProtectedRoute path="/twilio-content">
+            <TwilioContentTemplate />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/whatsapp-template-test">
-        <ProtectedRoute path="/whatsapp-template-test">
-          <WhatsAppTemplateTest />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/whatsapp-template-test">
+          <ProtectedRoute path="/whatsapp-template-test">
+            <WhatsAppTemplateTest />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/whatsapp-webhooks">
-        <ProtectedRoute path="/whatsapp-webhooks">
-          <WhatsAppWebhooks />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/whatsapp-webhooks">
+          <ProtectedRoute path="/whatsapp-webhooks">
+            <WhatsAppWebhooks />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/system-monitoring">
-        <ProtectedRoute path="/system-monitoring">
-          <SystemMonitoring />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/system-monitoring">
+          <ProtectedRoute path="/system-monitoring">
+            <SystemMonitoring />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/ai-agent">
-        <ProtectedRoute path="/ai-agent">
-          <AiAgent />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/ai-agent">
+          <ProtectedRoute path="/ai-agent">
+            <AiAgent />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/ai-agent-settings">
-        <ProtectedRoute path="/ai-agent-settings">
-          <AiAgentSettings />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/ai-agent-settings">
+          <ProtectedRoute path="/ai-agent-settings">
+            <AiAgentSettings />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/factory-simulation">
-        <ProtectedRoute path="/factory-simulation">
-          <FactorySimulation3D />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/factory-simulation">
+          <ProtectedRoute path="/factory-simulation">
+            <FactorySimulation3D />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/display-screen">
-        <DisplayScreen />
-      </Route>
+        <Route path="/display-screen">
+          <DisplayScreen />
+        </Route>
 
-      <Route path="/display-control">
-        <ProtectedRoute path="/display-control">
-          <DisplayControlPanel />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/display-control">
+          <ProtectedRoute path="/display-control">
+            <DisplayControlPanel />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/factory-floor">
-        <ProtectedRoute path="/factory-floor">
-          <FactoryFloor />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/factory-floor">
+          <ProtectedRoute path="/factory-floor">
+            <FactoryFloor />
+          </ProtectedRoute>
+        </Route>
 
-      <Route path="/material-mixing">
-        <ProtectedRoute path="/material-mixing">
-          <MaterialMixing />
-        </ProtectedRoute>
-      </Route>
+        <Route path="/material-mixing">
+          <ProtectedRoute path="/material-mixing">
+            <MaterialMixing />
+          </ProtectedRoute>
+        </Route>
 
-      <Route>
-        <NotFound />
-      </Route>
-    </Switch>
+        <Route>
+          <NotFound />
+        </Route>
+      </Switch>
+    </Suspense>
   );
 }
 

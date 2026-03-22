@@ -51,7 +51,7 @@ export async function editImages(
   const imageBytes = Buffer.from(imageBase64, "base64");
 
   if (outputPath) {
-    fs.writeFileSync(outputPath, imageBytes);
+    await fs.promises.writeFile(outputPath, imageBytes);
   }
 
   return imageBytes;

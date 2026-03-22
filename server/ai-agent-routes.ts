@@ -2404,12 +2404,14 @@ export function registerAiAgentRoutes(app: Express): void {
     const file = req.file;
     const filePath = file?.path;
     
-    const cleanupFile = () => {
-      if (filePath && fs.existsSync(filePath)) {
+    const cleanupFile = async () => {
+      if (filePath) {
         try {
-          fs.unlinkSync(filePath);
-        } catch (e) {
-          console.error("Failed to cleanup temp file:", e);
+          await fs.promises.unlink(filePath);
+        } catch (e: any) {
+          if (e.code !== 'ENOENT') {
+            console.error("Failed to cleanup temp file:", e);
+          }
         }
       }
     };
@@ -2422,7 +2424,7 @@ export function registerAiAgentRoutes(app: Express): void {
       let content = "";
 
       if (file.mimetype.startsWith("image/")) {
-        const imageBuffer = fs.readFileSync(filePath!);
+        const imageBuffer = await fs.promises.readFile(filePath!);
         const base64Image = imageBuffer.toString("base64");
         const imageUrl = `data:${file.mimetype};base64,${base64Image}`;
         
@@ -2442,7 +2444,7 @@ export function registerAiAgentRoutes(app: Express): void {
         content = visionResponse.choices[0]?.message?.content || "لم يتم التعرف على محتوى الصورة";
         
       } else if (file.mimetype === "text/plain" || file.mimetype === "text/csv") {
-        content = fs.readFileSync(filePath!, "utf-8");
+        content = await fs.promises.readFile(filePath!, "utf-8");
         
       } else if (file.mimetype.includes("spreadsheet") || file.mimetype.includes("excel")) {
         const workbook = new XLSX.Workbook();
@@ -2470,7 +2472,7 @@ export function registerAiAgentRoutes(app: Express): void {
         content = `ملف PDF تم رفعه: ${file.originalname}. لقراءة محتوى PDF، يرجى استخدام أداة متخصصة.`;
       }
 
-      cleanupFile();
+      await cleanupFile();
 
       res.json({
         success: true,
@@ -2480,7 +2482,7 @@ export function registerAiAgentRoutes(app: Express): void {
         content: content.substring(0, 10000)
       });
     } catch (error) {
-      cleanupFile();
+      await cleanupFile();
       console.error("File upload error:", error);
       res.status(500).json({ error: "فشل في معالجة الملف" });
     }
@@ -2491,12 +2493,14 @@ export function registerAiAgentRoutes(app: Express): void {
     const file = req.file;
     const filePath = file?.path;
     
-    const cleanupFile = () => {
-      if (filePath && fs.existsSync(filePath)) {
+    const cleanupFile = async () => {
+      if (filePath) {
         try {
-          fs.unlinkSync(filePath);
-        } catch (e) {
-          console.error("Failed to cleanup temp audio file:", e);
+          await fs.promises.unlink(filePath);
+        } catch (e: any) {
+          if (e.code !== 'ENOENT') {
+            console.error("Failed to cleanup temp audio file:", e);
+          }
         }
       }
     };
@@ -2509,14 +2513,14 @@ export function registerAiAgentRoutes(app: Express): void {
       // التحقق من أن الملف صوتي
       const audioTypes = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/webm", "audio/m4a", "video/webm", "video/mp4"];
       if (!audioTypes.includes(file.mimetype)) {
-        cleanupFile();
+        await cleanupFile();
         return res.status(400).json({ error: "نوع الملف غير مدعوم. يرجى رفع ملف صوتي" });
       }
 
       console.log(`Transcribing audio file: ${file.originalname}, type: ${file.mimetype}, size: ${file.size}`);
 
       // استخدام OpenAI Whisper لتحويل الصوت إلى نص
-      const audioBuffer = fs.readFileSync(filePath!);
+      const audioBuffer = await fs.promises.readFile(filePath!);
       const audioFile = new File([audioBuffer], file.originalname, { type: file.mimetype });
       
       const transcription = await openai.audio.transcriptions.create({
@@ -2526,7 +2530,7 @@ export function registerAiAgentRoutes(app: Express): void {
         response_format: "text"
       });
 
-      cleanupFile();
+      await cleanupFile();
 
       console.log(`Transcription successful: ${transcription.substring(0, 100)}...`);
 
@@ -2537,7 +2541,7 @@ export function registerAiAgentRoutes(app: Express): void {
         duration_hint: "تم تحويل الصوت بنجاح"
       });
     } catch (error: any) {
-      cleanupFile();
+      await cleanupFile();
       console.error("Audio transcription error:", error);
       res.status(500).json({ 
         error: "فشل في تحويل الصوت إلى نص",

@@ -90,7 +90,7 @@ async function streamToBuffer(stream: any): Promise<Buffer> {
 }
 
 async function mergeTemplateData(templatePath: string, data: Record<string, string>): Promise<Buffer> {
-  const templateBuf = fs.readFileSync(templatePath);
+  const templateBuf = await fs.promises.readFile(templatePath);
   const zip = await JSZip.loadAsync(templateBuf);
 
   const xmlFiles = ["word/document.xml", "word/header1.xml", "word/header2.xml", "word/header3.xml", "word/footer1.xml", "word/footer2.xml", "word/footer3.xml"];
@@ -132,7 +132,9 @@ export async function generateQuotePdfWithAdobe(quoteId: number): Promise<Buffer
   const items = await db.select().from(quote_items).where(eq(quote_items.quote_id, quoteId)).orderBy(quote_items.line_number);
 
   const templatePath = path.join(process.cwd(), "server", "services", "adobe-pdf", "templates", "quote-template-ar.docx");
-  if (!fs.existsSync(templatePath)) {
+  try {
+    await fs.promises.access(templatePath);
+  } catch {
     throw new Error(`Arabic quote template not found at: ${templatePath}`);
   }
 
@@ -144,7 +146,7 @@ export async function generateQuotePdfWithAdobe(quoteId: number): Promise<Buffer
 
   try {
     const mergedDocx = await mergeTemplateData(templatePath, templateData);
-    fs.writeFileSync(tempDocx, mergedDocx);
+    await fs.promises.writeFile(tempDocx, mergedDocx);
     console.log(`📝 Template merged (${(mergedDocx.length / 1024).toFixed(1)} KB), converting to PDF...`);
 
     const credentials = new ServicePrincipalCredentials({
@@ -176,12 +178,12 @@ export async function generateQuotePdfWithAdobe(quoteId: number): Promise<Buffer
     const streamAsset = await pdfServices.getContent({ asset: resultAsset });
     const pdfBuffer = await streamToBuffer(streamAsset.readStream);
 
-    if (fs.existsSync(tempDocx)) fs.unlinkSync(tempDocx);
+    await fs.promises.unlink(tempDocx).catch(() => {});
 
     console.log(`✅ Arabic template PDF generated successfully for quote: ${quoteId} (${(pdfBuffer.length / 1024).toFixed(1)} KB)`);
     return pdfBuffer;
   } catch (error) {
-    if (fs.existsSync(tempDocx)) fs.unlinkSync(tempDocx);
+    await fs.promises.unlink(tempDocx).catch(() => {});
     console.error("Adobe PDF generation error:", error);
     throw error;
   }
