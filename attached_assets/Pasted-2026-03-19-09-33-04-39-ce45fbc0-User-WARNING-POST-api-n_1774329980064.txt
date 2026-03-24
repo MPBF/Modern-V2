@@ -1,0 +1,178 @@
+2026-03-19 09:33:04.39
+ce45fbc0
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 728ms
+2026-03-19 10:31:59.57
+f5b26a00
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 763ms
+2026-03-19 19:25:23.16
+792a8212
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 1120ms
+2026-03-19 20:10:51.71
+792a8212
+User
+⚠️ [CRITICAL] POST /api/notifications/webhook/meta took 2733ms
+2026-03-19 20:22:15.10
+792a8212
+User
+⚠️ [WARNING] POST /api/login took 1086ms
+2026-03-19 20:31:37.15
+792a8212
+User
+⚠️ [CRITICAL] POST /api/notifications/webhook/meta took 2815ms
+2026-03-19 21:12:39.35
+792a8212
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 741ms
+2026-03-20 00:15:21.09
+792a8212
+User
+}
+2026-03-20 00:15:21.09
+792a8212
+User
+"message": "Error validating access token=[REDACTED] has expired on Thursday, 19-Mar-26 01:00:00 PDT. The current time is Thursday, 19-Mar-26 14:15:20 PDT.",
+2026-03-20 00:15:21.09
+792a8212
+User
+[2026-03-19T21:15:21.091Z] [ERROR] خطأ في إرسال رسالة واتس اب عبر Meta API {
+2026-03-20 00:15:21.09
+792a8212
+User
+"stack": "Error: Error validating access token=[REDACTED] has expired on Thursday, 19-Mar-26 01:00:00 PDT. The current time is Thursday, 19-Mar-26 14:15:20 PDT.\n at MetaWhatsAppService.sendTextMessage (file:///home/runner/workspace/dist/index.js:8896:19)\n at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n at async file:///home/runner/workspace/dist/index.js:19132:13"
+2026-03-20 00:15:21.09
+792a8212
+User
+"name": "Error",
+2026-03-20 05:07:11.90
+792a8212
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 739ms
+2026-03-20 10:08:51.22
+792a8212
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 890ms
+2026-03-20 11:49:25.17
+792a8212
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 789ms
+2026-03-20 17:33:53.95
+792a8212
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 522ms
+2026-03-20 19:56:02.35
+d1fb8b82
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 1386ms
+2026-03-20 21:09:47.43
+d1fb8b82
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 1268ms
+2026-03-22 06:39:03.18
+d1fb8b82
+User
+⚠️ [WARNING] POST /api/login took 955ms
+2026-03-22 06:40:09.29
+d1fb8b82
+User
+⚠️ [WARNING] GET /api/sms/status took 757ms
+2026-03-22 06:40:10.20
+d1fb8b82
+User
+⚠️ [WARNING] GET /api/sms/senders took 586ms
+2026-03-22 07:07:59.15
+d1fb8b82
+User
+⚠️ [WARNING] GET /api/sms/status took 593ms
+2026-03-22 07:08:16.86
+d1fb8b82
+User
+⚠️ [WARNING] GET /api/sms/status took 530ms
+2026-03-22 07:08:17.73
+d1fb8b82
+User
+⚠️ [WARNING] GET /api/sms/balance took 537ms
+2026-03-22 07:08:44.76
+d1fb8b82
+User
+⚠️ [WARNING] POST /api/sms/test took 586ms
+2026-03-22 08:10:00.79
+d1fb8b82
+User
+⚠️ [WARNING] GET /api/monitoring/code-health took 568ms
+2026-03-22 10:00:11.32
+d1fb8b82
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 843ms
+2026-03-22 10:06:20.68
+d1fb8b82
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 765ms
+2026-03-22 15:14:52.53
+63f148ed
+User
+⚠️ [WARNING] POST /api/mobile/login took 1404ms
+2026-03-22 20:41:12.89
+03d9ada3
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 769ms
+2026-03-23 13:07:47.84
+03d9ada3
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 826ms
+2026-03-23 17:25:44.00
+03d9ada3
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 1379ms
+2026-03-24 01:49:58.62
+03d9ada3
+User
+⚠️ [WARNING] POST /api/notifications/webhook/meta took 767ms
+2026-03-24 08:24:09.29
+60f4caf8
+User
+⚠️ [WARNING] POST /api/database/backup took 659ms
+2026-03-24 08:24:39.93
+60f4caf8
+User
+"name": "Error",
+2026-03-24 08:24:39.93
+60f4caf8
+User
+[2026-03-24T05:24:39.932Z] [ERROR] خطأ في إرسال رسالة واتس اب عبر Meta API {
+2026-03-24 08:24:39.93
+60f4caf8
+User
+}
+2026-03-24 08:24:39.93
+60f4caf8
+User
+"stack": "Error: Error validating access token=[REDACTED] has expired on Sunday, 22-Mar-26 12:00:00 PDT. The current time is Monday, 23-Mar-26 22:24:39 PDT.\n at MetaWhatsAppService.sendTextMessage (file:///home/runner/workspace/dist/index.js:9437:19)\n at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n at async file:///home/runner/workspace/dist/index.js:14510:20"
+2026-03-24 08:24:39.93
+60f4caf8
+User
+"message": "Error validating access token=[REDACTED] has expired on Sunday, 22-Mar-26 12:00:00 PDT. The current time is Monday, 23-Mar-26 22:24:39 PDT.",
+2026-03-24 08:25:03.40
+60f4caf8
+User
+"name": "Error",
+2026-03-24 08:25:03.40
+60f4caf8
+User
+}
+2026-03-24 08:25:03.40
+60f4caf8
+User
+[2026-03-24T05:25:03.403Z] [ERROR] خطأ في إرسال رسالة واتس اب عبر Meta API {
+2026-03-24 08:25:03.40
+60f4caf8
+User
+"message": "Error validating access token=[REDACTED] has expired on Sunday, 22-Mar-26 12:00:00 PDT. The current time is Monday, 23-Mar-26 22:25:03 PDT.",
+2026-03-24 08:25:03.40
+60f4caf8
+User
+"stack": "Error: Error validating access token=[REDACTED] has expired on Sunday, 22-Mar-26 12:00:00 PDT. The current time is Monday, 23-Mar-26 22:25:03 PDT.\n at MetaWhatsAppService.sendTextMessage (file:///home/runner/workspace/dist/index.js:9437:19)\n at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n at async file:///home/runner/workspace/dist/index.js:14510:20"
+Wrap
+Colors
