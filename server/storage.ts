@@ -5018,10 +5018,39 @@ export class DatabaseStorage implements IStorage {
     const [userCount] = await db.select({ count: count() }).from(users);
     const [orderCount] = await db.select({ count: count() }).from(orders);
     const [rollCount] = await db.select({ count: count() }).from(rolls);
+
+    let tableCount = 0;
+    let totalRecords = 0;
+    let databaseSize = "---";
+    try {
+      const tableResult = await db.execute(sql.raw(
+        `SELECT count(*) as cnt FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'`
+      ));
+      tableCount = Number(tableResult.rows[0]?.cnt) || 0;
+    } catch {}
+
+    try {
+      const recordResult = await db.execute(sql.raw(
+        `SELECT SUM(n_live_tup) as cnt FROM pg_stat_user_tables`
+      ));
+      totalRecords = Number(recordResult.rows[0]?.cnt) || 0;
+    } catch {}
+
+    try {
+      const sizeResult = await db.execute(sql.raw(
+        `SELECT pg_size_pretty(pg_database_size(current_database())) as size`
+      ));
+      databaseSize = (sizeResult.rows[0]?.size as string) || "---";
+    } catch {}
+
     return {
       users: userCount?.count || 0,
       orders: orderCount?.count || 0,
       rolls: rollCount?.count || 0,
+      tableCount,
+      totalRecords,
+      databaseSize,
+      lastBackup: "---",
     };
   }
 
