@@ -26,6 +26,9 @@ async function parseExcelBuffer(buffer: Buffer): Promise<Record<string, any>[]> 
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer as unknown as ArrayBuffer);
   const worksheet = workbook.worksheets[0];
+  if (!worksheet) {
+    throw Object.assign(new Error("الملف لا يحتوي على أوراق عمل"), { statusCode: 400 });
+  }
   const rows: Record<string, any>[] = [];
   const headers: string[] = [];
   worksheet.eachRow((row, rowNumber) => {
@@ -3202,7 +3205,10 @@ Do not include quotes or explanations.`;
 
   app.put("/api/customers/:id", requireAuth, requirePermission('manage_customers', 'manage_definitions'), async (req, res) => {
     try {
-      const id = req.params.id;
+      const id = parseInt(req.params.id);
+      if (isNaN(id) || id <= 0) {
+        return res.status(400).json({ message: "معرف العميل غير صحيح" });
+      }
       const validatedData = insertCustomerSchema.parse(req.body);
       
       // Convert empty strings to null for fields with length constraints
@@ -4581,7 +4587,19 @@ Do not include quotes or explanations.`;
 
   app.post("/api/roles", requireAuth, requirePermission('manage_roles'), async (req: AuthRequest, res) => {
     try {
-      const role = await storage.createRole(req.body);
+      const roleSchema = z.object({
+        name: z.string().min(1).max(50),
+        name_ar: z.string().max(100).optional().nullable(),
+        permissions: z.array(z.string()).optional().nullable(),
+      });
+      const parseResult = roleSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({
+          message: "بيانات الدور غير صحيحة",
+          errors: parseResult.error.errors,
+        });
+      }
+      const role = await storage.createRole(parseResult.data);
       invalidateRolesCache();
       res.json(role);
     } catch (error) {
@@ -4608,7 +4626,19 @@ Do not include quotes or explanations.`;
         return res.status(400).json({ message: "بيانات التحديث مطلوبة" });
       }
 
-      const role = await storage.updateRole(id, req.body);
+      const roleUpdateSchema = z.object({
+        name: z.string().min(1).max(50).optional(),
+        name_ar: z.string().max(100).optional().nullable(),
+        permissions: z.array(z.string()).optional().nullable(),
+      });
+      const parseResult = roleUpdateSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({
+          message: "بيانات الدور غير صحيحة",
+          errors: parseResult.error.errors,
+        });
+      }
+      const role = await storage.updateRole(id, parseResult.data);
       if (!role) {
         return res.status(404).json({ message: "الدور غير موجود" });
       }
