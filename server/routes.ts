@@ -88,6 +88,8 @@ import {
   insertProductionSettingsSchema,
   insertCustomerProductSchema,
   insertMasterBatchColorSchema,
+  insertQualityIssueSchema,
+  insertQuickNoteSchema,
   customers,
   customer_products,
   locations,
@@ -3818,7 +3820,11 @@ Do not include quotes or explanations.`;
 
   app.post("/api/quality-issues", requireAuth, requirePermission('manage_quality'), async (req: AuthRequest, res) => {
     try {
-      const issue = await storage.createQualityIssue(req.body);
+      const parseResult = insertQualityIssueSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: parseResult.error.errors });
+      }
+      const issue = await storage.createQualityIssue(parseResult.data);
       res.status(201).json({ success: true, data: issue });
     } catch (error: any) {
       console.error("Error creating quality issue:", error);
@@ -4162,7 +4168,11 @@ Do not include quotes or explanations.`;
 
   app.post("/api/consumable-parts", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
-      const consumablePart = await storage.createConsumablePart(req.body);
+      const parseResult = insertConsumablePartSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: parseResult.error.errors });
+      }
+      const consumablePart = await storage.createConsumablePart(parseResult.data);
       res.json(consumablePart);
     } catch (error) {
       console.error("Error creating consumable part:", error);
@@ -5735,7 +5745,11 @@ Do not include quotes or explanations.`;
 
   app.post("/api/orders", requireAuth, requirePermission('manage_orders'), async (req, res) => {
     try {
-      const order = await storage.createOrder(req.body);
+      const parseResult = insertNewOrderSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ message: "بيانات الطلب غير صحيحة", errors: parseResult.error.errors });
+      }
+      const order = await storage.createOrder(parseResult.data);
       res.status(201).json(order);
     } catch (error) {
       console.error("Error creating order:", error);

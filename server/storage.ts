@@ -2360,8 +2360,17 @@ export class DatabaseStorage implements IStorage {
       if (v.item_id && v.quantity) {
         const qty = parseFloat(String(v.quantity));
         const locId = v.location_id || null;
+        const stockCheck = await tx.execute(sql`
+          SELECT current_stock FROM inventory
+          WHERE item_id = ${v.item_id} AND (location_id = ${locId} OR (location_id IS NULL AND ${locId} IS NULL))
+          LIMIT 1
+        `);
+        const currentStock = parseFloat(String((stockCheck.rows as any[])[0]?.current_stock || '0'));
+        if (currentStock < qty) {
+          throw new Error(`لا يمكن حذف سند الاستلام: المخزون الحالي (${currentStock}) أقل من الكمية المسجلة (${qty}) للصنف ${v.item_id}`);
+        }
         await tx.execute(sql`
-          UPDATE inventory SET current_stock = GREATEST(0, current_stock - ${qty}), last_updated = NOW()
+          UPDATE inventory SET current_stock = current_stock - ${qty}, last_updated = NOW()
           WHERE item_id = ${v.item_id} AND (location_id = ${locId} OR (location_id IS NULL AND ${locId} IS NULL))
         `);
       }
@@ -2404,8 +2413,11 @@ export class DatabaseStorage implements IStorage {
       const [v] = await tx.insert(raw_material_vouchers_out).values(data).returning();
       if (v.item_id && v.quantity) {
         const qty = parseFloat(String(v.quantity));
+        const locId = v.location_id || null;
         const stockCheck = await tx.execute(sql`
-          SELECT current_stock FROM inventory WHERE item_id = ${v.item_id} LIMIT 1
+          SELECT current_stock FROM inventory
+          WHERE item_id = ${v.item_id} AND (location_id = ${locId} OR (location_id IS NULL AND ${locId} IS NULL))
+          LIMIT 1
         `);
         const currentStock = parseFloat(String((stockCheck.rows as any[])[0]?.current_stock || '0'));
         if (currentStock < qty) {
@@ -2413,7 +2425,7 @@ export class DatabaseStorage implements IStorage {
         }
         await tx.execute(sql`
           UPDATE inventory SET current_stock = current_stock - ${qty}, last_updated = NOW()
-          WHERE item_id = ${v.item_id}
+          WHERE item_id = ${v.item_id} AND (location_id = ${locId} OR (location_id IS NULL AND ${locId} IS NULL))
         `);
       }
       return v;
@@ -2426,9 +2438,10 @@ export class DatabaseStorage implements IStorage {
       if (!v) throw new Error("السند غير موجود");
       if (v.item_id && v.quantity) {
         const qty = parseFloat(String(v.quantity));
+        const locId = v.location_id || null;
         await tx.execute(sql`
           UPDATE inventory SET current_stock = current_stock + ${qty}, last_updated = NOW()
-          WHERE item_id = ${v.item_id}
+          WHERE item_id = ${v.item_id} AND (location_id = ${locId} OR (location_id IS NULL AND ${locId} IS NULL))
         `);
       }
       await tx.delete(raw_material_vouchers_out).where(eq(raw_material_vouchers_out.id, id));
