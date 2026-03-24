@@ -1,0 +1,167 @@
+  at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async Promise.all (index 27)
+    at async DatabaseStorage.createDatabaseBackup (/home/runner/workspace/server/storage.ts:4353:9)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:6032:22) {
+  length: 114,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '33',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3727',
+  routine: 'errorMissingColumn'
+}
+4:23:41 AM [express] POST /api/database/backup 500 in 232ms :: {"message":"خطأ في إنشاء النسخة الاحت…
+🔄 Session extended for user 1 on /api/database/backup
+Error creating database backup: error: column "title_template" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async Promise.all (index 27)
+    at async DatabaseStorage.createDatabaseBackup (/home/runner/workspace/server/storage.ts:4353:9)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:6032:22) {
+  length: 114,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '33',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3727',
+  routine: 'errorMissingColumn'
+}
+4:23:50 AM [express] POST /api/database/backup 500 in 135ms :: {"message":"خطأ في إنشاء النسخة الاحت…
+🔄 Session extended for user 1 on /api/database/backup
+Error creating database backup: error: column "title_template" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async Promise.all (index 27)
+    at async DatabaseStorage.createDatabaseBackup (/home/runner/workspace/server/storage.ts:4353:9)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:6032:22) {
+  length: 114,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '33',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3727',
+  routine: 'errorMissingColumn'
+}
+4:23:51 AM [express] POST /api/database/backup 500 in 73ms :: {"message":"خطأ في إنشاء النسخة الاحتي…
+🔄 Session extended for user 1 on /api/database/backup
+Error creating database backup: error: column "title_template" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async Promise.all (index 27)
+    at async DatabaseStorage.createDatabaseBackup (/home/runner/workspace/server/storage.ts:4353:9)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:6032:22) {
+  length: 114,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '33',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3727',
+  routine: 'errorMissingColumn'
+}
+4:23:52 AM [express] POST /api/database/backup 500 in 75ms :: {"message":"خطأ في إنشاء النسخة الاحتي…
+🔄 Session extended for user 1 on /api/database/backup
+Error creating database backup: error: column "title_template" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async Promise.all (index 27)
+    at async DatabaseStorage.createDatabaseBackup (/home/runner/workspace/server/storage.ts:4353:9)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:6032:22) {
+  length: 114,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '33',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3727',
+  routine: 'errorMissingColumn'
+}
+4:23:52 AM [express] POST /api/database/backup 500 in 97ms :: {"message":"خطأ في إنشاء النسخة الاحتي…
+🔄 Session extended for user 1 on /api/database/backup
+Error creating database backup: error: column "title_template" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async Promise.all (index 27)
+    at async DatabaseStorage.createDatabaseBackup (/home/runner/workspace/server/storage.ts:4353:9)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:6032:22) {
+  length: 114,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '33',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3727',
+  routine: 'errorMissingColumn'
+}
+4:23:53 AM [express] POST /api/database/backup 500 in 82ms :: {"message":"خطأ في إنشاء النسخة الاحتي…
+🔄 Session extended for user 1 on /api/database/optimize
+4:23:58 AM [express] POST /api/database/optimize 200 in 17ms :: {"message":"تم تحسين الجداول بنجاح",…
+🔄 Session extended for user 1 on /api/database/stats
+4:23:58 AM [express] GET /api/database/stats 304 in 13ms :: {"users":64,"orders":2,"rolls":6}
+🔄 Session extended for user 1 on /api/database/integrity-check
+4:24:00 AM [express] POST /api/database/integrity-check 200 in 8ms :: {"message":"تم فحص تكامل قاعدة…
+🔄 Session extended for user 1 on /api/database/stats
+4:24:00 AM [express] GET /api/database/stats 304 in 7ms :: {"users":64,"orders":2,"rolls":6}

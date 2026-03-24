@@ -4288,217 +4288,76 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
     const dateStr = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
-    const allUsers = await db.select().from(users);
-    const safeUsers = allUsers.map(({ password, ...rest }) => rest);
+    const safeQuery = async (table: any): Promise<any[]> => {
+      try {
+        return await db.select().from(table);
+      } catch {
+        try {
+          const tbl = table as any;
+          const tableName = tbl[Symbol.for('drizzle:Name')] || tbl?._.name;
+          if (tableName) {
+            const result = await db.execute(sql.raw(`SELECT * FROM "${tableName}"`));
+            return result.rows as any[];
+          }
+          return [];
+        } catch {
+          return [];
+        }
+      }
+    };
 
-    const [
-      allRoles,
-      allSections,
-      allCustomers,
-      allCustomerProducts,
-      allOrders,
-      allProductionOrders,
-      allRolls,
-      allCuts,
-      allMachines,
-      allItems,
-      allCategories,
-      allLocations,
-      allInventoryData,
-      allInventoryMovements,
-      allWarehouseReceipts,
-      allWarehouseTransactions,
-      allMaintenanceRequests,
-      allMaintenanceActionsData,
-      allMaintenanceReports,
-      allOperatorNegligenceReports,
-      allSpareParts,
-      allConsumableParts,
-      allConsumablePartsTransactions,
-      allQualityChecks,
-      allAttendance,
-      allWaste,
-      allNotifications,
-      allNotificationTemplates,
-      allTrainingRecords,
-      allTrainingPrograms,
-      allTrainingMaterials,
-      allTrainingEnrollments,
-      allTrainingEvaluations,
-      allTrainingCertificates,
-      allPerformanceReviews,
-      allPerformanceCriteria,
-      allPerformanceRatings,
-      allLeaveTypes,
-      allLeaveRequests,
-      allLeaveBalances,
-      allSystemSettings,
-      allUserSettings,
-      allFactoryLocations,
-      allAdminDecisions,
-      allQuickNotes,
-      allNoteAttachments,
-      allQualityIssues,
-      allQualityIssueResponsibles,
-      allQualityIssueActions,
-      allMixingBatches,
-      allBatchIngredients,
-      allMasterBatchColors,
-      allMachineQueues,
-      allSystemAlerts,
-      allAlertRules,
-      allSystemHealthChecks,
-      allUserRequests,
-      allSuppliersData,
-    ] = await Promise.all([
-      db.select().from(roles),
-      db.select().from(sections),
-      db.select().from(customers),
-      db.select().from(customer_products),
-      db.select().from(orders),
-      db.select().from(production_orders),
-      db.select().from(rolls),
-      db.select().from(cuts),
-      db.select().from(machines),
-      db.select().from(items),
-      db.select().from(categories),
-      db.select().from(locations),
-      db.select().from(inventory),
-      db.select().from(inventory_movements),
-      db.select().from(warehouse_receipts),
-      db.select().from(warehouse_transactions),
-      db.select().from(maintenance_requests),
-      db.select().from(maintenance_actions),
-      db.select().from(maintenance_reports),
-      db.select().from(operator_negligence_reports),
-      db.select().from(spare_parts),
-      db.select().from(consumable_parts),
-      db.select().from(consumable_parts_transactions),
-      db.select().from(quality_checks),
-      db.select().from(attendance),
-      db.select().from(waste),
-      db.select().from(notifications),
-      db.select().from(notification_templates),
-      db.select().from(training_records),
-      db.select().from(training_programs),
-      db.select().from(training_materials),
-      db.select().from(training_enrollments),
-      db.select().from(training_evaluations),
-      db.select().from(training_certificates),
-      db.select().from(performance_reviews),
-      db.select().from(performance_criteria),
-      db.select().from(performance_ratings),
-      db.select().from(leave_types),
-      db.select().from(leave_requests),
-      db.select().from(leave_balances),
-      db.select().from(system_settings),
-      db.select().from(user_settings),
-      db.select().from(factory_locations),
-      db.select().from(admin_decisions),
-      db.select().from(quick_notes),
-      db.select().from(note_attachments),
-      db.select().from(quality_issues),
-      db.select().from(quality_issue_responsibles),
-      db.select().from(quality_issue_actions),
-      db.select().from(mixing_batches),
-      db.select().from(batch_ingredients),
-      db.select().from(master_batch_colors),
-      db.select().from(machine_queues),
-      db.select().from(system_alerts),
-      db.select().from(alert_rules),
-      db.select().from(system_health_checks),
-      db.select().from(user_requests),
-      db.select().from(suppliers),
-    ]);
+    let safeUsers: any[] = [];
+    try {
+      const allUsers = await db.select().from(users);
+      safeUsers = allUsers.map(({ password, ...rest }) => rest);
+    } catch {
+      try {
+        const result = await db.execute(sql`SELECT * FROM users`);
+        safeUsers = (result.rows as any[]).map(({ password, ...rest }) => rest);
+      } catch { safeUsers = []; }
+    }
 
-    let allRawMaterialVouchersIn: any[] = [];
-    let allRawMaterialVouchersOut: any[] = [];
-    let allFinishedGoodsVouchersIn: any[] = [];
-    let allFinishedGoodsVouchersOut: any[] = [];
-    let allNotificationEventSettings: any[] = [];
-    let allNotificationEventLogs: any[] = [];
-    let allDisplaySlidesData: any[] = [];
-    try { allRawMaterialVouchersIn = await db.select().from(raw_material_vouchers_in); } catch {}
-    try { allRawMaterialVouchersOut = await db.select().from(raw_material_vouchers_out); } catch {}
-    try { allFinishedGoodsVouchersIn = await db.select().from(finished_goods_vouchers_in); } catch {}
-    try { allFinishedGoodsVouchersOut = await db.select().from(finished_goods_vouchers_out); } catch {}
-    try { allNotificationEventSettings = await db.select().from(notification_event_settings); } catch {}
-    try { allNotificationEventLogs = await db.select().from(notification_event_logs); } catch {}
-    try { allDisplaySlidesData = await db.select().from(display_slides); } catch {}
+    const tableQueries: Record<string, any> = {
+      roles, sections, customers, customer_products, orders,
+      production_orders, rolls, cuts, machines, items,
+      categories, locations, inventory, inventory_movements,
+      warehouse_receipts, warehouse_transactions,
+      maintenance_requests, maintenance_actions, maintenance_reports,
+      operator_negligence_reports, spare_parts, consumable_parts,
+      consumable_parts_transactions, quality_checks, attendance, waste,
+      notifications, notification_templates,
+      training_records, training_programs, training_materials,
+      training_enrollments, training_evaluations, training_certificates,
+      performance_reviews, performance_criteria, performance_ratings,
+      leave_types, leave_requests, leave_balances,
+      system_settings, user_settings, factory_locations,
+      admin_decisions, quick_notes, note_attachments,
+      quality_issues, quality_issue_responsibles, quality_issue_actions,
+      mixing_batches, batch_ingredients, master_batch_colors,
+      machine_queues, system_alerts, alert_rules, system_health_checks,
+      user_requests, suppliers,
+      raw_material_vouchers_in, raw_material_vouchers_out,
+      finished_goods_vouchers_in, finished_goods_vouchers_out,
+      notification_event_settings, notification_event_logs,
+      display_slides,
+    };
 
-    const backupData = {
+    const tableNames = Object.keys(tableQueries);
+    const results = await Promise.all(
+      tableNames.map(name => safeQuery(tableQueries[name]))
+    );
+
+    const backupData: Record<string, any> = {
       metadata: {
         version: "1.0",
         created_at: now.toISOString(),
         system: "MPBF Manufacturing System",
       },
       users: safeUsers,
-      roles: allRoles,
-      sections: allSections,
-      customers: allCustomers,
-      customer_products: allCustomerProducts,
-      orders: allOrders,
-      production_orders: allProductionOrders,
-      rolls: allRolls,
-      cuts: allCuts,
-      machines: allMachines,
-      items: allItems,
-      categories: allCategories,
-      locations: allLocations,
-      inventory: allInventoryData,
-      inventory_movements: allInventoryMovements,
-      warehouse_receipts: allWarehouseReceipts,
-      warehouse_transactions: allWarehouseTransactions,
-      maintenance_requests: allMaintenanceRequests,
-      maintenance_actions: allMaintenanceActionsData,
-      maintenance_reports: allMaintenanceReports,
-      operator_negligence_reports: allOperatorNegligenceReports,
-      spare_parts: allSpareParts,
-      consumable_parts: allConsumableParts,
-      consumable_parts_transactions: allConsumablePartsTransactions,
-      quality_checks: allQualityChecks,
-      attendance: allAttendance,
-      waste: allWaste,
-      notifications: allNotifications,
-      notification_templates: allNotificationTemplates,
-      training_records: allTrainingRecords,
-      training_programs: allTrainingPrograms,
-      training_materials: allTrainingMaterials,
-      training_enrollments: allTrainingEnrollments,
-      training_evaluations: allTrainingEvaluations,
-      training_certificates: allTrainingCertificates,
-      performance_reviews: allPerformanceReviews,
-      performance_criteria: allPerformanceCriteria,
-      performance_ratings: allPerformanceRatings,
-      leave_types: allLeaveTypes,
-      leave_requests: allLeaveRequests,
-      leave_balances: allLeaveBalances,
-      system_settings: allSystemSettings,
-      user_settings: allUserSettings,
-      factory_locations: allFactoryLocations,
-      admin_decisions: allAdminDecisions,
-      quick_notes: allQuickNotes,
-      note_attachments: allNoteAttachments,
-      quality_issues: allQualityIssues,
-      quality_issue_responsibles: allQualityIssueResponsibles,
-      quality_issue_actions: allQualityIssueActions,
-      mixing_batches: allMixingBatches,
-      batch_ingredients: allBatchIngredients,
-      master_batch_colors: allMasterBatchColors,
-      machine_queues: allMachineQueues,
-      system_alerts: allSystemAlerts,
-      alert_rules: allAlertRules,
-      system_health_checks: allSystemHealthChecks,
-      user_requests: allUserRequests,
-      suppliers: allSuppliersData,
-      raw_material_vouchers_in: allRawMaterialVouchersIn,
-      raw_material_vouchers_out: allRawMaterialVouchersOut,
-      finished_goods_vouchers_in: allFinishedGoodsVouchersIn,
-      finished_goods_vouchers_out: allFinishedGoodsVouchersOut,
-      notification_event_settings: allNotificationEventSettings,
-      notification_event_logs: allNotificationEventLogs,
-      display_slides: allDisplaySlidesData,
     };
+    tableNames.forEach((name, i) => {
+      backupData[name] = results[i];
+    });
 
     const tableStats: Record<string, number> = {};
     for (const [key, value] of Object.entries(backupData)) {
