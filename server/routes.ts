@@ -90,6 +90,20 @@ import {
   insertMasterBatchColorSchema,
   insertQualityIssueSchema,
   insertQuickNoteSchema,
+  insertNotificationTemplateSchema,
+  insertTrainingRecordSchema,
+  insertAdminDecisionSchema,
+  insertTrainingProgramSchema,
+  insertTrainingMaterialSchema,
+  insertTrainingEnrollmentSchema,
+  insertTrainingEvaluationSchema,
+  insertTrainingCertificateSchema,
+  insertPerformanceReviewSchema,
+  insertPerformanceCriteriaSchema,
+  insertLeaveTypeSchema,
+  insertLeaveRequestSchema,
+  insertLeaveBalanceSchema,
+  insertSystemSettingSchema,
   customers,
   customer_products,
   locations,
@@ -1450,7 +1464,11 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // Create notification template
   app.post("/api/notification-templates", requireAuth, async (req, res) => {
     try {
-      const template = await storage.createNotificationTemplate(req.body);
+      const validation = insertNotificationTemplateSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: validation.error.errors });
+      }
+      const template = await storage.createNotificationTemplate(validation.data);
       res.json(template);
     } catch (error: any) {
       console.error("Error creating notification template:", error);
@@ -1485,15 +1503,13 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     }
   });
 
-  // Generate next order number using SQL MAX for atomicity
+  // Generate next order number using SQL MAX for atomicity (preview only)
   app.get("/api/orders/next-number", requireAuth, async (req, res) => {
     try {
-      // Prevent caching to ensure fresh order numbers
       res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
       res.setHeader("Pragma", "no-cache");
       res.setHeader("Expires", "0");
 
-      // Use SQL MAX to atomically get highest order number - prevents race conditions
       const result = await db.execute(
         sql`SELECT MAX(CAST(SUBSTRING(order_number FROM 4) AS INTEGER)) as max_num 
             FROM orders 
@@ -1526,7 +1542,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         }
 
         // Validate required fields are present
-        const { customer_id, order_number } = req.body;
+        const { customer_id } = req.body;
+        let { order_number } = req.body;
         if (!customer_id?.trim()) {
           return res.status(400).json({
             message: "معرف العميل مطلوب",
@@ -1534,14 +1551,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           });
         }
 
-        if (!order_number?.trim()) {
-          return res.status(400).json({
-            message: "رقم الطلب مطلوب",
-            success: false,
-          });
-        }
-
-        // Prepare order data with safe defaults
+        // Prepare delivery days
         let deliveryDays: number | null = null;
         if (req.body.delivery_days) {
           try {
@@ -1558,19 +1568,62 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           }
         }
 
-        const orderData = {
-          ...req.body,
-          created_by: userId,
-          delivery_days: deliveryDays,
-          customer_id: customer_id.trim(),
-          order_number: order_number.trim(),
-          notes: req.body.notes?.trim() || null,
-        };
+        // Auto-generate or validate order number, with retry on duplicate
+        const MAX_RETRIES = 3;
+        let order = null;
+        let lastError: any = null;
 
-        const validatedData = insertNewOrderSchema.parse(orderData);
-        const order = await storage.createOrder(validatedData);
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+          try {
+            if (!order_number?.trim() || attempt > 0) {
+              const result = await db.execute(
+                sql`SELECT MAX(CAST(SUBSTRING(order_number FROM 4) AS INTEGER)) as max_num 
+                    FROM orders 
+                    WHERE order_number ~ '^ORD[0-9]+$'`
+              );
+              const maxNum = (result as any).rows?.[0]?.max_num || 0;
+              order_number = `ORD${(maxNum + 1 + attempt).toString().padStart(3, "0")}`;
+            } else if (attempt === 0) {
+              const existingResult = await db.execute(
+                sql`SELECT id FROM orders WHERE order_number = ${order_number.trim()} LIMIT 1`
+              );
+              if ((existingResult as any).rows?.length > 0) {
+                return res.status(409).json({
+                  message: "رقم الطلب موجود مسبقاً. يرجى المحاولة مرة أخرى.",
+                  success: false,
+                });
+              }
+            }
+
+            const orderData = {
+              ...req.body,
+              created_by: userId,
+              delivery_days: deliveryDays,
+              customer_id: customer_id.trim(),
+              order_number: order_number.trim(),
+              notes: req.body.notes?.trim() || null,
+            };
+
+            const validatedData = insertNewOrderSchema.parse(orderData);
+            order = await storage.createOrder(validatedData);
+            break;
+          } catch (retryError: any) {
+            lastError = retryError;
+            if (retryError?.message?.includes('unique') || retryError?.message?.includes('duplicate') ||
+                retryError?.code === '23505') {
+              continue;
+            }
+            throw retryError;
+          }
+        }
 
         if (!order) {
+          if (lastError?.code === '23505') {
+            return res.status(409).json({
+              message: "تعذر توليد رقم طلب فريد. يرجى المحاولة مرة أخرى.",
+              success: false,
+            });
+          }
           return res.status(500).json({
             message: "فشل في إنشاء الطلب",
             success: false,
@@ -3656,7 +3709,11 @@ Do not include quotes or explanations.`;
 
   app.post("/api/training-records", requireAuth, async (req, res) => {
     try {
-      const trainingRecord = await storage.createTrainingRecord(req.body);
+      const validation = insertTrainingRecordSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: validation.error.errors });
+      }
+      const trainingRecord = await storage.createTrainingRecord(validation.data);
       res.json(trainingRecord);
     } catch (error) {
       res.status(400).json({ message: "بيانات غير صحيحة" });
@@ -3676,7 +3733,11 @@ Do not include quotes or explanations.`;
 
   app.post("/api/admin-decisions", requireAuth, async (req, res) => {
     try {
-      const adminDecision = await storage.createAdminDecision(req.body);
+      const validation = insertAdminDecisionSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: validation.error.errors });
+      }
+      const adminDecision = await storage.createAdminDecision(validation.data);
       res.json(adminDecision);
     } catch (error) {
       res.status(400).json({ message: "بيانات غير صحيحة" });
@@ -3718,6 +3779,12 @@ Do not include quotes or explanations.`;
 
   app.post("/api/warehouse-transactions", requireAuth, requirePermission('manage_warehouse'), async (req, res) => {
     try {
+      if (!req.body || typeof req.body !== "object") {
+        return res.status(400).json({ message: "بيانات الحركة مطلوبة" });
+      }
+      if (!req.body.item_id || !req.body.transaction_type) {
+        return res.status(400).json({ message: "معرف الصنف ونوع الحركة مطلوبان" });
+      }
       const warehouseTransaction = await storage.createWarehouseTransaction(
         req.body,
       );
@@ -3740,6 +3807,12 @@ Do not include quotes or explanations.`;
 
   app.post("/api/mixing-recipes", requireAuth, async (req, res) => {
     try {
+      if (!req.body || typeof req.body !== "object") {
+        return res.status(400).json({ message: "بيانات الوصفة مطلوبة" });
+      }
+      if (!req.body.name) {
+        return res.status(400).json({ message: "اسم الوصفة مطلوب" });
+      }
       const mixingRecipe = await storage.createMixingRecipe(req.body);
       res.json(mixingRecipe);
     } catch (error) {
@@ -4125,6 +4198,12 @@ Do not include quotes or explanations.`;
 
   app.post("/api/spare-parts", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
+      if (!req.body || typeof req.body !== "object") {
+        return res.status(400).json({ message: "بيانات قطعة الغيار مطلوبة" });
+      }
+      if (!req.body.name) {
+        return res.status(400).json({ message: "اسم قطعة الغيار مطلوب" });
+      }
       const sparePart = await storage.createSparePart(req.body);
       res.json(sparePart);
     } catch (error) {
@@ -4910,7 +4989,11 @@ Do not include quotes or explanations.`;
 
   app.post("/api/hr/training-programs", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
-      const program = await storage.createTrainingProgram(req.body);
+      const validation = insertTrainingProgramSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: validation.error.errors });
+      }
+      const program = await storage.createTrainingProgram(validation.data);
       res.json(program);
     } catch (error) {
       console.error("[API Error]", error);
@@ -5002,7 +5085,11 @@ Do not include quotes or explanations.`;
 
   app.post("/api/hr/training-materials", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
-      const material = await storage.createTrainingMaterial(req.body);
+      const validation = insertTrainingMaterialSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: validation.error.errors });
+      }
+      const material = await storage.createTrainingMaterial(validation.data);
       res.json(material);
     } catch (error) {
       console.error("[API Error]", error);
@@ -5036,7 +5123,11 @@ Do not include quotes or explanations.`;
 
   app.post("/api/hr/training-enrollments", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
-      const enrollment = await storage.createTrainingEnrollment(req.body);
+      const validation = insertTrainingEnrollmentSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: validation.error.errors });
+      }
+      const enrollment = await storage.createTrainingEnrollment(validation.data);
       res.json(enrollment);
     } catch (error) {
       console.error("[API Error]", error);
@@ -5081,7 +5172,11 @@ Do not include quotes or explanations.`;
 
   app.post("/api/hr/training-evaluations", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
-      const evaluation = await storage.createTrainingEvaluation(req.body);
+      const validation = insertTrainingEvaluationSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: validation.error.errors });
+      }
+      const evaluation = await storage.createTrainingEvaluation(validation.data);
       res.json(evaluation);
     } catch (error) {
       console.error("[API Error]", error);
@@ -5133,7 +5228,11 @@ Do not include quotes or explanations.`;
 
   app.post("/api/hr/training-certificates", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
-      const certificate = await storage.createTrainingCertificate(req.body);
+      const validation = insertTrainingCertificateSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: validation.error.errors });
+      }
+      const certificate = await storage.createTrainingCertificate(validation.data);
       res.json(certificate);
     } catch (error) {
       console.error("[API Error]", error);
@@ -5195,7 +5294,11 @@ Do not include quotes or explanations.`;
 
   app.post("/api/hr/performance-reviews", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
-      const review = await storage.createPerformanceReview(req.body);
+      const validation = insertPerformanceReviewSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: validation.error.errors });
+      }
+      const review = await storage.createPerformanceReview(validation.data);
       res.json(review);
     } catch (error) {
       console.error("[API Error]", error);
@@ -5227,7 +5330,11 @@ Do not include quotes or explanations.`;
 
   app.post("/api/hr/performance-criteria", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
-      const criteria = await storage.createPerformanceCriteria(req.body);
+      const validation = insertPerformanceCriteriaSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: validation.error.errors });
+      }
+      const criteria = await storage.createPerformanceCriteria(validation.data);
       res.json(criteria);
     } catch (error) {
       console.error("[API Error]", error);
@@ -5248,7 +5355,11 @@ Do not include quotes or explanations.`;
 
   app.post("/api/hr/leave-types", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
-      const leaveType = await storage.createLeaveType(req.body);
+      const validation = insertLeaveTypeSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: validation.error.errors });
+      }
+      const leaveType = await storage.createLeaveType(validation.data);
       res.json(leaveType);
     } catch (error) {
       console.error("[API Error]", error);
@@ -5272,7 +5383,11 @@ Do not include quotes or explanations.`;
 
   app.post("/api/hr/leave-requests", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
-      const request = await storage.createLeaveRequest(req.body);
+      const validation = insertLeaveRequestSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: validation.error.errors });
+      }
+      const request = await storage.createLeaveRequest(validation.data);
       res.json(request);
     } catch (error) {
       console.error("[API Error]", error);
@@ -5320,7 +5435,11 @@ Do not include quotes or explanations.`;
 
   app.post("/api/hr/leave-balances", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
-      const balance = await storage.createLeaveBalance(req.body);
+      const validation = insertLeaveBalanceSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: validation.error.errors });
+      }
+      const balance = await storage.createLeaveBalance(validation.data);
       res.json(balance);
     } catch (error) {
       console.error("[API Error]", error);
@@ -5979,6 +6098,10 @@ Do not include quotes or explanations.`;
       if (isNaN(userId) || userId <= 0) {
         return res.status(400).json({ message: "معرف المستخدم غير صحيح" });
       }
+      const authUserId = getAuthUserId(req);
+      if (authUserId !== userId) {
+        return res.status(403).json({ message: "لا يمكنك الوصول إلى إعدادات مستخدم آخر" });
+      }
       const settings = await storage.getUserSettings(userId);
       res.json(settings);
     } catch (error) {
@@ -5992,6 +6115,10 @@ Do not include quotes or explanations.`;
       const userId = parseInt(req.params.userId);
       if (isNaN(userId) || userId <= 0) {
         return res.status(400).json({ message: "معرف المستخدم غير صحيح" });
+      }
+      const authUserId = getAuthUserId(req);
+      if (authUserId !== userId) {
+        return res.status(403).json({ message: "لا يمكنك تعديل إعدادات مستخدم آخر" });
       }
       const { settings } = req.body;
       const results = [];
@@ -7164,52 +7291,56 @@ Do not include quotes or explanations.`;
       const attendance = await storage.createAttendance(attendanceData);
       
 
-      // Send attendance notification
-      try {
-        const user = await storage.getUserById(req.body.user_id);
-        if (user && user.phone) {
-          let messageTemplate = "";
-          let priority = "normal";
+      // Send attendance notification asynchronously (fire-and-forget)
+      const attendanceId = attendance.id;
+      const attendanceUserId = req.body.user_id;
+      const attendanceStatus = req.body.status;
+      (async () => {
+        try {
+          const notifUser = await storage.getUserById(attendanceUserId);
+          if (notifUser && notifUser.phone) {
+            let messageTemplate = "";
+            let priority = "normal";
 
-          switch (req.body.status) {
-            case "حاضر":
-              messageTemplate = `مرحباً ${user.display_name_ar || user.username}، تم تسجيل حضورك اليوم بنجاح في ${new Date().toLocaleTimeString("en-US")}. نتمنى لك يوم عمل مثمر!`;
-              priority = "normal";
-              break;
-            case "في الاستراحة":
-              messageTemplate = `${user.display_name_ar || user.username}، تم تسجيل بدء استراحة الغداء في ${new Date().toLocaleTimeString("en-US")}. استمتع بوقت راحتك!`;
-              priority = "low";
-              break;
-            case "يعمل":
-              messageTemplate = `${user.display_name_ar || user.username}، تم تسجيل انتهاء استراحة الغداء في ${new Date().toLocaleTimeString("en-US")}. مرحباً بعودتك للعمل!`;
-              priority = "normal";
-              break;
-            case "مغادر":
-              messageTemplate = `${user.display_name_ar || user.username}، تم تسجيل انصرافك في ${new Date().toLocaleTimeString("en-US")}. شكراً لجهودك اليوم، نراك غداً!`;
-              priority = "normal";
-              break;
-          }
+            switch (attendanceStatus) {
+              case "حاضر":
+                messageTemplate = `مرحباً ${notifUser.display_name_ar || notifUser.username}، تم تسجيل حضورك اليوم بنجاح في ${new Date().toLocaleTimeString("en-US")}. نتمنى لك يوم عمل مثمر!`;
+                priority = "normal";
+                break;
+              case "في الاستراحة":
+                messageTemplate = `${notifUser.display_name_ar || notifUser.username}، تم تسجيل بدء استراحة الغداء في ${new Date().toLocaleTimeString("en-US")}. استمتع بوقت راحتك!`;
+                priority = "low";
+                break;
+              case "يعمل":
+                messageTemplate = `${notifUser.display_name_ar || notifUser.username}، تم تسجيل انتهاء استراحة الغداء في ${new Date().toLocaleTimeString("en-US")}. مرحباً بعودتك للعمل!`;
+                priority = "normal";
+                break;
+              case "مغادر":
+                messageTemplate = `${notifUser.display_name_ar || notifUser.username}، تم تسجيل انصرافك في ${new Date().toLocaleTimeString("en-US")}. شكراً لجهودك اليوم، نراك غداً!`;
+                priority = "normal";
+                break;
+            }
 
-          if (messageTemplate) {
-            await notificationService.sendWhatsAppMessage(
-              user.phone,
-              messageTemplate,
-              {
-                title: "تنبيه الحضور",
-                priority,
-                context_type: "attendance",
-                context_id: attendance.id?.toString(),
-              },
-            );
+            if (messageTemplate) {
+              await notificationService.sendWhatsAppMessage(
+                notifUser.phone,
+                messageTemplate,
+                {
+                  title: "تنبيه الحضور",
+                  priority,
+                  context_type: "attendance",
+                  context_id: attendanceId?.toString(),
+                },
+              );
+            }
           }
+        } catch (notificationError) {
+          console.error(
+            "Failed to send attendance notification:",
+            notificationError,
+          );
         }
-      } catch (notificationError) {
-        console.error(
-          "Failed to send attendance notification:",
-          notificationError,
-        );
-        // Don't fail the main request if notification fails
-      }
+      })();
 
       res.status(201).json(attendance);
     } catch (error) {
@@ -7382,11 +7513,14 @@ Do not include quotes or explanations.`;
   app.get("/api/attendance/monthly-editor/:userId", requireAuth, requirePermission("manage_attendance"), async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
+      if (isNaN(userId) || userId <= 0) {
+        return res.status(400).json({ message: "معرف الموظف غير صحيح" });
+      }
       const startDate = req.query.startDate as string;
       const endDate = req.query.endDate as string;
 
-      if (!userId || !startDate || !endDate) {
-        return res.status(400).json({ message: "معرف الموظف وتاريخ البداية والنهاية مطلوبون" });
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "تاريخ البداية والنهاية مطلوبان" });
       }
 
       // Get employee info
@@ -7587,6 +7721,12 @@ Do not include quotes or explanations.`;
 
   app.post("/api/violations", requireAuth, async (req, res) => {
     try {
+      if (!req.body || typeof req.body !== "object") {
+        return res.status(400).json({ message: "بيانات المخالفة مطلوبة" });
+      }
+      if (!req.body.user_id || !req.body.type) {
+        return res.status(400).json({ message: "معرف المستخدم ونوع المخالفة مطلوبان" });
+      }
       const violation = await storage.createViolation(req.body);
       res.status(201).json(violation);
     } catch (error) {
@@ -7632,6 +7772,12 @@ Do not include quotes or explanations.`;
 
   app.post("/api/user-requests", requireAuth, async (req, res) => {
     try {
+      if (!req.body || typeof req.body !== "object") {
+        return res.status(400).json({ message: "بيانات الطلب مطلوبة" });
+      }
+      if (!req.body.user_id || !req.body.type) {
+        return res.status(400).json({ message: "معرف المستخدم ونوع الطلب مطلوبان" });
+      }
       const request = await storage.createUserRequest(req.body);
       res.status(201).json(request);
     } catch (error) {
@@ -7718,7 +7864,11 @@ Do not include quotes or explanations.`;
   // Create system setting
   app.post("/api/system-settings", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const setting = await storage.createSystemSetting(req.body);
+      const validation = insertSystemSettingSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: validation.error.errors });
+      }
+      const setting = await storage.createSystemSetting(validation.data);
       res.status(201).json(setting);
     } catch (error) {
       console.error("Error creating system setting:", error);
