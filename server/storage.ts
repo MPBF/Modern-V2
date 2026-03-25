@@ -3470,7 +3470,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMachinesProductionBySection(section: any, dateFrom?: string, dateTo?: string): Promise<any[]> {
-    return await db.select().from(machines).orderBy(machines.name);
+    let query = db.select().from(machines);
+    if (section) {
+      query = query.where(eq(machines.section_id, String(section))) as any;
+    }
+    return await query.orderBy(machines.name);
   }
 
   async createItem(data: any): Promise<Item> {

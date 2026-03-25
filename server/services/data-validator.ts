@@ -659,9 +659,10 @@ export class DataValidator {
       // Dynamic lookup of admin roles to avoid hardcoded IDs
       let target_roles = [1, 2]; // Default fallback
       try {
-        const roles = await this.storage.getSafeUsersByRole?.(1) || []; // Just checking if method exists
-        // Note: In a real scenario we'd query roles by category, but for now let's make it more resilient
-      } catch (e) {}
+        const roles = await this.storage.getSafeUsersByRole?.(1) || [];
+      } catch (e) {
+        console.warn("[DataValidator] Failed to resolve admin roles, using defaults:", e instanceof Error ? e.message : String(e));
+      }
 
       await alertManager.createAlert({
         title: `Data Validation Errors in ${tableName}`,

@@ -4174,7 +4174,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/operator-negligence-reports/:id", requireAuth, async (req, res) => {
+  app.delete("/api/operator-negligence-reports/:id", requireAuth, requirePermission('manage_production', 'manage_maintenance'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "ID");
       await storage.deleteOperatorNegligenceReport(id);
@@ -5490,7 +5490,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/locations/:id", requireAuth, async (req, res) => {
+  app.delete("/api/locations/:id", requireAuth, requirePermission('manage_warehouse', 'manage_definitions'), async (req, res) => {
     try {
       const id = req.params.id;
       await storage.deleteLocation(id);
@@ -5716,7 +5716,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/machine-queues/:id", requireAuth, async (req, res) => {
+  app.delete("/api/machine-queues/:id", requireAuth, requirePermission('manage_production', 'manage_definitions'), async (req, res) => {
     try {
       const queueId = parseInt(req.params.id);
       
@@ -6981,7 +6981,7 @@ Do not include quotes or explanations.`;
           },
           records: attendanceRecords.map(r => ({
             date: r.date,
-            dayName: new Date(r.date).toLocaleDateString("en-US", { weekday: "long" }),
+            dayName: new Date(r.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" }),
             status: r.status,
             checkIn: r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : null,
             checkOut: r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : null,
@@ -7746,7 +7746,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/violations/:id", requireAuth, async (req, res) => {
+  app.delete("/api/violations/:id", requireAuth, requirePermission('manage_hr', 'manage_attendance'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "id");
       await storage.deleteViolation(id);
@@ -7775,10 +7775,14 @@ Do not include quotes or explanations.`;
       if (!req.body || typeof req.body !== "object") {
         return res.status(400).json({ message: "بيانات الطلب مطلوبة" });
       }
-      if (!req.body.user_id || !req.body.type) {
-        return res.status(400).json({ message: "معرف المستخدم ونوع الطلب مطلوبان" });
+      const userId = getAuthUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "غير مصرح به" });
       }
-      const request = await storage.createUserRequest(req.body);
+      if (!req.body.type) {
+        return res.status(400).json({ message: "نوع الطلب مطلوب" });
+      }
+      const request = await storage.createUserRequest({ ...req.body, user_id: userId });
       res.status(201).json(request);
     } catch (error) {
       console.error("Error creating user request:", error);
@@ -7786,7 +7790,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/user-requests/:id", requireAuth, async (req, res) => {
+  app.put("/api/user-requests/:id", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "id");
       const request = await storage.updateUserRequest(id, req.body);
@@ -7797,7 +7801,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.patch("/api/user-requests/:id", requireAuth, async (req, res) => {
+  app.patch("/api/user-requests/:id", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "id");
       const request = await storage.updateUserRequest(id, req.body);
@@ -7808,7 +7812,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/user-requests/:id", requireAuth, async (req, res) => {
+  app.delete("/api/user-requests/:id", requireAuth, requirePermission('manage_hr'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "id");
       await storage.deleteUserRequest(id);
@@ -7942,7 +7946,7 @@ Do not include quotes or explanations.`;
   });
 
   // Delete factory location
-  app.delete("/api/factory-locations/:id", requireAuth, async (req, res) => {
+  app.delete("/api/factory-locations/:id", requireAuth, requirePermission('manage_definitions'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "id");
       await storage.deleteFactoryLocation(id);
