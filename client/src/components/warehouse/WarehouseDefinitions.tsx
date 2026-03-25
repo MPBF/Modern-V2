@@ -160,14 +160,14 @@ function SuppliersTab() {
                 {t('warehouse.definitions.addSupplier')}
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="w-[95vw] sm:w-full">
               <DialogHeader>
                 <DialogTitle>{editingItem ? t('warehouse.definitions.editSupplier') : t('warehouse.definitions.addNewSupplier')}</DialogTitle>
                 <DialogDescription className="sr-only">{t('warehouse.definitions.supplierFormDesc')}</DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="name"
@@ -195,7 +195,7 @@ function SuppliersTab() {
                       )}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="phone"
@@ -263,6 +263,7 @@ function SuppliersTab() {
         ) : suppliers.length === 0 ? (
           <div className="text-center py-8 text-gray-500">{t('warehouse.definitions.noSuppliers')}</div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -297,6 +298,7 @@ function SuppliersTab() {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -421,7 +423,7 @@ function ItemsTab() {
                 {t('warehouse.definitions.addItem')}
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="w-[95vw] sm:w-full">
               <DialogHeader>
                 <DialogTitle>{editingItem ? t('warehouse.definitions.editItem') : t('warehouse.definitions.addNewItem')}</DialogTitle>
                 <DialogDescription className="sr-only">{t('warehouse.definitions.itemFormDesc')}</DialogDescription>
@@ -465,7 +467,7 @@ function ItemsTab() {
                       </FormItem>
                     )}
                   />
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="name"
@@ -493,7 +495,7 @@ function ItemsTab() {
                       )}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="unit"
@@ -549,6 +551,7 @@ function ItemsTab() {
         ) : items.length === 0 ? (
           <div className="text-center py-8 text-gray-500">{t('warehouse.definitions.noItems')}</div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -585,6 +588,7 @@ function ItemsTab() {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
         {items.length > 50 && (
           <p className="text-sm text-gray-500 mt-2 text-center">
@@ -707,14 +711,14 @@ function UnitsTab() {
                 {t('warehouse.definitions.addUnit')}
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="w-[95vw] sm:w-full">
               <DialogHeader>
                 <DialogTitle>{editingItem ? t('warehouse.definitions.editUnit') : t('warehouse.definitions.addNewUnit')}</DialogTitle>
                 <DialogDescription className="sr-only">{t('warehouse.definitions.unitFormDesc')}</DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="name"
@@ -742,7 +746,7 @@ function UnitsTab() {
                       )}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="symbol"
@@ -785,6 +789,7 @@ function UnitsTab() {
         {isLoading ? (
           <div className="text-center py-4">{t('warehouse.loading')}</div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -821,6 +826,7 @@ function UnitsTab() {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -913,14 +919,14 @@ function CategoriesTab() {
                 {t('warehouse.definitions.addGroup')}
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="w-[95vw] sm:w-full">
               <DialogHeader>
                 <DialogTitle>{editingItem ? t('warehouse.definitions.editGroup') : t('warehouse.definitions.addNewGroup')}</DialogTitle>
                 <DialogDescription className="sr-only">{t('warehouse.definitions.groupFormDesc')}</DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="name"
@@ -966,6 +972,7 @@ function CategoriesTab() {
         ) : categories.length === 0 ? (
           <div className="text-center py-8 text-gray-500">{t('warehouse.definitions.noGroups')}</div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -986,6 +993,7 @@ function CategoriesTab() {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -997,24 +1005,26 @@ export function WarehouseDefinitions() {
   return (
     <div className="space-y-4">
       <Tabs defaultValue="suppliers" className="space-y-4">
-        <TabsList className="grid grid-cols-4 w-full max-w-2xl">
-          <TabsTrigger value="suppliers" className="flex items-center gap-1">
-            <Building2 className="h-4 w-4" />
-            {t('warehouse.definitions.suppliers')}
-          </TabsTrigger>
-          <TabsTrigger value="items" className="flex items-center gap-1">
-            <Package className="h-4 w-4" />
-            {t('warehouse.definitions.items')}
-          </TabsTrigger>
-          <TabsTrigger value="units" className="flex items-center gap-1">
-            <Scale className="h-4 w-4" />
-            {t('warehouse.definitions.units')}
-          </TabsTrigger>
-          <TabsTrigger value="categories" className="flex items-center gap-1">
-            <Boxes className="h-4 w-4" />
-            {t('warehouse.definitions.groups')}
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-1">
+          <TabsList className="inline-flex w-auto min-w-full">
+            <TabsTrigger value="suppliers" className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-3 shrink-0">
+              <Building2 className="h-4 w-4 shrink-0" />
+              {t('warehouse.definitions.suppliers')}
+            </TabsTrigger>
+            <TabsTrigger value="items" className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-3 shrink-0">
+              <Package className="h-4 w-4 shrink-0" />
+              {t('warehouse.definitions.items')}
+            </TabsTrigger>
+            <TabsTrigger value="units" className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-3 shrink-0">
+              <Scale className="h-4 w-4 shrink-0" />
+              {t('warehouse.definitions.units')}
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-3 shrink-0">
+              <Boxes className="h-4 w-4 shrink-0" />
+              {t('warehouse.definitions.groups')}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="suppliers">
           <SuppliersTab />

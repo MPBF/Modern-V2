@@ -268,7 +268,7 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
         <DialogHeader>
           <DialogTitle>{getTitleForType(type)}</DialogTitle>
           <DialogDescription className="sr-only">{t('warehouse.voucherForm.description')}</DialogDescription>
@@ -296,7 +296,7 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="item_id"
@@ -348,7 +348,7 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="quantity"
@@ -509,7 +509,7 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
             )}
 
             {type === "finished-goods-out" && (
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="driver_name"

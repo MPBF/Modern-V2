@@ -139,13 +139,15 @@ export function WarehouseReports() {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="summary">{t('warehouse.reports.summary')}</TabsTrigger>
-          <TabsTrigger value="stock">{t('warehouse.reports.balances')}</TabsTrigger>
-          <TabsTrigger value="alerts">{t('warehouse.reports.alerts')}</TabsTrigger>
-          <TabsTrigger value="movements">{t('warehouse.reports.movements')}</TabsTrigger>
-          <TabsTrigger value="import-export">{t('warehouse.reports.importExport')}</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-1">
+          <TabsList className="inline-flex w-auto min-w-full">
+            <TabsTrigger value="summary" className="text-xs sm:text-sm px-2 sm:px-3 shrink-0">{t('warehouse.reports.summary')}</TabsTrigger>
+            <TabsTrigger value="stock" className="text-xs sm:text-sm px-2 sm:px-3 shrink-0">{t('warehouse.reports.balances')}</TabsTrigger>
+            <TabsTrigger value="alerts" className="text-xs sm:text-sm px-2 sm:px-3 shrink-0">{t('warehouse.reports.alerts')}</TabsTrigger>
+            <TabsTrigger value="movements" className="text-xs sm:text-sm px-2 sm:px-3 shrink-0">{t('warehouse.reports.movements')}</TabsTrigger>
+            <TabsTrigger value="import-export" className="text-xs sm:text-sm px-2 sm:px-3 shrink-0">{t('warehouse.reports.importExport')}</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="summary" className="space-y-4">
           {summaryLoading ? (
@@ -199,9 +201,9 @@ export function WarehouseReports() {
 
         <TabsContent value="stock">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>{t('warehouse.reports.currentBalancesReport')}</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => handleExport("items")}>
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <CardTitle className="text-sm sm:text-base">{t('warehouse.reports.currentBalancesReport')}</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => handleExport("items")} className="w-full sm:w-auto">
                 <Download className="h-4 w-4 ml-2" />
                 {t('warehouse.reports.exportExcel')}
               </Button>
@@ -210,17 +212,18 @@ export function WarehouseReports() {
               {stockLoading ? (
                 <div className="text-center py-8 text-muted-foreground">{t('warehouse.loading')}</div>
               ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('warehouse.reports.code')}</TableHead>
-                    <TableHead>{t('warehouse.labels.item')}</TableHead>
-                    <TableHead>{t('warehouse.reports.classification')}</TableHead>
-                    <TableHead>{t('warehouse.labels.unit')}</TableHead>
-                    <TableHead>{t('warehouse.reports.currentBalance')}</TableHead>
-                    <TableHead>{t('warehouse.reports.minLimit')}</TableHead>
-                    <TableHead>{t('warehouse.reports.status')}</TableHead>
-                    <TableHead>{t('warehouse.reports.value')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.code')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('warehouse.labels.item')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.classification')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('warehouse.labels.unit')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.currentBalance')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.minLimit')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.status')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.value')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -241,11 +244,12 @@ export function WarehouseReports() {
                            item.stock_status === "high" ? t('warehouse.reports.statusHigh') : t('warehouse.reports.statusNormal')}
                         </Badge>
                       </TableCell>
-                      <TableCell>{Number(item.total_value || 0).toLocaleString("en-US")} {t('warehouse.currency')}</TableCell>
+                      <TableCell className="whitespace-nowrap">{Number(item.total_value || 0).toLocaleString("en-US")} {t('warehouse.currency')}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+              </div>
               )}
             </CardContent>
           </Card>
@@ -265,6 +269,7 @@ export function WarehouseReports() {
                   {t('warehouse.reports.noAlerts')}
                 </div>
               ) : (
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -289,6 +294,7 @@ export function WarehouseReports() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -298,9 +304,9 @@ export function WarehouseReports() {
           <Card>
             <CardHeader>
               <CardTitle>{t('warehouse.reports.movementsReport')}</CardTitle>
-              <div className="flex gap-4 mt-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-4">
                 <div className="flex-1">
-                  <Label>{t('warehouse.reports.fromDate')}</Label>
+                  <Label className="text-xs sm:text-sm">{t('warehouse.reports.fromDate')}</Label>
                   <Input 
                     type="date" 
                     value={startDate} 
@@ -308,7 +314,7 @@ export function WarehouseReports() {
                   />
                 </div>
                 <div className="flex-1">
-                  <Label>{t('warehouse.reports.toDate')}</Label>
+                  <Label className="text-xs sm:text-sm">{t('warehouse.reports.toDate')}</Label>
                   <Input 
                     type="date" 
                     value={endDate} 
@@ -316,7 +322,7 @@ export function WarehouseReports() {
                   />
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={() => refetchMovements()}>
+                  <Button onClick={() => refetchMovements()} className="w-full sm:w-auto">
                     <RefreshCw className="h-4 w-4 ml-2" />
                     {t('warehouse.reports.refresh')}
                   </Button>
@@ -324,21 +330,22 @@ export function WarehouseReports() {
               </div>
             </CardHeader>
             <CardContent>
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('warehouse.reports.dateColumn')}</TableHead>
-                    <TableHead>{t('warehouse.labels.item')}</TableHead>
-                    <TableHead>{t('warehouse.reports.movementType')}</TableHead>
-                    <TableHead>{t('warehouse.labels.quantity')}</TableHead>
-                    <TableHead>{t('warehouse.reports.reference')}</TableHead>
-                    <TableHead>{t('warehouse.labels.notes')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.dateColumn')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('warehouse.labels.item')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.movementType')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('warehouse.labels.quantity')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.reference')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('warehouse.labels.notes')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {(movements as any[])?.map((mov: any) => (
                     <TableRow key={mov.id}>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {new Date(mov.created_at).toLocaleDateString("en-US")}
                       </TableCell>
                       <TableCell>{mov.item_name || mov.item_code}</TableCell>
@@ -352,12 +359,13 @@ export function WarehouseReports() {
                         </Badge>
                       </TableCell>
                       <TableCell>{mov.quantity}</TableCell>
-                      <TableCell>{mov.reference_type} - {mov.reference_id}</TableCell>
+                      <TableCell className="whitespace-nowrap">{mov.reference_type} - {mov.reference_id}</TableCell>
                       <TableCell>{mov.notes}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

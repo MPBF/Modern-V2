@@ -400,12 +400,13 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
               {t('warehouse.vouchers.noVouchers')}
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-center">{t('warehouse.vouchers.voucherNumber')}</TableHead>
-                  <TableHead className="text-center">{t('warehouse.vouchers.type')}</TableHead>
-                  <TableHead className="text-center">{t('warehouse.vouchers.date')}</TableHead>
+                  <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.voucherNumber')}</TableHead>
+                  <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.type')}</TableHead>
+                  <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.date')}</TableHead>
                   {(type === "raw-material-in" || type === "raw-material-out") && (
                     <TableHead className="text-center">الصنف</TableHead>
                   )}
@@ -503,12 +504,13 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={!!viewVoucher} onOpenChange={(open) => { if (!open) setViewVoucher(null); }}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto w-[95vw] sm:w-full" dir="rtl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {getIcon()}
@@ -518,11 +520,11 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
 
           {viewVoucher && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                 {renderVoucherDetails(viewVoucher).map((row, i) => (
                   <div key={i} className="flex gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                    <span className="font-semibold text-gray-600 dark:text-gray-400 min-w-[90px] text-sm">{row.label}:</span>
-                    <span className="text-sm">{row.value}</span>
+                    <span className="font-semibold text-gray-600 dark:text-gray-400 min-w-[70px] sm:min-w-[90px] text-xs sm:text-sm">{row.label}:</span>
+                    <span className="text-xs sm:text-sm">{row.value}</span>
                   </div>
                 ))}
               </div>
@@ -534,9 +536,10 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                 return (
                   <div className="border rounded-lg overflow-hidden dark:border-gray-700">
                     <div className="bg-blue-50 dark:bg-blue-900/30 px-3 py-2">
-                      <span className="font-semibold text-sm text-blue-800 dark:text-blue-200">أوامر الإنتاج المستلمة ({parsedItems.length})</span>
+                      <span className="font-semibold text-xs sm:text-sm text-blue-800 dark:text-blue-200">أوامر الإنتاج المستلمة ({parsedItems.length})</span>
                     </div>
-                    <table className="w-full text-sm">
+                    <div className="overflow-x-auto">
+                    <table className="w-full text-xs sm:text-sm min-w-[400px]">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
                           <th className="py-2 px-3 text-center font-medium">أمر الإنتاج</th>
@@ -562,6 +565,7 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                         </tr>
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 );
               })()}

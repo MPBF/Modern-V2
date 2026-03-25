@@ -113,28 +113,30 @@ export default function Warehouse() {
       </div>
 
       <Tabs defaultValue="production-hall" className="space-y-4">
-        <TabsList className="flex flex-wrap w-full justify-start gap-1">
-          <TabsTrigger value="production-hall" className="shrink-0 bg-amber-50 dark:bg-amber-950">
-            <Factory className="h-4 w-4 ml-1" />
-            {t('warehouse.tabs.productionHall')}
-          </TabsTrigger>
-          <TabsTrigger value="finished-goods" className="shrink-0 bg-blue-50 dark:bg-blue-950">
-            <Package className="h-4 w-4 ml-1" />
-            {t('warehouse.tabs.finishedGoods')}
-          </TabsTrigger>
-          <TabsTrigger value="raw-materials" className="shrink-0 bg-green-50 dark:bg-green-950">
-            <Boxes className="h-4 w-4 ml-1" />
-            {t('warehouse.tabs.rawMaterials')}
-          </TabsTrigger>
-          <TabsTrigger value="definitions" className="shrink-0 bg-purple-50 dark:bg-purple-950">
-            <Settings className="h-4 w-4 ml-1" />
-            {t('warehouse.tabs.definitions')}
-          </TabsTrigger>
-          <TabsTrigger value="reports" className="shrink-0 bg-gray-50 dark:bg-gray-950">
-            <BarChart3 className="h-4 w-4 ml-1" />
-            {t('warehouse.tabs.reports')}
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-1 px-1 pb-1">
+          <TabsList className="inline-flex w-auto min-w-full justify-start gap-1">
+            <TabsTrigger value="production-hall" className="shrink-0 bg-amber-50 dark:bg-amber-950 text-xs sm:text-sm px-2 sm:px-3">
+              <Factory className="h-4 w-4 ml-1 shrink-0" />
+              {t('warehouse.tabs.productionHall')}
+            </TabsTrigger>
+            <TabsTrigger value="finished-goods" className="shrink-0 bg-blue-50 dark:bg-blue-950 text-xs sm:text-sm px-2 sm:px-3">
+              <Package className="h-4 w-4 ml-1 shrink-0" />
+              {t('warehouse.tabs.finishedGoods')}
+            </TabsTrigger>
+            <TabsTrigger value="raw-materials" className="shrink-0 bg-green-50 dark:bg-green-950 text-xs sm:text-sm px-2 sm:px-3">
+              <Boxes className="h-4 w-4 ml-1 shrink-0" />
+              {t('warehouse.tabs.rawMaterials')}
+            </TabsTrigger>
+            <TabsTrigger value="definitions" className="shrink-0 bg-purple-50 dark:bg-purple-950 text-xs sm:text-sm px-2 sm:px-3">
+              <Settings className="h-4 w-4 ml-1 shrink-0" />
+              {t('warehouse.tabs.definitions')}
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="shrink-0 bg-gray-50 dark:bg-gray-950 text-xs sm:text-sm px-2 sm:px-3">
+              <BarChart3 className="h-4 w-4 ml-1 shrink-0" />
+              {t('warehouse.tabs.reports')}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="production-hall" className="space-y-4">
           <ProductionHallContent onCreateVoucher={() => openVoucherForm("finished-goods-in")} />
@@ -183,16 +185,18 @@ function FinishedGoodsSection({ onCreateVoucherIn, onCreateVoucherOut }: { onCre
   return (
     <div className="space-y-4">
       <Tabs defaultValue="fp-del" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="fp-del">
-            <Truck className="h-4 w-4 ml-1" />
-            {t('warehouse.production.fpDelVouchers')}
-          </TabsTrigger>
-          <TabsTrigger value="fp-rec">
-            <ArrowDownToLine className="h-4 w-4 ml-1" />
-            {t('warehouse.production.fpRecVouchers')}
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex w-auto min-w-full">
+            <TabsTrigger value="fp-del" className="text-xs sm:text-sm">
+              <Truck className="h-4 w-4 ml-1 shrink-0" />
+              {t('warehouse.production.fpDelVouchers')}
+            </TabsTrigger>
+            <TabsTrigger value="fp-rec" className="text-xs sm:text-sm">
+              <ArrowDownToLine className="h-4 w-4 ml-1 shrink-0" />
+              {t('warehouse.production.fpRecVouchers')}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="fp-del">
           <DeliveryHallContent />
@@ -397,22 +401,22 @@ function DeliveryHallContent() {
                     تسليم المحدد ({selectedOrders.size})
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto w-[95vw] sm:w-full">
                   <DialogHeader>
-                    <DialogTitle>إنشاء سند تسليم FP-Del</DialogTitle>
-                    <DialogDescription>
+                    <DialogTitle className="text-sm sm:text-base">إنشاء سند تسليم FP-Del</DialogTitle>
+                    <DialogDescription className="text-xs sm:text-sm">
                       أدخل أوزان التسليم لكل أمر إنتاج
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
-                    <div className="border rounded-lg overflow-hidden dark:border-gray-700">
-                      <table className="w-full text-sm">
+                    <div className="border rounded-lg overflow-x-auto dark:border-gray-700">
+                      <table className="w-full text-xs sm:text-sm min-w-[400px]">
                         <thead className="bg-gray-50 dark:bg-gray-800">
                           <tr>
-                            <th className="py-2 px-3 text-center font-medium">أمر الإنتاج</th>
-                            <th className="py-2 px-3 text-center font-medium">المنتج</th>
-                            <th className="py-2 px-3 text-center font-medium">المتاح (كجم)</th>
-                            <th className="py-2 px-3 text-center font-medium">وزن التسليم (كجم) *</th>
+                            <th className="py-2 px-2 sm:px-3 text-center font-medium">أمر الإنتاج</th>
+                            <th className="py-2 px-2 sm:px-3 text-center font-medium">المنتج</th>
+                            <th className="py-2 px-2 sm:px-3 text-center font-medium">المتاح (كجم)</th>
+                            <th className="py-2 px-2 sm:px-3 text-center font-medium">وزن التسليم (كجم) *</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -441,17 +445,17 @@ function DeliveryHallContent() {
                         </tbody>
                       </table>
                     </div>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="text-sm font-medium">اسم السائق</label>
+                        <label className="text-xs sm:text-sm font-medium">اسم السائق</label>
                         <Input value={driverName} onChange={(e) => setDriverName(e.target.value)} placeholder="اسم السائق" />
                       </div>
                       <div>
-                        <label className="text-sm font-medium">هاتف السائق</label>
+                        <label className="text-xs sm:text-sm font-medium">هاتف السائق</label>
                         <Input value={driverPhone} onChange={(e) => setDriverPhone(e.target.value)} placeholder="رقم الهاتف" />
                       </div>
                       <div>
-                        <label className="text-sm font-medium">رقم المركبة</label>
+                        <label className="text-xs sm:text-sm font-medium">رقم المركبة</label>
                         <Input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value)} placeholder="رقم المركبة" />
                       </div>
                     </div>
@@ -508,32 +512,29 @@ function DeliveryHallContent() {
               </div>
               {groupedByOrder.map((group) => (
                 <div key={group.order_number} className="border rounded-lg overflow-hidden mb-4">
-                  <div className="bg-orange-50 dark:bg-orange-900/20 px-4 py-2 flex justify-between items-center">
-                    <div className="flex gap-4 items-center">
-                      <span className="font-bold text-sm">{t('warehouse.production.order')}: {group.order_number}</span>
-                    </div>
-                    <div className="flex gap-4 items-center">
-                      <span className="font-bold text-sm">{group.customer_name_ar || group.customer_name}</span>
-                    </div>
+                  <div className="bg-orange-50 dark:bg-orange-900/20 px-3 sm:px-4 py-2 flex flex-wrap justify-between items-center gap-1">
+                    <span className="font-bold text-xs sm:text-sm">{t('warehouse.production.order')}: {group.order_number}</span>
+                    <span className="font-bold text-xs sm:text-sm">{group.customer_name_ar || group.customer_name}</span>
                   </div>
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50 dark:bg-gray-800">
-                      <tr>
-                        <th className="py-2 px-3 w-10"></th>
-                        <th className="py-2 px-3 text-center font-medium">أمر الإنتاج</th>
-                        <th className="py-2 px-3 text-center font-medium">المنتج</th>
-                        <th className="py-2 px-3 text-center font-medium">مستلم (كجم)</th>
-                        <th className="py-2 px-3 text-center font-medium">مسلّم (كجم)</th>
-                        <th className="py-2 px-3 text-center font-medium">متاح (كجم)</th>
-                        <th className="py-2 px-3 text-center font-medium">إجراء</th>
-                      </tr>
-                    </thead>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs sm:text-sm min-w-[500px]">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                          <th className="py-2 px-2 sm:px-3 w-8 sm:w-10"></th>
+                          <th className="py-2 px-2 sm:px-3 text-center font-medium">أمر الإنتاج</th>
+                          <th className="py-2 px-2 sm:px-3 text-center font-medium">المنتج</th>
+                          <th className="py-2 px-2 sm:px-3 text-center font-medium">مستلم (كجم)</th>
+                          <th className="py-2 px-2 sm:px-3 text-center font-medium">مسلّم (كجم)</th>
+                          <th className="py-2 px-2 sm:px-3 text-center font-medium">متاح (كجم)</th>
+                          <th className="py-2 px-2 sm:px-3 text-center font-medium">إجراء</th>
+                        </tr>
+                      </thead>
                     <tbody>
                       {group.items.map((order: any) => {
                         const isSelected = selectedOrders.has(order.production_order_id.toString());
                         return (
                           <tr key={order.production_order_id} className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 ${isSelected ? 'bg-orange-50 dark:bg-orange-900/20' : ''}`}>
-                            <td className="py-2 px-3 text-center">
+                            <td className="py-2 px-2 sm:px-3 text-center">
                               <input
                                 type="checkbox"
                                 checked={isSelected}
@@ -541,21 +542,21 @@ function DeliveryHallContent() {
                                 className="h-4 w-4 rounded border-gray-300"
                               />
                             </td>
-                            <td className="py-2 px-3 text-center font-medium">{order.production_order_number}</td>
-                            <td className="py-2 px-3 text-center">{order.product_name_ar || order.product_name}</td>
-                            <td className="py-2 px-3 text-center">{order.warehouse_received_kg.toFixed(2)}</td>
-                            <td className="py-2 px-3 text-center">{order.warehouse_delivered_kg.toFixed(2)}</td>
-                            <td className="py-2 px-3 text-center">
+                            <td className="py-2 px-2 sm:px-3 text-center font-medium">{order.production_order_number}</td>
+                            <td className="py-2 px-2 sm:px-3 text-center">{order.product_name_ar || order.product_name}</td>
+                            <td className="py-2 px-2 sm:px-3 text-center">{order.warehouse_received_kg.toFixed(2)}</td>
+                            <td className="py-2 px-2 sm:px-3 text-center">{order.warehouse_delivered_kg.toFixed(2)}</td>
+                            <td className="py-2 px-2 sm:px-3 text-center">
                               <Badge variant={order.available_for_delivery > 0 ? "default" : "secondary"}>
                                 {order.available_for_delivery.toFixed(2)}
                               </Badge>
                             </td>
-                            <td className="py-2 px-3 text-center">
+                            <td className="py-2 px-2 sm:px-3 text-center">
                               {order.available_for_delivery > 0 && (
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                                  className="text-orange-600 border-orange-300 hover:bg-orange-50 text-xs sm:text-sm px-2 sm:px-3"
                                   onClick={() => openDeliveryForOrder(order.production_order_id.toString())}
                                 >
                                   <Truck className="h-3 w-3 ml-1" />
@@ -568,6 +569,7 @@ function DeliveryHallContent() {
                       })}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               ))}
             </>
@@ -586,16 +588,18 @@ function RawMaterialsSection({ onCreateVoucherIn, onCreateVoucherOut }: { onCrea
   return (
     <div className="space-y-4">
       <Tabs defaultValue="rm-rec" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="rm-rec">
-            <ArrowDownToLine className="h-4 w-4 ml-1" />
-            {t('warehouse.production.rmRecVouchers')}
-          </TabsTrigger>
-          <TabsTrigger value="rm-del">
-            <ArrowUpFromLine className="h-4 w-4 ml-1" />
-            {t('warehouse.production.rmDelVouchers')}
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex w-auto min-w-full">
+            <TabsTrigger value="rm-rec" className="text-xs sm:text-sm">
+              <ArrowDownToLine className="h-4 w-4 ml-1 shrink-0" />
+              {t('warehouse.production.rmRecVouchers')}
+            </TabsTrigger>
+            <TabsTrigger value="rm-del" className="text-xs sm:text-sm">
+              <ArrowUpFromLine className="h-4 w-4 ml-1 shrink-0" />
+              {t('warehouse.production.rmDelVouchers')}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="rm-rec">
           <div className="mb-3">
@@ -804,16 +808,16 @@ function ProductionHallContent({ onCreateVoucher }: { onCreateVoucher: () => voi
                     {t('warehouse.production.receiveSelected')} ({selectedOrders.size})
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
                   <DialogHeader>
-                    <DialogTitle>{t('warehouse.production.createFpRecTitle')}</DialogTitle>
-                    <DialogDescription>
+                    <DialogTitle className="text-sm sm:text-base">{t('warehouse.production.createFpRecTitle')}</DialogTitle>
+                    <DialogDescription className="text-xs sm:text-sm">
                       {t('warehouse.production.createFpRecDesc')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
-                    <div className="border rounded-lg overflow-hidden dark:border-gray-700">
-                      <table className="w-full text-sm">
+                    <div className="border rounded-lg overflow-x-auto dark:border-gray-700">
+                      <table className="w-full text-xs sm:text-sm min-w-[400px]">
                         <thead className="bg-gray-50 dark:bg-gray-800">
                           <tr>
                             <th className="py-2 px-3 text-start font-medium">{t('warehouse.production.productionOrder')}</th>
@@ -904,32 +908,32 @@ function ProductionHallContent({ onCreateVoucher }: { onCreateVoucher: () => voi
 
               {groupedByOrder.map((group) => (
                 <div key={group.order_number} className="border rounded-lg overflow-hidden">
-                  <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Hash className="h-4 w-4 text-gray-500" />
-                      <span className="font-bold text-sm">{t('warehouse.production.order')}: {group.order_number}</span>
-                      <span className="text-gray-400">|</span>
-                      <User className="h-4 w-4 text-gray-500" />
-                      <span className="font-bold text-sm">{group.customer_name_ar || group.customer_name}</span>
+                  <div className="bg-gray-100 dark:bg-gray-800 px-3 sm:px-4 py-2 sm:py-3 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                      <Hash className="h-4 w-4 text-gray-500 shrink-0" />
+                      <span className="font-bold text-xs sm:text-sm">{t('warehouse.production.order')}: {group.order_number}</span>
+                      <span className="text-gray-400 hidden sm:inline">|</span>
+                      <User className="h-4 w-4 text-gray-500 shrink-0 hidden sm:inline" />
+                      <span className="font-bold text-xs sm:text-sm">{group.customer_name_ar || group.customer_name}</span>
                     </div>
-                    <Badge variant="outline">{group.items.length} {t('warehouse.production.productionOrders')}</Badge>
+                    <Badge variant="outline" className="text-xs">{group.items.length} {t('warehouse.production.productionOrders')}</Badge>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-xs sm:text-sm min-w-[700px]">
                       <thead>
                         <tr className="border-b bg-gray-50 dark:bg-gray-900">
-                          <th className="text-right py-2 px-3 font-medium w-10"></th>
-                          <th className="text-right py-2 px-3 font-medium">{t('warehouse.production.productionOrder')}</th>
-                          <th className="text-right py-2 px-3 font-medium">{t('warehouse.labels.item')}</th>
-                          <th className="text-right py-2 px-3 font-medium">{t('warehouse.production.requiredQuantity')}</th>
-                          <th className="text-right py-2 px-3 font-medium">{t('warehouse.production.producedFilm')}</th>
-                          <th className="text-right py-2 px-3 font-medium">{t('warehouse.production.printing')}</th>
-                          <th className="text-right py-2 px-3 font-medium">{t('warehouse.production.cutQuantity')}</th>
-                          <th className="text-right py-2 px-3 font-medium">{t('warehouse.production.received')}</th>
-                          <th className="text-right py-2 px-3 font-medium">{t('warehouse.production.remaining')}</th>
-                          <th className="text-right py-2 px-3 font-medium">{t('warehouse.production.waste')}</th>
-                          <th className="text-right py-2 px-3 font-medium">{t('warehouse.production.status')}</th>
-                          <th className="text-right py-2 px-3 font-medium w-24">{t('warehouse.production.receive')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium w-8 sm:w-10"></th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.productionOrder')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.labels.item')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.requiredQuantity')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.producedFilm')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.printing')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.cutQuantity')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.received')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.remaining')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.waste')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.status')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium w-20 sm:w-24">{t('warehouse.production.receive')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -939,7 +943,7 @@ function ProductionHallContent({ onCreateVoucher }: { onCreateVoucher: () => voi
 
                           return (
                             <tr key={order.production_order_id} className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                              <td className="py-2 px-3">
+                              <td className="py-2 px-2 sm:px-3">
                                 {remaining > 0 && (
                                   <input
                                     type="checkbox"
@@ -949,55 +953,55 @@ function ProductionHallContent({ onCreateVoucher }: { onCreateVoucher: () => voi
                                   />
                                 )}
                               </td>
-                              <td className="py-2 px-3 font-medium">{order.production_order_number}</td>
-                              <td className="py-2 px-3">{order.product_name_ar || order.product_name}</td>
-                              <td className="py-2 px-3">{order.quantity_required.toFixed(2)}</td>
-                              <td className="py-2 px-3">
+                              <td className="py-2 px-2 sm:px-3 font-medium whitespace-nowrap">{order.production_order_number}</td>
+                              <td className="py-2 px-2 sm:px-3">{order.product_name_ar || order.product_name}</td>
+                              <td className="py-2 px-2 sm:px-3">{order.quantity_required.toFixed(2)}</td>
+                              <td className="py-2 px-2 sm:px-3">
                                 {order.total_film_weight > 0 ? (
                                   <span className="text-blue-600">{order.total_film_weight.toFixed(2)}</span>
                                 ) : (
                                   <span className="text-gray-400">-</span>
                                 )}
                               </td>
-                              <td className="py-2 px-3">
+                              <td className="py-2 px-2 sm:px-3">
                                 {order.total_print_weight > 0 ? (
                                   <span className="text-purple-600">{order.total_print_weight.toFixed(2)}</span>
                                 ) : (
                                   <span className="text-gray-400">-</span>
                                 )}
                               </td>
-                              <td className="py-2 px-3">
+                              <td className="py-2 px-2 sm:px-3">
                                 <span className="text-green-600 font-medium">{order.total_cut_weight.toFixed(2)}</span>
                               </td>
-                              <td className="py-2 px-3">
+                              <td className="py-2 px-2 sm:px-3">
                                 <span className="text-orange-600 font-medium">{order.total_received_weight.toFixed(2)}</span>
                               </td>
-                              <td className="py-2 px-3">
+                              <td className="py-2 px-2 sm:px-3">
                                 <span className={`font-bold ${remaining > 0 ? 'text-purple-600' : 'text-green-600'}`}>
                                   {remaining.toFixed(2)}
                                 </span>
                               </td>
-                              <td className="py-2 px-3">
+                              <td className="py-2 px-2 sm:px-3">
                                 <span className="text-red-600">{order.waste_weight.toFixed(2)}</span>
                               </td>
-                              <td className="py-2 px-3">
+                              <td className="py-2 px-2 sm:px-3">
                                 {remaining > 0 ? (
-                                  <Badge variant="outline" className="text-orange-600 border-orange-600">
+                                  <Badge variant="outline" className="text-orange-600 border-orange-600 text-xs whitespace-nowrap">
                                     {t('warehouse.production.waitingReceipt')}
                                   </Badge>
                                 ) : (
-                                  <Badge variant="outline" className="text-green-600 border-green-600">
+                                  <Badge variant="outline" className="text-green-600 border-green-600 text-xs whitespace-nowrap">
                                     <CheckCircle className="h-3 w-3 ml-1" />
                                     {t('warehouse.production.complete')}
                                   </Badge>
                                 )}
                               </td>
-                              <td className="py-2 px-3">
+                              <td className="py-2 px-2 sm:px-3">
                                 {remaining > 0 && (
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="text-xs border-blue-300 text-blue-600 hover:bg-blue-50"
+                                    className="text-xs border-blue-300 text-blue-600 hover:bg-blue-50 px-2 sm:px-3 whitespace-nowrap"
                                     onClick={() => openReceiptForOrder(order.production_order_id.toString())}
                                   >
                                     <ArrowDownToLine className="h-3 w-3 ml-1" />

@@ -227,7 +227,7 @@ export function InventoryCountForm({ open, onOpenChange }: InventoryCountFormPro
       if (!isOpen) resetForm();
       onOpenChange(isOpen);
     }}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
         <DialogHeader>
           <DialogTitle>
             {countId ? t('warehouse.inventoryCount.countOperation') : t('warehouse.inventoryCount.startNewCount')}
@@ -338,6 +338,7 @@ export function InventoryCountForm({ open, onOpenChange }: InventoryCountFormPro
                     {t('warehouse.inventoryCount.startScanningToAdd')}
                   </div>
                 ) : (
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -379,6 +380,7 @@ export function InventoryCountForm({ open, onOpenChange }: InventoryCountFormPro
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
