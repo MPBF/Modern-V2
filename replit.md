@@ -363,9 +363,23 @@ A full-stack Manufacturing Resource Planning (MRP) system for a plastic bag manu
 - Various `/api/monitoring/*` and `/api/system/*` endpoints
 
 ### AI Agent
-- `POST /api/ai-agent/chat` — AI assistant conversation
+- `POST /api/ai-agent/chat` — AI assistant conversation (SSE streaming)
 - `GET/POST/PUT/DELETE /api/ai-agent/knowledge` — Knowledge base management
 - `GET /api/ai-agent/settings` — AI configuration
+- **AI Agent Tools** (OpenAI function calling):
+  - `get_order_status`, `get_orders_summary`, `list_orders` — Order queries with filtering/search
+  - `create_order` — Create new orders (requires `manage_orders` permission, auto-generates order number with advisory lock)
+  - `update_order_status` — Change order status (requires `manage_orders`/`update_order_status`/`manage_production`)
+  - `create_customer` — Register new customers (requires `manage_customers`/`manage_definitions`, auto-generates CID)
+  - `create_customer_product` — Register product specs for customers (requires `manage_customers`/`manage_definitions`)
+  - `get_customer_info`, `get_customers_list` — Customer search/list
+  - `get_production_order_status`, `get_production_summary`, `get_recent_production` — Production queries
+  - `get_machines_status`, `get_inventory_status`, `get_users_info` — Factory status queries
+  - `create_quote`, `generate_quote_pdf`, `get_quote_templates`, `get_quote_by_number` — Quote management
+  - `send_whatsapp_message`, `send_quote_whatsapp`, `send_quote_email` — Communication
+  - `calculate_bag_quantity`, `calculate_printing_costs` — Industry calculations
+  - `convert_currency`, `get_exchange_rates` — Currency tools
+  - `search_knowledge_base`, `add_to_knowledge_base`, `get_website_info` — Knowledge management
 
 ## Authentication & Authorization
 

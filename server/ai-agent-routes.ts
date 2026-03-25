@@ -2,8 +2,8 @@ import type { Express, Request, Response } from "express";
 import { requireAuth } from "./middleware/auth";
 import OpenAI from "openai";
 import { db } from "./db";
-import { orders, production_orders, rolls, quotes, quote_items, customers, ai_agent_settings, ai_agent_knowledge, quote_templates, users, machines, inventory, maintenance_requests, items } from "@shared/schema";
-import { eq, desc, and, gte, lte, count, sum, like, or } from "drizzle-orm";
+import { orders, production_orders, rolls, quotes, quote_items, customers, customer_products, categories, ai_agent_settings, ai_agent_knowledge, quote_templates, users, machines, inventory, maintenance_requests, items } from "@shared/schema";
+import { eq, desc, and, gte, lte, count, sum, like, or, sql, ilike } from "drizzle-orm";
 import multer, { FileFilterCallback } from "multer";
 import * as XLSX from "exceljs";
 import * as fs from "fs";
@@ -548,21 +548,23 @@ async function getSystemPrompt(): Promise<string> {
   return `أنت ${agentName}، مساعد ذكي متقدم ومتكامل مع نظام إدارة الإنتاج لشركة ${companyName} (www.modplastic.com).
 
 ### قدراتك الكاملة:
-1. **الطلبات والإنتاج**: الاستعلام عن الطلبات وأوامر الإنتاج والكميات المنتجة
-2. **العملاء**: الاستعلام عن بيانات العملاء وقوائمهم الكاملة
-3. **المستخدمون والموظفون**: عرض معلومات الموظفين وأدوارهم وحالتهم
-4. **المكائن**: متابعة حالة مكائن المصنع (بثق، طباعة، قطع) وطلبات الصيانة
-5. **المخزون**: الاستعلام عن مستويات المواد الخام والمنتجات
-6. **الحسابات الذكية**:
+1. **الطلبات والإنتاج**: الاستعلام عن الطلبات وأوامر الإنتاج والكميات المنتجة، وعرض قوائم الطلبات المفصلة مع التصفية والبحث
+2. **إنشاء وإدارة الطلبات**: إنشاء طلبات جديدة مع توليد رقم تلقائي، وتحديث حالة الطلبات (انتظار/إنتاج/متوقف/ملغي/مكتمل)
+3. **العملاء**: الاستعلام عن بيانات العملاء وقوائمهم الكاملة، وتسجيل عملاء جدد مع بياناتهم
+4. **منتجات العملاء**: تسجيل منتجات جديدة للعملاء مع تحديد المواصفات (أبعاد، مادة خام، تخريم، طباعة)
+5. **المستخدمون والموظفون**: عرض معلومات الموظفين وأدوارهم وحالتهم
+6. **المكائن**: متابعة حالة مكائن المصنع (بثق، طباعة، قطع) وطلبات الصيانة
+7. **المخزون**: الاستعلام عن مستويات المواد الخام والمنتجات
+8. **الحسابات الذكية**:
    - حساب عدد الأكياس من الأبعاد والوزن (عرض × طول × سُمك × كثافة المادة)
    - حساب الوزن المطلوب لعدد أكياس معين
    - حساب تكلفة الكليشهات الطباعية بناء على عدد الألوان وأبعاد الكليشه
-7. **عروض الأسعار**: إنشاء عروض احترافية بـ PDF ثنائي اللغة (عربي/إنجليزي)
-8. **إرسال العروض**: عبر الواتساب أو البريد الإلكتروني
-9. **تحويل العملات**: بين العملات الرئيسية (الأساس: الريال السعودي)
-10. **تحليل الملفات**: صور، Excel، CSV، PDF
-11. **الرسائل الصوتية**: تحويل الصوت إلى نص
-12. **قاعدة المعرفة**: البحث والتعلم وحفظ المعلومات
+9. **عروض الأسعار**: إنشاء عروض احترافية بـ PDF ثنائي اللغة (عربي/إنجليزي)
+10. **إرسال العروض**: عبر الواتساب أو البريد الإلكتروني
+11. **تحويل العملات**: بين العملات الرئيسية (الأساس: الريال السعودي)
+12. **تحليل الملفات**: صور، Excel، CSV، PDF
+13. **الرسائل الصوتية**: تحويل الصوت إلى نص
+14. **قاعدة المعرفة**: البحث والتعلم وحفظ المعلومات
 
 ### معلومات المصنع:
 - الموقع: www.modplastic.com | متخصصون في الأكياس البلاستيكية والأفلام البلاستيكية
@@ -602,6 +604,32 @@ ${defaultGreeting ? `رسالة الترحيب: ${defaultGreeting}\n` : ""}
 **عند الإرسال عبر البريد الإلكتروني:**
 1. اطلب عنوان البريد الإلكتروني
 2. استخدم send_quote_email
+
+**عند عرض الطلبات المسجلة:**
+1. استخدم list_orders لعرض قائمة مفصلة
+2. يمكن التصفية حسب الحالة أو العميل أو البحث في رقم الطلب
+3. النتائج تتضمن أوامر الإنتاج المرتبطة بكل طلب
+
+**عند إنشاء طلب جديد:**
+1. تحقق من وجود العميل أولاً باستخدام get_customer_info أو get_customers_list
+2. إذا العميل غير مسجل، سجله بـ create_customer ثم أنشئ الطلب
+3. استخدم create_order مع معرف العميل - رقم الطلب يُولَّد تلقائياً
+4. يمكن تحديد أيام التسليم وتاريخ التسليم وملاحظات
+
+**عند تحديث حالة طلب:**
+1. تأكد من رقم الطلب أو معرفه باستخدام list_orders أو get_order_status
+2. استخدم update_order_status مع الحالة الجديدة
+3. الحالات: waiting (انتظار)، in_production (إنتاج)، paused (متوقف)، cancelled (ملغي)، completed (مكتمل)
+
+**عند تسجيل عميل جديد:**
+1. اجمع البيانات: الاسم (مطلوب)، الاسم بالعربية، رقم الجوال، المدينة
+2. اختياري: الرقم الضريبي (14 رقم)، الاسم التجاري، الرقم الموحد (يبدأ بـ 7 ومكون من 10 أرقام)
+3. استخدم create_customer - يتم توليد معرف العميل تلقائياً
+
+**عند تسجيل منتج لعميل:**
+1. تأكد من وجود العميل أولاً
+2. اجمع مواصفات المنتج: الأبعاد، المادة الخام، نوع التخريم، هل مطبوع
+3. استخدم create_customer_product
 
 **عند الاستعلام عن العملاء:**
 - بحث محدد: get_customer_info | قائمة كاملة: get_customers_list
@@ -977,10 +1005,107 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
         required: ["quote_id", "email"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_orders",
+      description: "عرض قائمة الطلبات مع إمكانية البحث والتصفية حسب الحالة أو العميل أو رقم الطلب. يعرض تفاصيل كل طلب مع أوامر الإنتاج المرتبطة",
+      parameters: {
+        type: "object",
+        properties: {
+          status: { type: "string", enum: ["waiting", "in_production", "paused", "cancelled", "completed"], description: "تصفية حسب حالة الطلب" },
+          customer_id: { type: "string", description: "تصفية حسب معرف العميل (مثل CID001)" },
+          search: { type: "string", description: "بحث في رقم الطلب أو اسم العميل" },
+          limit: { type: "number", description: "الحد الأقصى للنتائج (افتراضي 20)" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_order",
+      description: "إنشاء طلب جديد في النظام. يتطلب معرف العميل. يتم توليد رقم الطلب تلقائياً إذا لم يُحدد. العميل يجب أن يكون مسجلاً مسبقاً",
+      parameters: {
+        type: "object",
+        properties: {
+          customer_id: { type: "string", description: "معرف العميل (مثل CID001) - يجب أن يكون عميل مسجل في النظام" },
+          order_number: { type: "string", description: "رقم الطلب (اختياري - يتم توليده تلقائياً إذا لم يُحدد)" },
+          delivery_days: { type: "number", description: "عدد أيام التسليم (اختياري)" },
+          delivery_date: { type: "string", description: "تاريخ التسليم بصيغة YYYY-MM-DD (اختياري)" },
+          notes: { type: "string", description: "ملاحظات على الطلب (اختياري)" }
+        },
+        required: ["customer_id"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_order_status",
+      description: "تحديث حالة طلب معين. الحالات المتاحة: waiting (انتظار)، in_production (قيد الإنتاج)، paused (متوقف)، cancelled (ملغي)، completed (مكتمل)",
+      parameters: {
+        type: "object",
+        properties: {
+          order_id: { type: "number", description: "رقم معرف الطلب (ID)" },
+          status: { type: "string", enum: ["waiting", "in_production", "paused", "cancelled", "completed"], description: "الحالة الجديدة للطلب" }
+        },
+        required: ["order_id", "status"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_customer",
+      description: "تسجيل عميل جديد في النظام. يتم توليد معرف العميل تلقائياً (CID001, CID002, ...)",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "اسم العميل بالإنجليزية" },
+          name_ar: { type: "string", description: "اسم العميل بالعربية" },
+          phone: { type: "string", description: "رقم الجوال" },
+          city: { type: "string", description: "المدينة" },
+          address: { type: "string", description: "العنوان (اختياري)" },
+          tax_number: { type: "string", description: "الرقم الضريبي (14 رقم، اختياري)" },
+          commercial_name: { type: "string", description: "الاسم التجاري (اختياري)" },
+          unified_number: { type: "string", description: "الرقم الموحد (يبدأ بـ 7 ومكون من 10 أرقام، اختياري)" }
+        },
+        required: ["name"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_customer_product",
+      description: "تسجيل منتج جديد لعميل معين. يحدد مواصفات المنتج مثل الأبعاد والسماكة والمادة الخام ونوع التقطيع",
+      parameters: {
+        type: "object",
+        properties: {
+          customer_id: { type: "string", description: "معرف العميل (مثل CID001)" },
+          size_caption: { type: "string", description: "وصف المقاس (مثل: 30×40)" },
+          width: { type: "number", description: "العرض بالسنتيمتر" },
+          thickness: { type: "number", description: "السماكة بالميكرون" },
+          raw_material: { type: "string", enum: ["HDPE", "LDPE", "LLDPE", "Regrind"], description: "نوع المادة الخام" },
+          cutting_length_cm: { type: "number", description: "طول التقطيع بالسنتيمتر" },
+          is_printed: { type: "boolean", description: "هل المنتج مطبوع؟" },
+          punching: { type: "string", enum: ["NON", "T-Shirt", "T-shirt\\Hook", "Banana"], description: "نوع التخريم" },
+          cutting_unit: { type: "string", enum: ["KG", "ROLL", "PKT"], description: "وحدة التقطيع" },
+          master_batch_id: { type: "string", description: "لون الماستر باتش (مثل: CLEAR, WHITE, BLACK)" },
+          notes: { type: "string", description: "ملاحظات إضافية" }
+        },
+        required: ["customer_id"]
+      }
+    }
   }
 ];
 
-async function executeFunction(name: string, args: Record<string, unknown>): Promise<string> {
+async function executeFunction(name: string, args: Record<string, unknown>, userPermissions?: string[]): Promise<string> {
+  const perms = userPermissions || [];
+  const hasPermission = (perm: string) => perms.includes('admin') || perms.includes(perm);
+  
   try {
     switch (name) {
       case "get_order_status": {
@@ -2110,6 +2235,326 @@ async function executeFunction(name: string, args: Record<string, unknown>): Pro
         });
       }
 
+      case "list_orders": {
+        const statusFilter = args.status as string | undefined;
+        const customerIdFilter = args.customer_id as string | undefined;
+        const searchTerm = args.search as string | undefined;
+        const limitNum = (args.limit as number) || 20;
+
+        const conditions: any[] = [];
+        if (statusFilter) {
+          conditions.push(eq(orders.status, statusFilter));
+        }
+        if (customerIdFilter) {
+          conditions.push(eq(orders.customer_id, customerIdFilter));
+        }
+        if (searchTerm) {
+          conditions.push(
+            or(
+              ilike(orders.order_number, `%${searchTerm}%`),
+              ilike(customers.name, `%${searchTerm}%`),
+              like(customers.name_ar, `%${searchTerm}%`)
+            )
+          );
+        }
+
+        const orderResults = await db
+          .select({
+            id: orders.id,
+            order_number: orders.order_number,
+            customer_id: orders.customer_id,
+            customer_name: customers.name,
+            customer_name_ar: customers.name_ar,
+            status: orders.status,
+            delivery_days: orders.delivery_days,
+            delivery_date: orders.delivery_date,
+            notes: orders.notes,
+            created_at: orders.created_at,
+          })
+          .from(orders)
+          .leftJoin(customers, eq(orders.customer_id, customers.id))
+          .where(conditions.length > 0 ? and(...conditions) : undefined)
+          .orderBy(desc(orders.created_at))
+          .limit(limitNum);
+
+        const orderIds = orderResults.map(o => o.id);
+        let prodOrdersData: any[] = [];
+        if (orderIds.length > 0) {
+          prodOrdersData = await db.select({
+            id: production_orders.id,
+            order_id: production_orders.order_id,
+            production_order_number: production_orders.production_order_number,
+            status: production_orders.status,
+            quantity_kg: production_orders.quantity_kg,
+            produced_quantity_kg: production_orders.produced_quantity_kg,
+          }).from(production_orders)
+            .where(sql`${production_orders.order_id} IN (${sql.join(orderIds.map(id => sql`${id}`), sql`, `)})`);
+        }
+
+        const statusLabels: Record<string, string> = {
+          waiting: "انتظار",
+          in_production: "قيد الإنتاج",
+          paused: "متوقف",
+          cancelled: "ملغي",
+          completed: "مكتمل"
+        };
+
+        return JSON.stringify({
+          count: orderResults.length,
+          orders: orderResults.map(o => ({
+            id: o.id,
+            order_number: o.order_number,
+            customer_id: o.customer_id,
+            customer_name: o.customer_name_ar || o.customer_name,
+            status: o.status,
+            status_label: statusLabels[o.status] || o.status,
+            delivery_days: o.delivery_days,
+            delivery_date: o.delivery_date,
+            notes: o.notes,
+            created_at: o.created_at,
+            production_orders: prodOrdersData
+              .filter(po => po.order_id === o.id)
+              .map(po => ({
+                id: po.id,
+                number: po.production_order_number,
+                status: po.status,
+                quantity_kg: po.quantity_kg,
+                produced_quantity_kg: po.produced_quantity_kg,
+              }))
+          }))
+        });
+      }
+
+      case "create_order": {
+        if (!hasPermission('manage_orders')) {
+          return JSON.stringify({ error: "ليس لديك صلاحية إنشاء طلبات. مطلوب صلاحية manage_orders" });
+        }
+
+        const customerId = args.customer_id as string;
+        let orderNumber = args.order_number as string | undefined;
+        const deliveryDays = args.delivery_days as number | undefined;
+        const deliveryDateStr = args.delivery_date as string | undefined;
+        const notes = args.notes as string | undefined;
+
+        const [customer] = await db.select().from(customers).where(eq(customers.id, customerId));
+        if (!customer) {
+          return JSON.stringify({ error: `العميل غير موجود بالمعرف: ${customerId}. تأكد من تسجيل العميل أولاً` });
+        }
+
+        let deliveryDate: string | null = null;
+        if (deliveryDateStr) {
+          const parsedDate = new Date(deliveryDateStr);
+          if (isNaN(parsedDate.getTime())) {
+            return JSON.stringify({ error: "صيغة تاريخ التسليم غير صحيحة. استخدم YYYY-MM-DD" });
+          }
+          deliveryDate = parsedDate.toISOString().split("T")[0];
+        }
+
+        const newOrder = await db.transaction(async (tx) => {
+          await tx.execute(sql`SELECT pg_advisory_xact_lock(2001)`);
+
+          if (!orderNumber?.trim()) {
+            const result = await tx.execute(
+              sql`SELECT MAX(CAST(SUBSTRING(order_number FROM 4) AS INTEGER)) as max_num 
+                  FROM orders 
+                  WHERE order_number ~ '^ORD[0-9]+$'`
+            );
+            const maxNum = (result as any).rows?.[0]?.max_num || 0;
+            orderNumber = `ORD${(maxNum + 1).toString().padStart(3, "0")}`;
+          } else {
+            const [existing] = await tx.select({ id: orders.id }).from(orders).where(eq(orders.order_number, orderNumber!.trim()));
+            if (existing) {
+              throw new Error(`رقم الطلب ${orderNumber} مستخدم بالفعل`);
+            }
+          }
+
+          const [order] = await tx.insert(orders).values({
+            order_number: orderNumber!,
+            customer_id: customerId,
+            delivery_days: deliveryDays && deliveryDays > 0 ? deliveryDays : null,
+            delivery_date: deliveryDate,
+            notes: notes || null,
+            status: "waiting",
+          }).returning();
+          return order;
+        });
+
+        return JSON.stringify({
+          success: true,
+          order: {
+            id: newOrder.id,
+            order_number: newOrder.order_number,
+            customer_id: newOrder.customer_id,
+            customer_name: customer.name_ar || customer.name,
+            status: newOrder.status,
+            status_label: "انتظار",
+            delivery_days: newOrder.delivery_days,
+            delivery_date: newOrder.delivery_date,
+            notes: newOrder.notes,
+            created_at: newOrder.created_at,
+          },
+          message: `تم إنشاء الطلب رقم ${newOrder.order_number} بنجاح للعميل ${customer.name_ar || customer.name}`
+        });
+      }
+
+      case "update_order_status": {
+        if (!hasPermission('manage_orders') && !hasPermission('update_order_status') && !hasPermission('manage_production')) {
+          return JSON.stringify({ error: "ليس لديك صلاحية تحديث حالة الطلبات" });
+        }
+
+        const orderId = args.order_id as number;
+        const newStatus = args.status as string;
+
+        const validStatuses = ["waiting", "in_production", "paused", "cancelled", "completed"];
+        if (!validStatuses.includes(newStatus)) {
+          return JSON.stringify({ error: `حالة غير صالحة: ${newStatus}. الحالات المتاحة: ${validStatuses.join(", ")}` });
+        }
+
+        const [existingOrder] = await db.select().from(orders).where(eq(orders.id, orderId));
+        if (!existingOrder) {
+          return JSON.stringify({ error: "الطلب غير موجود" });
+        }
+
+        const oldStatus = existingOrder.status;
+        if (oldStatus === newStatus) {
+          return JSON.stringify({ message: `الطلب بالفعل في حالة "${newStatus}"، لم يتم التغيير` });
+        }
+
+        const [updatedOrder] = await db.update(orders)
+          .set({ status: newStatus })
+          .where(eq(orders.id, orderId))
+          .returning();
+
+        const statusLabels: Record<string, string> = {
+          waiting: "انتظار",
+          in_production: "قيد الإنتاج",
+          paused: "متوقف",
+          cancelled: "ملغي",
+          completed: "مكتمل"
+        };
+
+        return JSON.stringify({
+          success: true,
+          order: {
+            id: updatedOrder.id,
+            order_number: updatedOrder.order_number,
+            old_status: oldStatus,
+            old_status_label: statusLabels[oldStatus] || oldStatus,
+            new_status: updatedOrder.status,
+            new_status_label: statusLabels[newStatus] || newStatus,
+          },
+          message: `تم تحديث حالة الطلب ${updatedOrder.order_number} من "${statusLabels[oldStatus] || oldStatus}" إلى "${statusLabels[newStatus] || newStatus}"`
+        });
+      }
+
+      case "create_customer": {
+        if (!hasPermission('manage_customers') && !hasPermission('manage_definitions')) {
+          return JSON.stringify({ error: "ليس لديك صلاحية تسجيل عملاء جدد" });
+        }
+
+        const customerName = args.name as string;
+        const nameAr = args.name_ar as string | undefined;
+        const phone = args.phone as string | undefined;
+        const city = args.city as string | undefined;
+        const address = args.address as string | undefined;
+        const taxNumber = args.tax_number as string | undefined;
+        const commercialName = args.commercial_name as string | undefined;
+        const unifiedNumber = args.unified_number as string | undefined;
+
+        if (taxNumber && (taxNumber.length !== 14 || !/^\d+$/.test(taxNumber))) {
+          return JSON.stringify({ error: "الرقم الضريبي يجب أن يكون 14 رقم" });
+        }
+        if (unifiedNumber && !/^7[0-9]{9}$/.test(unifiedNumber)) {
+          return JSON.stringify({ error: "الرقم الموحد يجب أن يبدأ بـ 7 ويتكون من 10 أرقام" });
+        }
+
+        const { storage } = await import("./storage");
+        const newCustomer = await storage.createCustomer({
+          name: customerName,
+          name_ar: nameAr || null,
+          phone: phone || null,
+          city: city || null,
+          address: address || null,
+          tax_number: taxNumber || null,
+          commercial_name: commercialName || null,
+          unified_number: unifiedNumber || null,
+          is_active: true,
+        });
+
+        return JSON.stringify({
+          success: true,
+          customer: {
+            id: newCustomer.id,
+            name: newCustomer.name,
+            name_ar: newCustomer.name_ar,
+            phone: newCustomer.phone,
+            city: newCustomer.city,
+            tax_number: newCustomer.tax_number,
+            commercial_name: newCustomer.commercial_name,
+            is_active: newCustomer.is_active,
+          },
+          message: `تم تسجيل العميل "${nameAr || customerName}" بنجاح بالمعرف ${newCustomer.id}`
+        });
+      }
+
+      case "create_customer_product": {
+        if (!hasPermission('manage_customers') && !hasPermission('manage_definitions')) {
+          return JSON.stringify({ error: "ليس لديك صلاحية تسجيل منتجات العملاء" });
+        }
+
+        const custId = args.customer_id as string;
+        const sizeCaption = args.size_caption as string | undefined;
+        const width = args.width as number | undefined;
+        const thickness = args.thickness as number | undefined;
+        const rawMaterial = args.raw_material as string | undefined;
+        const cuttingLengthCm = args.cutting_length_cm as number | undefined;
+        const isPrinted = args.is_printed as boolean | undefined;
+        const punching = args.punching as string | undefined;
+        const cuttingUnit = args.cutting_unit as string | undefined;
+        const masterBatchId = args.master_batch_id as string | undefined;
+        const prodNotes = args.notes as string | undefined;
+
+        const [cust] = await db.select().from(customers).where(eq(customers.id, custId));
+        if (!cust) {
+          return JSON.stringify({ error: `العميل غير موجود بالمعرف: ${custId}. تأكد من تسجيل العميل أولاً` });
+        }
+
+        const { storage } = await import("./storage");
+        const newProduct = await storage.createCustomerProduct({
+          customer_id: custId,
+          size_caption: sizeCaption || null,
+          width: width ? String(width) : null,
+          thickness: thickness ? String(thickness) : null,
+          raw_material: rawMaterial || null,
+          cutting_length_cm: cuttingLengthCm || null,
+          is_printed: isPrinted ?? false,
+          punching: punching || "NON",
+          cutting_unit: cuttingUnit || "KG",
+          master_batch_id: masterBatchId || null,
+          notes: prodNotes || null,
+          status: "active",
+        });
+
+        return JSON.stringify({
+          success: true,
+          product: {
+            id: newProduct.id,
+            customer_id: newProduct.customer_id,
+            customer_name: cust.name_ar || cust.name,
+            size_caption: newProduct.size_caption,
+            width: newProduct.width,
+            thickness: newProduct.thickness,
+            raw_material: newProduct.raw_material,
+            cutting_length_cm: newProduct.cutting_length_cm,
+            is_printed: newProduct.is_printed,
+            punching: newProduct.punching,
+            cutting_unit: newProduct.cutting_unit,
+            master_batch_id: newProduct.master_batch_id,
+          },
+          message: `تم تسجيل المنتج بنجاح للعميل "${cust.name_ar || cust.name}" (معرف المنتج: ${newProduct.id})`
+        });
+      }
+
       default:
         return JSON.stringify({ error: "دالة غير معروفة" });
     }
@@ -2156,6 +2601,7 @@ export function registerAiAgentRoutes(app: Express): void {
 
   try {
     const { messages } = req.body as { messages: Array<{ role: string; content: string }> };
+    const userPerms: string[] = (req as any).user?.permissions || [];
 
     if (!Array.isArray(messages)) {
       return res.status(400).json({ error: "صيغة الرسائل غير صحيحة" });
@@ -2248,7 +2694,7 @@ export function registerAiAgentRoutes(app: Express): void {
           continue;
         }
 
-        const result = await executeFunction(fn.name, args);
+        const result = await executeFunction(fn.name, args, userPerms);
 
         chatMessages.push({
           role: "tool",
