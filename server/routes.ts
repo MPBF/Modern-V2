@@ -1649,7 +1649,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.delete(
     "/api/orders/:id",
     requireAuth,
-    requireAdmin,
+    requirePermission('manage_orders'),
     validateRequest({ params: commonSchemas.idParam }),
     async (req, res) => {
       try {
@@ -1882,7 +1882,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.put(
     "/api/production-orders/:id",
     requireAuth,
-    requireAdmin,
+    requirePermission('manage_production'),
     async (req, res) => {
       try {
         const id = parseRouteParam(req.params.id, "ID");
@@ -1933,7 +1933,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.delete(
     "/api/production-orders/:id",
     requireAuth,
-    requireAdmin,
+    requirePermission('manage_production'),
     async (req, res) => {
       try {
         const id = parseRouteParam(req.params.id, "ID");
@@ -2217,7 +2217,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     }
   });
 
-  app.patch("/api/rolls/:id", requireAuth, async (req, res) => {
+  app.patch("/api/rolls/:id", requireAuth, requirePermission('manage_production', 'view_film_dashboard', 'view_printing_dashboard', 'view_cutting_dashboard'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "ID");
       const { stage, weight_kg, waste_kg, cut_weight_total_kg, printing_machine_id } = req.body;
@@ -2315,7 +2315,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   });
 
   // Mark roll as printed
-  app.post("/api/rolls/:id/mark-printed", requireAuth, async (req: AuthRequest, res) => {
+  app.post("/api/rolls/:id/mark-printed", requireAuth, requirePermission('manage_production', 'view_printing_dashboard'), async (req: AuthRequest, res) => {
     try {
       const rollId = parseRouteParam(req.params.id, "Roll ID");
       const user = req.user;
@@ -2471,7 +2471,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   });
 
   // Create roll with timing calculation
-  app.post("/api/rolls/create-with-timing", requireAuth, async (req: AuthRequest, res) => {
+  app.post("/api/rolls/create-with-timing", requireAuth, requirePermission('manage_production', 'view_film_dashboard'), async (req: AuthRequest, res) => {
     try {
       const userId = getAuthUserId(req);
       
@@ -2540,7 +2540,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   });
 
   // Create final roll and complete film production
-  app.post("/api/rolls/create-final", requireAuth, async (req: AuthRequest, res) => {
+  app.post("/api/rolls/create-final", requireAuth, requirePermission('manage_production', 'view_film_dashboard'), async (req: AuthRequest, res) => {
     try {
       const userId = getAuthUserId(req);
       
@@ -3805,7 +3805,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/mixing-recipes", requireAuth, async (req, res) => {
+  app.post("/api/mixing-recipes", requireAuth, requirePermission('manage_mixing', 'manage_production'), async (req, res) => {
     try {
       if (!req.body || typeof req.body !== "object") {
         return res.status(400).json({ message: "بيانات الوصفة مطلوبة" });
@@ -3831,7 +3831,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.post("/api/maintenance", requireAuth, async (req, res) => {
+  app.post("/api/maintenance", requireAuth, requirePermission('manage_maintenance', 'create_maintenance_requests'), async (req, res) => {
     try {
       const validatedData = insertMaintenanceRequestSchema.parse(req.body);
       const request = await storage.createMaintenanceRequest(validatedData);
@@ -5692,7 +5692,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/machine-queues/reorder", requireAuth, async (req, res) => {
+  app.put("/api/machine-queues/reorder", requireAuth, requirePermission('manage_production'), async (req, res) => {
     try {
       const { queueId, newPosition } = req.body;
       
@@ -5876,7 +5876,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/orders/:id", requireAuth, requireAdmin, async (req, res) => {
+  app.put("/api/orders/:id", requireAuth, requirePermission('manage_orders'), async (req, res) => {
     try {
       const orderId = parseRouteParam(req.params.id, "id");
       const result = insertNewOrderSchema.safeParse(req.body);
@@ -5904,7 +5904,7 @@ Do not include quotes or explanations.`;
   app.patch(
     "/api/orders/:id/status",
     requireAuth,
-    requireAdmin,
+    requirePermission('manage_orders', 'update_order_status', 'manage_production'),
     async (req, res) => {
       try {
         const orderId = parseRouteParam(req.params.id, "id");
@@ -6615,7 +6615,7 @@ Do not include quotes or explanations.`;
   });
 
   // Bulk upsert manual attendance
-  app.post("/api/attendance/manual", requireAuth, async (req, res) => {
+  app.post("/api/attendance/manual", requireAuth, requirePermission('manage_attendance'), async (req, res) => {
     try {
       const { entries } = req.body;
       
@@ -6711,7 +6711,7 @@ Do not include quotes or explanations.`;
   });
 
   // استيراد بيانات الحضور من ملف Excel
-  app.post("/api/attendance/import", requireAuth, upload.single("file"), async (req, res) => {
+  app.post("/api/attendance/import", requireAuth, requirePermission('manage_attendance'), upload.single("file"), async (req, res) => {
     try {
       const userId = parseInt(req.body.userId);
       
@@ -7359,7 +7359,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/attendance/:id", requireAuth, async (req, res) => {
+  app.put("/api/attendance/:id", requireAuth, requirePermission('manage_attendance'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "id");
       const attendance = await storage.updateAttendance(id, req.body);
@@ -7370,7 +7370,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.delete("/api/attendance/:id", requireAuth, async (req, res) => {
+  app.delete("/api/attendance/:id", requireAuth, requirePermission('manage_attendance'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "id");
       await storage.deleteAttendance(id);
@@ -7993,7 +7993,7 @@ Do not include quotes or explanations.`;
   });
 
   // Start Production
-  app.patch("/api/production-orders/:id/start-production", requireAuth, async (req, res) => {
+  app.patch("/api/production-orders/:id/start-production", requireAuth, requirePermission('manage_production'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "id");
       const productionOrder = await storage.startProduction(id);
@@ -8113,7 +8113,7 @@ Do not include quotes or explanations.`;
   );
 
   // Printing Operations
-  app.patch("/api/rolls/:id/print", requireAuth, async (req, res) => {
+  app.patch("/api/rolls/:id/print", requireAuth, requirePermission('manage_production', 'view_printing_dashboard'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "id");
       if (!getAuthUserId(req)) {
@@ -8444,7 +8444,7 @@ Do not include quotes or explanations.`;
   });
 
   // إكمال عملية التقطيع
-  app.post("/api/rolls/:id/complete-cutting", requireAuth, async (req, res) => {
+  app.post("/api/rolls/:id/complete-cutting", requireAuth, requirePermission('manage_production', 'view_cutting_dashboard'), async (req, res) => {
     try {
       const authReq = req as AuthRequest;
       const rollId = parseRouteParam(req.params.id, "id");
@@ -9238,7 +9238,7 @@ Do not include quotes or explanations.`;
   });
 
   // Create mixing batch
-  app.post("/api/mixing-batches", requireAuth, async (req, res) => {
+  app.post("/api/mixing-batches", requireAuth, requirePermission('manage_mixing', 'manage_production'), async (req, res) => {
     try {
       const { batch, ingredients } = req.body;
       
@@ -9275,7 +9275,7 @@ Do not include quotes or explanations.`;
   });
 
   // Update mixing batch
-  app.put("/api/mixing-batches/:id", requireAuth, async (req, res) => {
+  app.put("/api/mixing-batches/:id", requireAuth, requirePermission('manage_mixing', 'manage_production'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "id");
       const updates = req.body;
@@ -9289,7 +9289,7 @@ Do not include quotes or explanations.`;
   });
 
   // Update batch ingredient actuals
-  app.put("/api/mixing-batches/:id/ingredients", requireAuth, async (req, res) => {
+  app.put("/api/mixing-batches/:id/ingredients", requireAuth, requirePermission('manage_mixing', 'manage_production'), async (req, res) => {
     try {
       const batchId = parseRouteParam(req.params.id, "id");
       const { ingredientUpdates } = req.body;
@@ -9308,7 +9308,7 @@ Do not include quotes or explanations.`;
   });
 
   // Complete mixing batch
-  app.post("/api/mixing-batches/:id/complete", requireAuth, async (req, res) => {
+  app.post("/api/mixing-batches/:id/complete", requireAuth, requirePermission('manage_mixing', 'manage_production'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "id");
       const completedBatch = await storage.completeMixingBatch(id);
@@ -10875,7 +10875,7 @@ Do not include quotes or explanations.`;
     }
   });
 
-  app.put("/api/display/slides/reorder", requireAuth, async (req, res) => {
+  app.put("/api/display/slides/reorder", requireAuth, requirePermission('manage_display_screen'), async (req, res) => {
     try {
       const slideOrderSchema = z.array(z.object({
         id: z.number().int().positive(),

@@ -375,17 +375,20 @@ A full-stack Manufacturing Resource Planning (MRP) system for a plastic bag manu
 3. **Mobile Login**: `POST /api/mobile/login` → bcrypt check → Bearer token (30-day expiry, in-memory store)
 
 ### Permission System
-- Permissions defined in `shared/permissions.ts` (~85 permission keys)
+- Permissions defined in `shared/permissions.ts` (~86 permission keys)
 - Stored as JSON string array in `roles.permissions` column
 - Backend enforcement: `requireAuth`, `requireAdmin`, `requirePermission('perm1', 'perm2')` middleware
 - Frontend enforcement: `canAccessRoute()`, `canAccessSettingsTab()`, `canAccessDefinitionsTab()`
 - Admin role (role_id 10, name "Admin") has `'admin'` permission that bypasses all checks
 - Role cache with 60s TTL via `getCachedRoles()`, invalidated on role CRUD
+- `requireAdmin` is only used for database management and system-level operations
+- All business operations (orders, production, attendance, etc.) use `requirePermission` with appropriate permissions
 
 ### Permission Categories
 - **View**: `view_home`, `view_dashboard`, `view_orders`, `view_production`, `view_hr`, etc.
 - **Manage**: `manage_orders`, `manage_production`, `manage_warehouse`, `manage_users`, etc.
-- **Specialized**: `create_quality_inspections`, `manage_spare_parts`, `use_ai_agent`, etc.
+- **Specialized**: `update_order_status`, `create_quality_inspections`, `manage_spare_parts`, `use_ai_agent`, etc.
+- **Operator**: `view_film_dashboard`, `view_printing_dashboard`, `view_cutting_dashboard` (also grant production write access for operator-specific actions)
 - **Admin**: `admin` (super permission, bypasses all checks)
 
 ## Manufacturing Workflow

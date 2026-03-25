@@ -11,6 +11,7 @@ export type PermissionKey =
   | 'view_dashboard'
   | 'view_user_dashboard'
   | 'manage_orders'
+  | 'update_order_status'
   | 'manage_production'
   | 'manage_maintenance'
   | 'manage_quality'
@@ -130,6 +131,13 @@ export const PERMISSIONS: Permission[] = [
     name_ar: 'إدارة الطلبات', 
     category: 'الطلبات',
     description: 'Create, edit, delete orders'
+  },
+  { 
+    id: 'update_order_status', 
+    name: 'Update Order Status', 
+    name_ar: 'تحديث حالة الطلب', 
+    category: 'الطلبات',
+    description: 'Change order status (waiting, in_production, paused, completed, cancelled)'
   },
   
   // Production
