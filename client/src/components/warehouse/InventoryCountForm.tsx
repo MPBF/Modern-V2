@@ -338,47 +338,56 @@ export function InventoryCountForm({ open, onOpenChange }: InventoryCountFormPro
                     {t('warehouse.inventoryCount.startScanningToAdd')}
                   </div>
                 ) : (
-                  <Table className="min-w-[500px]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-right whitespace-nowrap">{t('warehouse.labels.item')}</TableHead>
-                        <TableHead className="text-right whitespace-nowrap">{t('warehouse.inventoryCount.systemQuantity')}</TableHead>
-                        <TableHead className="text-right whitespace-nowrap">{t('warehouse.inventoryCount.actualCount')}</TableHead>
-                        <TableHead className="text-right whitespace-nowrap">{t('warehouse.inventoryCount.difference')}</TableHead>
-                        <TableHead className="text-right"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  <>
+                    <div className="hidden sm:block">
+                      <Table className="min-w-[500px]">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-right whitespace-nowrap">{t('warehouse.labels.item')}</TableHead>
+                            <TableHead className="text-right whitespace-nowrap">{t('warehouse.inventoryCount.systemQuantity')}</TableHead>
+                            <TableHead className="text-right whitespace-nowrap">{t('warehouse.inventoryCount.actualCount')}</TableHead>
+                            <TableHead className="text-right whitespace-nowrap">{t('warehouse.inventoryCount.difference')}</TableHead>
+                            <TableHead className="text-right"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {countItems.map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell>{item.item_name}</TableCell>
+                              <TableCell>{item.system_quantity} {item.unit}</TableCell>
+                              <TableCell>
+                                <Input type="number" value={item.counted_quantity} onChange={(e) => handleQuantityChange(index, parseFloat(e.target.value) || 0)} className="w-24" />
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={item.difference === 0 ? "default" : "destructive"}>{item.difference > 0 ? "+" : ""}{item.difference.toFixed(2)}</Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(index)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <div className="sm:hidden space-y-2">
                       {countItems.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{item.item_name}</TableCell>
-                          <TableCell>{item.system_quantity} {item.unit}</TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              value={item.counted_quantity}
-                              onChange={(e) => handleQuantityChange(index, parseFloat(e.target.value) || 0)}
-                              className="w-24"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={item.difference === 0 ? "default" : "destructive"}>
-                              {item.difference > 0 ? "+" : ""}{item.difference.toFixed(2)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveItem(index)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                        <div key={index} className="border rounded-lg p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-sm">{item.item_name}</span>
+                            <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(index)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                            <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.inventoryCount.systemQuantity')}:</span><span>{item.system_quantity} {item.unit}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-gray-500">{t('warehouse.inventoryCount.difference')}:</span><Badge variant={item.difference === 0 ? "default" : "destructive"} className="text-xs">{item.difference > 0 ? "+" : ""}{item.difference.toFixed(2)}</Badge></div>
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500">{t('warehouse.inventoryCount.actualCount')}</label>
+                            <Input type="number" value={item.counted_quantity} onChange={(e) => handleQuantityChange(index, parseFloat(e.target.value) || 0)} className="mt-1" />
+                          </div>
+                        </div>
                       ))}
-                    </TableBody>
-                  </Table>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>

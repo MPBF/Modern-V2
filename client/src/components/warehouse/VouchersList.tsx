@@ -400,109 +400,101 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
               {t('warehouse.vouchers.noVouchers')}
             </div>
           ) : (
-            <Table className="min-w-[700px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.voucherNumber')}</TableHead>
-                  <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.type')}</TableHead>
-                  <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.date')}</TableHead>
-                  {(type === "raw-material-in" || type === "raw-material-out") && (
-                    <TableHead className="text-center whitespace-nowrap">الصنف</TableHead>
-                  )}
-                  {type === "raw-material-in" && (
-                    <TableHead className="text-center whitespace-nowrap">المورد</TableHead>
-                  )}
-                  {type === "raw-material-out" && (
-                    <TableHead className="text-center whitespace-nowrap">الجهة</TableHead>
-                  )}
-                  <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.quantity')}</TableHead>
-                  <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.status')}</TableHead>
-                  <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <div className="hidden sm:block">
+                <Table className="min-w-[700px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.voucherNumber')}</TableHead>
+                      <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.type')}</TableHead>
+                      <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.date')}</TableHead>
+                      {(type === "raw-material-in" || type === "raw-material-out") && <TableHead className="text-center whitespace-nowrap">الصنف</TableHead>}
+                      {type === "raw-material-in" && <TableHead className="text-center whitespace-nowrap">المورد</TableHead>}
+                      {type === "raw-material-out" && <TableHead className="text-center whitespace-nowrap">الجهة</TableHead>}
+                      <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.quantity')}</TableHead>
+                      <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.status')}</TableHead>
+                      <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {vouchers.map((voucher: any) => (
+                      <TableRow key={voucher.id}>
+                        <TableCell className="text-center font-medium">{voucher.voucher_number}</TableCell>
+                        <TableCell className="text-center">{getVoucherTypeLabel(voucher.voucher_type)}</TableCell>
+                        <TableCell className="text-center">{new Date(voucher.voucher_date).toLocaleDateString("en-US")}</TableCell>
+                        {(type === "raw-material-in" || type === "raw-material-out") && <TableCell className="text-center text-sm">{voucher.item_name_ar || voucher.item_name || voucher.item_id}</TableCell>}
+                        {type === "raw-material-in" && <TableCell className="text-center text-sm">{voucher.supplier_name_ar || voucher.supplier_name || '-'}</TableCell>}
+                        {type === "raw-material-out" && <TableCell className="text-center text-sm">{voucher.to_destination || voucher.production_order_number || '-'}</TableCell>}
+                        <TableCell className="text-center">{parseFloat(voucher.quantity || 0).toLocaleString("en-US")} {voucher.unit || t('warehouse.units.kilo')}</TableCell>
+                        <TableCell className="text-center">{getStatusBadge(voucher.status)}</TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex gap-1 justify-center">
+                            <Button variant="ghost" size="sm" onClick={() => handleView(voucher)} title="عرض السند"><Eye className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => handlePrint(voucher)} title="طباعة السند"><Printer className="h-4 w-4" /></Button>
+                            {(type === "finished-goods-in" || type === "finished-goods-out" || type === "raw-material-in" || type === "raw-material-out") && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /></Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>{t('warehouse.vouchers.confirmDeleteTitle')}</AlertDialogTitle>
+                                    <AlertDialogDescription>{t('warehouse.vouchers.confirmDeleteDesc', { number: voucher.voucher_number })}</AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter className="gap-2">
+                                    <AlertDialogCancel>{t('warehouse.buttons.cancel')}</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deleteMutation.mutate(voucher.id)} className="bg-red-600 hover:bg-red-700">{deleteMutation.isPending ? t('common.processing') : t('warehouse.vouchers.confirmDelete')}</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="sm:hidden space-y-3">
                 {vouchers.map((voucher: any) => (
-                  <TableRow key={voucher.id}>
-                    <TableCell className="text-center font-medium">
-                      {voucher.voucher_number}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {getVoucherTypeLabel(voucher.voucher_type)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {new Date(voucher.voucher_date).toLocaleDateString("en-US")}
-                    </TableCell>
-                    {(type === "raw-material-in" || type === "raw-material-out") && (
-                      <TableCell className="text-center text-sm">
-                        {voucher.item_name_ar || voucher.item_name || voucher.item_id}
-                      </TableCell>
-                    )}
-                    {type === "raw-material-in" && (
-                      <TableCell className="text-center text-sm">
-                        {voucher.supplier_name_ar || voucher.supplier_name || '-'}
-                      </TableCell>
-                    )}
-                    {type === "raw-material-out" && (
-                      <TableCell className="text-center text-sm">
-                        {voucher.to_destination || voucher.production_order_number || '-'}
-                      </TableCell>
-                    )}
-                    <TableCell className="text-center">
-                      {parseFloat(voucher.quantity || 0).toLocaleString("en-US")} {voucher.unit || t('warehouse.units.kilo')}
-                    </TableCell>
-                    <TableCell className="text-center">
+                  <div key={voucher.id} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm">{voucher.voucher_number}</span>
                       {getStatusBadge(voucher.status)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex gap-1 justify-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleView(voucher)}
-                          title="عرض السند"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handlePrint(voucher)}
-                          title="طباعة السند"
-                        >
-                          <Printer className="h-4 w-4" />
-                        </Button>
-                        {(type === "finished-goods-in" || type === "finished-goods-out" || type === "raw-material-in" || type === "raw-material-out") && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>{t('warehouse.vouchers.confirmDeleteTitle')}</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  {t('warehouse.vouchers.confirmDeleteDesc', { number: voucher.voucher_number })}
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter className="gap-2">
-                                <AlertDialogCancel>{t('warehouse.buttons.cancel')}</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteMutation.mutate(voucher.id)}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  {deleteMutation.isPending ? t('common.processing') : t('warehouse.vouchers.confirmDelete')}
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                      <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.vouchers.type')}:</span><span>{getVoucherTypeLabel(voucher.voucher_type)}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.vouchers.date')}:</span><span>{new Date(voucher.voucher_date).toLocaleDateString("en-US")}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.vouchers.quantity')}:</span><span className="font-medium">{parseFloat(voucher.quantity || 0).toLocaleString("en-US")} {voucher.unit || t('warehouse.units.kilo')}</span></div>
+                      {(type === "raw-material-in" || type === "raw-material-out") && <div className="flex justify-between"><span className="text-gray-500">الصنف:</span><span>{voucher.item_name_ar || voucher.item_name || voucher.item_id}</span></div>}
+                      {type === "raw-material-in" && <div className="flex justify-between"><span className="text-gray-500">المورد:</span><span>{voucher.supplier_name_ar || voucher.supplier_name || '-'}</span></div>}
+                      {type === "raw-material-out" && <div className="flex justify-between"><span className="text-gray-500">الجهة:</span><span>{voucher.to_destination || voucher.production_order_number || '-'}</span></div>}
+                    </div>
+                    <div className="flex gap-1 pt-1 border-t">
+                      <Button variant="ghost" size="sm" onClick={() => handleView(voucher)} className="flex-1 text-xs"><Eye className="h-3 w-3 ml-1" />عرض</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handlePrint(voucher)} className="flex-1 text-xs"><Printer className="h-3 w-3 ml-1" />طباعة</Button>
+                      {(type === "finished-goods-in" || type === "finished-goods-out" || type === "raw-material-in" || type === "raw-material-out") && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="flex-1 text-xs text-red-500"><Trash2 className="h-3 w-3 ml-1" />حذف</Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="w-[95vw] sm:w-full">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>{t('warehouse.vouchers.confirmDeleteTitle')}</AlertDialogTitle>
+                              <AlertDialogDescription>{t('warehouse.vouchers.confirmDeleteDesc', { number: voucher.voucher_number })}</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter className="gap-2">
+                              <AlertDialogCancel>{t('warehouse.buttons.cancel')}</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteMutation.mutate(voucher.id)} className="bg-red-600 hover:bg-red-700">{deleteMutation.isPending ? t('common.processing') : t('warehouse.vouchers.confirmDelete')}</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

@@ -212,42 +212,64 @@ export function WarehouseReports() {
               {stockLoading ? (
                 <div className="text-center py-8 text-muted-foreground">{t('warehouse.loading')}</div>
               ) : (
-              <Table className="min-w-[800px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.code')}</TableHead>
-                    <TableHead className="whitespace-nowrap">{t('warehouse.labels.item')}</TableHead>
-                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.classification')}</TableHead>
-                    <TableHead className="whitespace-nowrap">{t('warehouse.labels.unit')}</TableHead>
-                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.currentBalance')}</TableHead>
-                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.minLimit')}</TableHead>
-                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.status')}</TableHead>
-                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.value')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                <div className="hidden sm:block">
+                  <Table className="min-w-[800px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="whitespace-nowrap">{t('warehouse.reports.code')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('warehouse.labels.item')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('warehouse.reports.classification')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('warehouse.labels.unit')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('warehouse.reports.currentBalance')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('warehouse.reports.minLimit')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('warehouse.reports.status')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('warehouse.reports.value')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(stockLevels as any[])?.map((item: any) => (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.code}</TableCell>
+                          <TableCell>{item.name_ar}</TableCell>
+                          <TableCell>{item.category}</TableCell>
+                          <TableCell>{item.unit}</TableCell>
+                          <TableCell>{item.current_stock}</TableCell>
+                          <TableCell>{item.min_stock}</TableCell>
+                          <TableCell>
+                            <Badge variant={item.stock_status === "low" ? "destructive" : item.stock_status === "high" ? "outline" : "default"}>
+                              {item.stock_status === "low" ? t('warehouse.reports.statusLow') : item.stock_status === "high" ? t('warehouse.reports.statusHigh') : t('warehouse.reports.statusNormal')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">{Number(item.total_value || 0).toLocaleString("en-US")} {t('warehouse.currency')}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="sm:hidden space-y-3">
                   {(stockLevels as any[])?.map((item: any) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.code}</TableCell>
-                      <TableCell>{item.name_ar}</TableCell>
-                      <TableCell>{item.category}</TableCell>
-                      <TableCell>{item.unit}</TableCell>
-                      <TableCell>{item.current_stock}</TableCell>
-                      <TableCell>{item.min_stock}</TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          item.stock_status === "low" ? "destructive" : 
-                          item.stock_status === "high" ? "outline" : "default"
-                        }>
-                          {item.stock_status === "low" ? t('warehouse.reports.statusLow') : 
-                           item.stock_status === "high" ? t('warehouse.reports.statusHigh') : t('warehouse.reports.statusNormal')}
+                    <div key={item.id} className="border rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-sm">{item.name_ar}</span>
+                          <span className="text-xs text-gray-500 mr-2">({item.code})</span>
+                        </div>
+                        <Badge variant={item.stock_status === "low" ? "destructive" : item.stock_status === "high" ? "outline" : "default"}>
+                          {item.stock_status === "low" ? t('warehouse.reports.statusLow') : item.stock_status === "high" ? t('warehouse.reports.statusHigh') : t('warehouse.reports.statusNormal')}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">{Number(item.total_value || 0).toLocaleString("en-US")} {t('warehouse.currency')}</TableCell>
-                    </TableRow>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.reports.classification')}:</span><span>{item.category}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.labels.unit')}:</span><span>{item.unit}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.reports.currentBalance')}:</span><span className="font-bold">{item.current_stock}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.reports.minLimit')}:</span><span>{item.min_stock}</span></div>
+                        <div className="flex justify-between col-span-2"><span className="text-gray-500">{t('warehouse.reports.value')}:</span><span className="font-medium">{Number(item.total_value || 0).toLocaleString("en-US")} {t('warehouse.currency')}</span></div>
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+              </>
               )}
             </CardContent>
           </Card>
@@ -267,30 +289,49 @@ export function WarehouseReports() {
                   {t('warehouse.reports.noAlerts')}
                 </div>
               ) : (
-                <Table className="min-w-[500px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="whitespace-nowrap">{t('warehouse.reports.code')}</TableHead>
-                      <TableHead className="whitespace-nowrap">{t('warehouse.labels.item')}</TableHead>
-                      <TableHead className="whitespace-nowrap">{t('warehouse.reports.currentBalance')}</TableHead>
-                      <TableHead className="whitespace-nowrap">{t('warehouse.reports.minLimit')}</TableHead>
-                      <TableHead className="whitespace-nowrap">{t('warehouse.reports.shortage')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  <div className="hidden sm:block">
+                    <Table className="min-w-[500px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="whitespace-nowrap">{t('warehouse.reports.code')}</TableHead>
+                          <TableHead className="whitespace-nowrap">{t('warehouse.labels.item')}</TableHead>
+                          <TableHead className="whitespace-nowrap">{t('warehouse.reports.currentBalance')}</TableHead>
+                          <TableHead className="whitespace-nowrap">{t('warehouse.reports.minLimit')}</TableHead>
+                          <TableHead className="whitespace-nowrap">{t('warehouse.reports.shortage')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(alerts as any[])?.map((item: any) => (
+                          <TableRow key={item.id} className="bg-red-50 dark:bg-red-950">
+                            <TableCell>{item.code}</TableCell>
+                            <TableCell>{item.name_ar}</TableCell>
+                            <TableCell className="text-red-600 font-bold">{item.current_stock}</TableCell>
+                            <TableCell>{item.min_stock}</TableCell>
+                            <TableCell><Badge variant="destructive">{item.shortage}</Badge></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div className="sm:hidden space-y-2">
                     {(alerts as any[])?.map((item: any) => (
-                      <TableRow key={item.id} className="bg-red-50 dark:bg-red-950">
-                        <TableCell>{item.code}</TableCell>
-                        <TableCell>{item.name_ar}</TableCell>
-                        <TableCell className="text-red-600 font-bold">{item.current_stock}</TableCell>
-                        <TableCell>{item.min_stock}</TableCell>
-                        <TableCell>
-                          <Badge variant="destructive">{item.shortage}</Badge>
-                        </TableCell>
-                      </TableRow>
+                      <div key={item.id} className="border border-red-200 rounded-lg p-3 bg-red-50 dark:bg-red-950 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="font-bold text-sm">{item.name_ar}</span>
+                            <span className="text-xs text-gray-500 mr-2">({item.code})</span>
+                          </div>
+                          <Badge variant="destructive">{t('warehouse.reports.shortage')}: {item.shortage}</Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 text-xs">
+                          <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.reports.currentBalance')}:</span><span className="text-red-600 font-bold">{item.current_stock}</span></div>
+                          <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.reports.minLimit')}:</span><span>{item.min_stock}</span></div>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -326,40 +367,56 @@ export function WarehouseReports() {
               </div>
             </CardHeader>
             <CardContent>
-              <Table className="min-w-[700px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.dateColumn')}</TableHead>
-                    <TableHead className="whitespace-nowrap">{t('warehouse.labels.item')}</TableHead>
-                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.movementType')}</TableHead>
-                    <TableHead className="whitespace-nowrap">{t('warehouse.labels.quantity')}</TableHead>
-                    <TableHead className="whitespace-nowrap">{t('warehouse.reports.reference')}</TableHead>
-                    <TableHead className="whitespace-nowrap">{t('warehouse.labels.notes')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                <div className="hidden sm:block">
+                  <Table className="min-w-[700px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="whitespace-nowrap">{t('warehouse.reports.dateColumn')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('warehouse.labels.item')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('warehouse.reports.movementType')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('warehouse.labels.quantity')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('warehouse.reports.reference')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('warehouse.labels.notes')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(movements as any[])?.map((mov: any) => (
+                        <TableRow key={mov.id}>
+                          <TableCell className="whitespace-nowrap">{new Date(mov.created_at).toLocaleDateString("en-US")}</TableCell>
+                          <TableCell>{mov.item_name || mov.item_code}</TableCell>
+                          <TableCell>
+                            <Badge variant={mov.movement_type === "in" ? "default" : "secondary"}>
+                              {mov.movement_type === "in" ? <><TrendingUp className="h-3 w-3 ml-1" /> {t('warehouse.movementTypes.in')}</> : <><TrendingDown className="h-3 w-3 ml-1" /> {t('warehouse.movementTypes.out')}</>}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{mov.quantity}</TableCell>
+                          <TableCell className="whitespace-nowrap">{mov.reference_type} - {mov.reference_id}</TableCell>
+                          <TableCell>{mov.notes}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="sm:hidden space-y-3">
                   {(movements as any[])?.map((mov: any) => (
-                    <TableRow key={mov.id}>
-                      <TableCell className="whitespace-nowrap">
-                        {new Date(mov.created_at).toLocaleDateString("en-US")}
-                      </TableCell>
-                      <TableCell>{mov.item_name || mov.item_code}</TableCell>
-                      <TableCell>
+                    <div key={mov.id} className="border rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-sm">{mov.item_name || mov.item_code}</span>
                         <Badge variant={mov.movement_type === "in" ? "default" : "secondary"}>
-                          {mov.movement_type === "in" ? (
-                            <><TrendingUp className="h-3 w-3 ml-1" /> {t('warehouse.movementTypes.in')}</>
-                          ) : (
-                            <><TrendingDown className="h-3 w-3 ml-1" /> {t('warehouse.movementTypes.out')}</>
-                          )}
+                          {mov.movement_type === "in" ? <><TrendingUp className="h-3 w-3 ml-1" /> {t('warehouse.movementTypes.in')}</> : <><TrendingDown className="h-3 w-3 ml-1" /> {t('warehouse.movementTypes.out')}</>}
                         </Badge>
-                      </TableCell>
-                      <TableCell>{mov.quantity}</TableCell>
-                      <TableCell className="whitespace-nowrap">{mov.reference_type} - {mov.reference_id}</TableCell>
-                      <TableCell>{mov.notes}</TableCell>
-                    </TableRow>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.reports.dateColumn')}:</span><span>{new Date(mov.created_at).toLocaleDateString("en-US")}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.labels.quantity')}:</span><span className="font-bold">{mov.quantity}</span></div>
+                        <div className="flex justify-between col-span-2"><span className="text-gray-500">{t('warehouse.reports.reference')}:</span><span>{mov.reference_type} - {mov.reference_id}</span></div>
+                        {mov.notes && <div className="flex justify-between col-span-2"><span className="text-gray-500">{t('warehouse.labels.notes')}:</span><span>{mov.notes}</span></div>}
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+              </>
             </CardContent>
           </Card>
         </TabsContent>

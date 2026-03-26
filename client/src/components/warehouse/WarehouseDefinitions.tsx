@@ -263,40 +263,52 @@ function SuppliersTab() {
         ) : suppliers.length === 0 ? (
           <div className="text-center py-8 text-gray-500">{t('warehouse.definitions.noSuppliers')}</div>
         ) : (
-          <Table className="min-w-[500px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.name')}</TableHead>
-                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.phone')}</TableHead>
-                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.contactPerson')}</TableHead>
-                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            <div className="hidden sm:block">
+              <Table className="min-w-[500px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.name')}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.phone')}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.contactPerson')}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {suppliers.map((supplier: any) => (
+                    <TableRow key={supplier.id}>
+                      <TableCell>{supplier.name_ar || supplier.name}</TableCell>
+                      <TableCell dir="ltr">{supplier.phone || "-"}</TableCell>
+                      <TableCell>{supplier.contact_person || "-"}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(supplier)}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => deleteMutation.mutate(supplier.id)} disabled={deleteMutation.isPending}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="sm:hidden space-y-2">
               {suppliers.map((supplier: any) => (
-                <TableRow key={supplier.id}>
-                  <TableCell>{supplier.name_ar || supplier.name}</TableCell>
-                  <TableCell dir="ltr">{supplier.phone || "-"}</TableCell>
-                  <TableCell>{supplier.contact_person || "-"}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(supplier)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteMutation.mutate(supplier.id)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
+                <div key={supplier.id} className="border rounded-lg p-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm">{supplier.name_ar || supplier.name}</span>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(supplier)}><Edit className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => deleteMutation.mutate(supplier.id)} disabled={deleteMutation.isPending}><Trash2 className="h-4 w-4 text-red-500" /></Button>
                     </div>
-                  </TableCell>
-                </TableRow>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 text-xs">
+                    <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.definitions.phone')}:</span><span dir="ltr">{supplier.phone || "-"}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.definitions.contactPerson')}:</span><span>{supplier.contact_person || "-"}</span></div>
+                  </div>
+                </div>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
@@ -549,42 +561,57 @@ function ItemsTab() {
         ) : items.length === 0 ? (
           <div className="text-center py-8 text-gray-500">{t('warehouse.definitions.noItems')}</div>
         ) : (
-          <Table className="min-w-[600px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.code')}</TableHead>
-                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.name')}</TableHead>
-                <TableHead className="text-right whitespace-nowrap">{t('warehouse.labels.unit')}</TableHead>
-                <TableHead className="text-right whitespace-nowrap">{t('warehouse.labels.barcode')}</TableHead>
-                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            <div className="hidden sm:block">
+              <Table className="min-w-[600px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.code')}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.name')}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t('warehouse.labels.unit')}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t('warehouse.labels.barcode')}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.slice(0, 50).map((item: any) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.code}</TableCell>
+                      <TableCell>{item.name_ar || item.name}</TableCell>
+                      <TableCell>{item.unit || "-"}</TableCell>
+                      <TableCell dir="ltr">{item.barcode || "-"}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(item)}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => deleteMutation.mutate(item.id)} disabled={deleteMutation.isPending}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="sm:hidden space-y-2">
               {items.slice(0, 50).map((item: any) => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.code}</TableCell>
-                  <TableCell>{item.name_ar || item.name}</TableCell>
-                  <TableCell>{item.unit || "-"}</TableCell>
-                  <TableCell dir="ltr">{item.barcode || "-"}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(item)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteMutation.mutate(item.id)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
+                <div key={item.id} className="border rounded-lg p-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-bold text-sm">{item.name_ar || item.name}</span>
+                      <span className="text-xs text-gray-500 mr-2">({item.code})</span>
                     </div>
-                  </TableCell>
-                </TableRow>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(item)}><Edit className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => deleteMutation.mutate(item.id)} disabled={deleteMutation.isPending}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 text-xs">
+                    <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.labels.unit')}:</span><span>{item.unit || "-"}</span></div>
+                    {item.barcode && <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.labels.barcode')}:</span><span dir="ltr">{item.barcode}</span></div>}
+                  </div>
+                </div>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          </>
         )}
         {items.length > 50 && (
           <p className="text-sm text-gray-500 mt-2 text-center">
@@ -785,42 +812,47 @@ function UnitsTab() {
         {isLoading ? (
           <div className="text-center py-4">{t('warehouse.loading')}</div>
         ) : (
-          <Table className="min-w-[400px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.name')}</TableHead>
-                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.symbol')}</TableHead>
-                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            <div className="hidden sm:block">
+              <Table className="min-w-[400px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.name')}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.symbol')}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allUnits.map((unit: any) => (
+                    <TableRow key={unit.id}>
+                      <TableCell>{unit.name_ar || unit.name}</TableCell>
+                      <TableCell><Badge variant="outline">{unit.symbol}</Badge></TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(unit)}><Edit className="h-4 w-4" /></Button>
+                          {!unit.id.toString().startsWith("default") && <Button variant="ghost" size="sm" onClick={() => deleteMutation.mutate(unit.id)} disabled={deleteMutation.isPending}><Trash2 className="h-4 w-4 text-red-500" /></Button>}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="sm:hidden space-y-2">
               {allUnits.map((unit: any) => (
-                <TableRow key={unit.id}>
-                  <TableCell>{unit.name_ar || unit.name}</TableCell>
-                  <TableCell>
+                <div key={unit.id} className="border rounded-lg p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm">{unit.name_ar || unit.name}</span>
                     <Badge variant="outline">{unit.symbol}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(unit)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {!unit.id.toString().startsWith("default") && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteMutation.mutate(unit.id)}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(unit)}><Edit className="h-4 w-4" /></Button>
+                    {!unit.id.toString().startsWith("default") && <Button variant="ghost" size="sm" onClick={() => deleteMutation.mutate(unit.id)} disabled={deleteMutation.isPending}><Trash2 className="h-4 w-4 text-red-500" /></Button>}
+                  </div>
+                </div>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
@@ -966,26 +998,34 @@ function CategoriesTab() {
         ) : categories.length === 0 ? (
           <div className="text-center py-8 text-gray-500">{t('warehouse.definitions.noGroups')}</div>
         ) : (
-          <Table className="min-w-[350px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.name')}</TableHead>
-                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            <div className="hidden sm:block">
+              <Table className="min-w-[350px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.name')}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {categories.map((cat: any) => (
+                    <TableRow key={cat.id}>
+                      <TableCell>{cat.name_ar || cat.name}</TableCell>
+                      <TableCell><Button variant="ghost" size="sm" onClick={() => handleEdit(cat)}><Edit className="h-4 w-4" /></Button></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="sm:hidden space-y-2">
               {categories.map((cat: any) => (
-                <TableRow key={cat.id}>
-                  <TableCell>{cat.name_ar || cat.name}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(cat)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                <div key={cat.id} className="border rounded-lg p-3 flex items-center justify-between">
+                  <span className="font-bold text-sm">{cat.name_ar || cat.name}</span>
+                  <Button variant="ghost" size="sm" onClick={() => handleEdit(cat)}><Edit className="h-4 w-4" /></Button>
+                </div>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
