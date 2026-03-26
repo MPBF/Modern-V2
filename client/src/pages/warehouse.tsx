@@ -517,16 +517,16 @@ function DeliveryHallContent() {
                     <span className="font-bold text-xs sm:text-sm">{group.customer_name_ar || group.customer_name}</span>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-xs sm:text-sm min-w-[500px]">
+                    <table className="w-full text-xs sm:text-sm min-w-[650px]">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
                           <th className="py-2 px-2 sm:px-3 w-8 sm:w-10"></th>
-                          <th className="py-2 px-2 sm:px-3 text-center font-medium">أمر الإنتاج</th>
-                          <th className="py-2 px-2 sm:px-3 text-center font-medium">المنتج</th>
-                          <th className="py-2 px-2 sm:px-3 text-center font-medium">مستلم (كجم)</th>
-                          <th className="py-2 px-2 sm:px-3 text-center font-medium">مسلّم (كجم)</th>
-                          <th className="py-2 px-2 sm:px-3 text-center font-medium">متاح (كجم)</th>
-                          <th className="py-2 px-2 sm:px-3 text-center font-medium">إجراء</th>
+                          <th className="py-2 px-2 sm:px-3 text-center font-medium whitespace-nowrap">أمر الإنتاج</th>
+                          <th className="py-2 px-2 sm:px-3 text-center font-medium whitespace-nowrap">المنتج</th>
+                          <th className="py-2 px-2 sm:px-3 text-center font-medium whitespace-nowrap">مستلم (كجم)</th>
+                          <th className="py-2 px-2 sm:px-3 text-center font-medium whitespace-nowrap">مسلّم (كجم)</th>
+                          <th className="py-2 px-2 sm:px-3 text-center font-medium whitespace-nowrap">متاح (كجم)</th>
+                          <th className="py-2 px-2 sm:px-3 text-center font-medium whitespace-nowrap">إجراء</th>
                         </tr>
                       </thead>
                     <tbody>
@@ -542,16 +542,16 @@ function DeliveryHallContent() {
                                 className="h-4 w-4 rounded border-gray-300"
                               />
                             </td>
-                            <td className="py-2 px-2 sm:px-3 text-center font-medium">{order.production_order_number}</td>
-                            <td className="py-2 px-2 sm:px-3 text-center">{order.product_name_ar || order.product_name}</td>
-                            <td className="py-2 px-2 sm:px-3 text-center">{order.warehouse_received_kg.toFixed(2)}</td>
-                            <td className="py-2 px-2 sm:px-3 text-center">{order.warehouse_delivered_kg.toFixed(2)}</td>
-                            <td className="py-2 px-2 sm:px-3 text-center">
+                            <td className="py-2 px-2 sm:px-3 text-center font-medium whitespace-nowrap">{order.production_order_number}</td>
+                            <td className="py-2 px-2 sm:px-3 text-center whitespace-nowrap">{order.product_name_ar || order.product_name}</td>
+                            <td className="py-2 px-2 sm:px-3 text-center whitespace-nowrap">{order.warehouse_received_kg.toFixed(2)}</td>
+                            <td className="py-2 px-2 sm:px-3 text-center whitespace-nowrap">{order.warehouse_delivered_kg.toFixed(2)}</td>
+                            <td className="py-2 px-2 sm:px-3 text-center whitespace-nowrap">
                               <Badge variant={order.available_for_delivery > 0 ? "default" : "secondary"}>
                                 {order.available_for_delivery.toFixed(2)}
                               </Badge>
                             </td>
-                            <td className="py-2 px-2 sm:px-3 text-center">
+                            <td className="py-2 px-2 sm:px-3 text-center whitespace-nowrap">
                               {order.available_for_delivery > 0 && (
                                 <Button
                                   size="sm"
@@ -919,21 +919,21 @@ function ProductionHallContent({ onCreateVoucher }: { onCreateVoucher: () => voi
                     <Badge variant="outline" className="text-xs">{group.items.length} {t('warehouse.production.productionOrders')}</Badge>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-xs sm:text-sm min-w-[700px]">
+                    <table className="w-full text-xs sm:text-sm min-w-[1100px]">
                       <thead>
                         <tr className="border-b bg-gray-50 dark:bg-gray-900">
-                          <th className="text-right py-2 px-2 sm:px-3 font-medium w-8 sm:w-10"></th>
-                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.productionOrder')}</th>
-                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.labels.item')}</th>
-                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.requiredQuantity')}</th>
-                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.producedFilm')}</th>
-                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.printing')}</th>
-                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.cutQuantity')}</th>
-                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.received')}</th>
-                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.remaining')}</th>
-                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.waste')}</th>
-                          <th className="text-right py-2 px-2 sm:px-3 font-medium">{t('warehouse.production.status')}</th>
-                          <th className="text-right py-2 px-2 sm:px-3 font-medium w-20 sm:w-24">{t('warehouse.production.receive')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium whitespace-nowrap w-8 sm:w-10"></th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium whitespace-nowrap">{t('warehouse.production.productionOrder')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium whitespace-nowrap">{t('warehouse.labels.item')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium whitespace-nowrap">{t('warehouse.production.requiredQuantity')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium whitespace-nowrap">{t('warehouse.production.producedFilm')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium whitespace-nowrap">{t('warehouse.production.printing')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium whitespace-nowrap">{t('warehouse.production.cutQuantity')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium whitespace-nowrap">{t('warehouse.production.received')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium whitespace-nowrap">{t('warehouse.production.remaining')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium whitespace-nowrap">{t('warehouse.production.waste')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium whitespace-nowrap">{t('warehouse.production.status')}</th>
+                          <th className="text-right py-2 px-2 sm:px-3 font-medium whitespace-nowrap w-20 sm:w-24">{t('warehouse.production.receive')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -954,34 +954,34 @@ function ProductionHallContent({ onCreateVoucher }: { onCreateVoucher: () => voi
                                 )}
                               </td>
                               <td className="py-2 px-2 sm:px-3 font-medium whitespace-nowrap">{order.production_order_number}</td>
-                              <td className="py-2 px-2 sm:px-3">{order.product_name_ar || order.product_name}</td>
-                              <td className="py-2 px-2 sm:px-3">{order.quantity_required.toFixed(2)}</td>
-                              <td className="py-2 px-2 sm:px-3">
+                              <td className="py-2 px-2 sm:px-3 whitespace-nowrap">{order.product_name_ar || order.product_name}</td>
+                              <td className="py-2 px-2 sm:px-3 whitespace-nowrap">{order.quantity_required.toFixed(2)}</td>
+                              <td className="py-2 px-2 sm:px-3 whitespace-nowrap">
                                 {order.total_film_weight > 0 ? (
                                   <span className="text-blue-600">{order.total_film_weight.toFixed(2)}</span>
                                 ) : (
                                   <span className="text-gray-400">-</span>
                                 )}
                               </td>
-                              <td className="py-2 px-2 sm:px-3">
+                              <td className="py-2 px-2 sm:px-3 whitespace-nowrap">
                                 {order.total_print_weight > 0 ? (
                                   <span className="text-purple-600">{order.total_print_weight.toFixed(2)}</span>
                                 ) : (
                                   <span className="text-gray-400">-</span>
                                 )}
                               </td>
-                              <td className="py-2 px-2 sm:px-3">
+                              <td className="py-2 px-2 sm:px-3 whitespace-nowrap">
                                 <span className="text-green-600 font-medium">{order.total_cut_weight.toFixed(2)}</span>
                               </td>
-                              <td className="py-2 px-2 sm:px-3">
+                              <td className="py-2 px-2 sm:px-3 whitespace-nowrap">
                                 <span className="text-orange-600 font-medium">{order.total_received_weight.toFixed(2)}</span>
                               </td>
-                              <td className="py-2 px-2 sm:px-3">
+                              <td className="py-2 px-2 sm:px-3 whitespace-nowrap">
                                 <span className={`font-bold ${remaining > 0 ? 'text-purple-600' : 'text-green-600'}`}>
                                   {remaining.toFixed(2)}
                                 </span>
                               </td>
-                              <td className="py-2 px-2 sm:px-3">
+                              <td className="py-2 px-2 sm:px-3 whitespace-nowrap">
                                 <span className="text-red-600">{order.waste_weight.toFixed(2)}</span>
                               </td>
                               <td className="py-2 px-2 sm:px-3">
