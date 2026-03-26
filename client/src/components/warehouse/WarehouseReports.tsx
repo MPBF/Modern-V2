@@ -212,8 +212,7 @@ export function WarehouseReports() {
               {stockLoading ? (
                 <div className="text-center py-8 text-muted-foreground">{t('warehouse.loading')}</div>
               ) : (
-              <div className="overflow-x-auto">
-              <Table>
+              <Table className="min-w-[800px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="whitespace-nowrap">{t('warehouse.reports.code')}</TableHead>
@@ -249,7 +248,6 @@ export function WarehouseReports() {
                   ))}
                 </TableBody>
               </Table>
-              </div>
               )}
             </CardContent>
           </Card>
@@ -269,15 +267,14 @@ export function WarehouseReports() {
                   {t('warehouse.reports.noAlerts')}
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                <Table>
+                <Table className="min-w-[500px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('warehouse.reports.code')}</TableHead>
-                      <TableHead>{t('warehouse.labels.item')}</TableHead>
-                      <TableHead>{t('warehouse.reports.currentBalance')}</TableHead>
-                      <TableHead>{t('warehouse.reports.minLimit')}</TableHead>
-                      <TableHead>{t('warehouse.reports.shortage')}</TableHead>
+                      <TableHead className="whitespace-nowrap">{t('warehouse.reports.code')}</TableHead>
+                      <TableHead className="whitespace-nowrap">{t('warehouse.labels.item')}</TableHead>
+                      <TableHead className="whitespace-nowrap">{t('warehouse.reports.currentBalance')}</TableHead>
+                      <TableHead className="whitespace-nowrap">{t('warehouse.reports.minLimit')}</TableHead>
+                      <TableHead className="whitespace-nowrap">{t('warehouse.reports.shortage')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -294,7 +291,6 @@ export function WarehouseReports() {
                     ))}
                   </TableBody>
                 </Table>
-                </div>
               )}
             </CardContent>
           </Card>
@@ -330,8 +326,7 @@ export function WarehouseReports() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-              <Table>
+              <Table className="min-w-[700px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="whitespace-nowrap">{t('warehouse.reports.dateColumn')}</TableHead>
@@ -365,7 +360,6 @@ export function WarehouseReports() {
                   ))}
                 </TableBody>
               </Table>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

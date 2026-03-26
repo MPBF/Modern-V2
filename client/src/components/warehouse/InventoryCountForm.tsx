@@ -338,14 +338,13 @@ export function InventoryCountForm({ open, onOpenChange }: InventoryCountFormPro
                     {t('warehouse.inventoryCount.startScanningToAdd')}
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                  <Table>
+                  <Table className="min-w-[500px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">{t('warehouse.labels.item')}</TableHead>
-                        <TableHead className="text-right">{t('warehouse.inventoryCount.systemQuantity')}</TableHead>
-                        <TableHead className="text-right">{t('warehouse.inventoryCount.actualCount')}</TableHead>
-                        <TableHead className="text-right">{t('warehouse.inventoryCount.difference')}</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">{t('warehouse.labels.item')}</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">{t('warehouse.inventoryCount.systemQuantity')}</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">{t('warehouse.inventoryCount.actualCount')}</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">{t('warehouse.inventoryCount.difference')}</TableHead>
                         <TableHead className="text-right"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -380,7 +379,6 @@ export function InventoryCountForm({ open, onOpenChange }: InventoryCountFormPro
                       ))}
                     </TableBody>
                   </Table>
-                  </div>
                 )}
               </CardContent>
             </Card>

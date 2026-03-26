@@ -263,14 +263,13 @@ function SuppliersTab() {
         ) : suppliers.length === 0 ? (
           <div className="text-center py-8 text-gray-500">{t('warehouse.definitions.noSuppliers')}</div>
         ) : (
-          <div className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[500px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">{t('warehouse.definitions.name')}</TableHead>
-                <TableHead className="text-right">{t('warehouse.definitions.phone')}</TableHead>
-                <TableHead className="text-right">{t('warehouse.definitions.contactPerson')}</TableHead>
-                <TableHead className="text-right">{t('warehouse.definitions.actions')}</TableHead>
+                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.name')}</TableHead>
+                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.phone')}</TableHead>
+                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.contactPerson')}</TableHead>
+                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -298,7 +297,6 @@ function SuppliersTab() {
               ))}
             </TableBody>
           </Table>
-          </div>
         )}
       </CardContent>
     </Card>
@@ -551,15 +549,14 @@ function ItemsTab() {
         ) : items.length === 0 ? (
           <div className="text-center py-8 text-gray-500">{t('warehouse.definitions.noItems')}</div>
         ) : (
-          <div className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[600px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">{t('warehouse.definitions.code')}</TableHead>
-                <TableHead className="text-right">{t('warehouse.definitions.name')}</TableHead>
-                <TableHead className="text-right">{t('warehouse.labels.unit')}</TableHead>
-                <TableHead className="text-right">{t('warehouse.labels.barcode')}</TableHead>
-                <TableHead className="text-right">{t('warehouse.definitions.actions')}</TableHead>
+                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.code')}</TableHead>
+                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.name')}</TableHead>
+                <TableHead className="text-right whitespace-nowrap">{t('warehouse.labels.unit')}</TableHead>
+                <TableHead className="text-right whitespace-nowrap">{t('warehouse.labels.barcode')}</TableHead>
+                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -588,7 +585,6 @@ function ItemsTab() {
               ))}
             </TableBody>
           </Table>
-          </div>
         )}
         {items.length > 50 && (
           <p className="text-sm text-gray-500 mt-2 text-center">
@@ -789,13 +785,12 @@ function UnitsTab() {
         {isLoading ? (
           <div className="text-center py-4">{t('warehouse.loading')}</div>
         ) : (
-          <div className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[400px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">{t('warehouse.definitions.name')}</TableHead>
-                <TableHead className="text-right">{t('warehouse.definitions.symbol')}</TableHead>
-                <TableHead className="text-right">{t('warehouse.definitions.actions')}</TableHead>
+                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.name')}</TableHead>
+                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.symbol')}</TableHead>
+                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -826,7 +821,6 @@ function UnitsTab() {
               ))}
             </TableBody>
           </Table>
-          </div>
         )}
       </CardContent>
     </Card>
@@ -972,12 +966,11 @@ function CategoriesTab() {
         ) : categories.length === 0 ? (
           <div className="text-center py-8 text-gray-500">{t('warehouse.definitions.noGroups')}</div>
         ) : (
-          <div className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[350px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">{t('warehouse.definitions.name')}</TableHead>
-                <TableHead className="text-right">{t('warehouse.definitions.actions')}</TableHead>
+                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.name')}</TableHead>
+                <TableHead className="text-right whitespace-nowrap">{t('warehouse.definitions.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -993,7 +986,6 @@ function CategoriesTab() {
               ))}
             </TableBody>
           </Table>
-          </div>
         )}
       </CardContent>
     </Card>

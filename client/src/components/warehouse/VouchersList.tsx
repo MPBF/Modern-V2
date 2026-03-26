@@ -400,25 +400,24 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
               {t('warehouse.vouchers.noVouchers')}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-            <Table>
+            <Table className="min-w-[700px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.voucherNumber')}</TableHead>
                   <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.type')}</TableHead>
                   <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.date')}</TableHead>
                   {(type === "raw-material-in" || type === "raw-material-out") && (
-                    <TableHead className="text-center">الصنف</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">الصنف</TableHead>
                   )}
                   {type === "raw-material-in" && (
-                    <TableHead className="text-center">المورد</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">المورد</TableHead>
                   )}
                   {type === "raw-material-out" && (
-                    <TableHead className="text-center">الجهة</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">الجهة</TableHead>
                   )}
-                  <TableHead className="text-center">{t('warehouse.vouchers.quantity')}</TableHead>
-                  <TableHead className="text-center">{t('warehouse.vouchers.status')}</TableHead>
-                  <TableHead className="text-center">{t('warehouse.vouchers.actions')}</TableHead>
+                  <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.quantity')}</TableHead>
+                  <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.status')}</TableHead>
+                  <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -504,7 +503,6 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                 ))}
               </TableBody>
             </Table>
-            </div>
           )}
         </CardContent>
       </Card>
