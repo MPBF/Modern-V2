@@ -49,6 +49,7 @@ const DisplayScreen = lazy(() => import("./pages/DisplayScreen"));
 const DisplayControlPanel = lazy(() => import("./pages/DisplayControlPanel"));
 const FactoryFloor = lazy(() => import("./pages/FactoryFloor"));
 const MaterialMixing = lazy(() => import("./pages/material-mixing"));
+const WarehouseMobile = lazy(() => import("./pages/warehouse-mobile"));
 
 function PageLoadingFallback() {
   return (
@@ -313,6 +314,12 @@ function AppRoutes() {
         <Route path="/material-mixing">
           <ProtectedRoute path="/material-mixing">
             <MaterialMixing />
+          </ProtectedRoute>
+        </Route>
+
+        <Route path="/warehouse-mobile">
+          <ProtectedRoute path="/warehouse-mobile">
+            <WarehouseMobile />
           </ProtectedRoute>
         </Route>
 

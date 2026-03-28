@@ -480,6 +480,16 @@ Customer Order → Production Order(s) → Film Stage → Printing Stage → Cut
 - `client/src/components/pwa/InstallPrompt.tsx` — Mobile install banner
 - Express routes serve `sw.js`, `manifest.json`, and `/icons/` with correct MIME types
 
+## Mobile Warehouse App
+
+- **Route**: `/warehouse-mobile` — Mobile-optimized warehouse interface
+- **File**: `client/src/pages/warehouse-mobile.tsx` — Single file with all mobile views
+- **Features**: Dashboard, barcode scanner (html5-qrcode camera), quick inventory lookup, voucher creation, inventory count with scanner
+- **Library**: `html5-qrcode` for camera-based barcode/QR scanning
+- **Pattern**: Uses internal view state (dashboard/scanner/inventory/voucher/count) instead of sub-routes
+- **API calls**: Uses `apiRequest` from `@lib/queryClient` for all fetch operations
+- **Translation keys**: `warehouse.mobile.*` namespace in ar.json/en.json
+
 ## External Service Integrations
 
 | Service | Purpose | Config |

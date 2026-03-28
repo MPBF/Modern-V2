@@ -5455,5 +5455,8 @@
     "offline": "You are offline",
     "iosGuide": "Tap",
     "iosThen": "then choose \"Add to Home Screen\""
+  },
+  "nav": {
+    "warehouseMobile": "Mobile Warehouse"
   }
 }
