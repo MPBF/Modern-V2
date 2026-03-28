@@ -1680,22 +1680,169 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAttendanceSummary(userId: number, start: Date, end: Date): Promise<any> {
-    // Basic summary implementation
-    return { presentDays: 0, lateMinutes: 0 };
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+    const records = await db
+      .select()
+      .from(attendance)
+      .where(
+        and(
+          eq(attendance.user_id, userId),
+          sql`${attendance.date} BETWEEN ${startStr} AND ${endStr}`
+        )
+      );
+
+    const presentDays = records.filter(r => r.status === 'حاضر' || r.check_in_time !== null).length;
+    const absentDays = records.filter(r => r.status === 'غائب' && r.check_in_time === null).length;
+    const lateMinutes = records.reduce((sum, r) => sum + (r.late_minutes || 0), 0);
+    const totalWorkHours = records.reduce((sum, r) => sum + (r.work_hours || 0), 0);
+    const overtimeHours = records.reduce((sum, r) => sum + (r.overtime_hours || 0), 0);
+    const earlyLeaveMinutes = records.reduce((sum, r) => sum + (r.early_leave_minutes || 0), 0);
+
+    return {
+      presentDays,
+      absentDays,
+      lateMinutes,
+      totalWorkHours: Math.round(totalWorkHours * 100) / 100,
+      overtimeHours: Math.round(overtimeHours * 100) / 100,
+      earlyLeaveMinutes,
+      totalDays: records.length,
+    };
   }
 
   async getAttendanceReport(start: Date, end: Date, filters?: any): Promise<any[]> {
-    return [];
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+
+    const conditions = [
+      sql`${attendance.date} BETWEEN ${startStr} AND ${endStr}`,
+    ];
+
+    if (filters?.sectionId) {
+      conditions.push(eq(users.section_id, Number(filters.sectionId)));
+    }
+    if (filters?.roleId) {
+      conditions.push(eq(users.role_id, filters.roleId));
+    }
+
+    const records = await db
+      .select({
+        id: attendance.id,
+        user_id: attendance.user_id,
+        username: users.username,
+        display_name: users.display_name,
+        display_name_ar: users.display_name_ar,
+        role_name: roles.name,
+        role_name_ar: roles.name_ar,
+        status: attendance.status,
+        check_in_time: attendance.check_in_time,
+        check_out_time: attendance.check_out_time,
+        work_hours: attendance.work_hours,
+        overtime_hours: attendance.overtime_hours,
+        late_minutes: attendance.late_minutes,
+        early_leave_minutes: attendance.early_leave_minutes,
+        date: attendance.date,
+        notes: attendance.notes,
+      })
+      .from(attendance)
+      .innerJoin(users, eq(attendance.user_id, users.id))
+      .leftJoin(roles, eq(users.role_id, roles.id))
+      .where(and(...conditions))
+      .orderBy(desc(attendance.date));
+
+    return records;
   }
 
   async getDailyAttendanceStats(date: string): Promise<any> {
-    return { total: 0, present: 0, absent: 0 };
+    const totalUsers = await db
+      .select({ count: count() })
+      .from(users)
+      .where(eq(users.status, 'active'));
+
+    const total = totalUsers[0]?.count || 0;
+
+    const attendanceRecords = await db
+      .select()
+      .from(attendance)
+      .where(eq(attendance.date, date));
+
+    const present = attendanceRecords.filter(r => r.status === 'حاضر' || r.check_in_time !== null).length;
+    const onLeave = attendanceRecords.filter(r => r.status === 'إجازة').length;
+    const late = attendanceRecords.filter(r => (r.late_minutes || 0) > 0).length;
+    const absent = total - present - onLeave;
+
+    return { total, present, absent: absent < 0 ? 0 : absent, onLeave, late };
   }
 
   async upsertManualAttendance(entries: any[]): Promise<any[]> {
     const results = [];
     for (const entry of entries) {
-      // Logic for upsert
+      const { user_id, date, status, check_in_time, check_out_time, notes, created_by } = entry;
+
+      const checkIn = check_in_time !== undefined ? (check_in_time ? new Date(check_in_time) : null) : undefined;
+      const checkOut = check_out_time !== undefined ? (check_out_time ? new Date(check_out_time) : null) : undefined;
+
+      let workHours: number | null = null;
+      let lateMinutes = 0;
+      const resolvedCheckIn = checkIn !== undefined ? checkIn : null;
+      const resolvedCheckOut = checkOut !== undefined ? checkOut : null;
+      if (resolvedCheckIn && resolvedCheckOut) {
+        workHours = Math.round(((resolvedCheckOut.getTime() - resolvedCheckIn.getTime()) / 3600000) * 100) / 100;
+      }
+
+      const existing = await db
+        .select()
+        .from(attendance)
+        .where(
+          and(
+            eq(attendance.user_id, user_id),
+            eq(attendance.date, date)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        const rec = existing[0];
+        const finalCheckIn = checkIn !== undefined ? checkIn : rec.check_in_time;
+        const finalCheckOut = checkOut !== undefined ? checkOut : rec.check_out_time;
+        let computedWorkHours = rec.work_hours;
+        if (finalCheckIn && finalCheckOut) {
+          computedWorkHours = Math.round(((new Date(finalCheckOut).getTime() - new Date(finalCheckIn).getTime()) / 3600000) * 100) / 100;
+        }
+
+        const updateData: any = {
+          status: status !== undefined ? status : rec.status,
+          notes: notes !== undefined ? notes : rec.notes,
+          updated_by: created_by,
+          updated_at: new Date(),
+          work_hours: computedWorkHours,
+        };
+        if (checkIn !== undefined) updateData.check_in_time = checkIn;
+        if (checkOut !== undefined) updateData.check_out_time = checkOut;
+
+        const [updated] = await db
+          .update(attendance)
+          .set(updateData)
+          .where(eq(attendance.id, rec.id))
+          .returning();
+        results.push(updated);
+      } else {
+        const [created] = await db
+          .insert(attendance)
+          .values({
+            user_id,
+            date,
+            status: status || 'حاضر',
+            check_in_time: checkIn !== undefined ? checkIn : null,
+            check_out_time: checkOut !== undefined ? checkOut : null,
+            work_hours: workHours,
+            late_minutes: lateMinutes,
+            notes,
+            created_by,
+          })
+          .returning();
+        results.push(created);
+      }
     }
     return results;
   }

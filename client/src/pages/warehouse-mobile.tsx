@@ -520,6 +520,9 @@ function MobileVoucherCreate({ onBack }: { onBack: () => void }) {
     onSuccess: () => {
       toast({ title: t('warehouse.mobile.voucher.success') });
       queryClient.invalidateQueries({ queryKey: ["/api/warehouse/vouchers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory-movements"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/warehouse/reports/alerts"] });
       setSelectedItemId("");
       setQuantity("");
       setNotes("");
