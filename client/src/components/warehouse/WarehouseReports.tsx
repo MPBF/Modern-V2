@@ -139,15 +139,13 @@ export function WarehouseReports() {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="overflow-x-auto pb-1">
-          <TabsList className="inline-flex w-auto min-w-full">
-            <TabsTrigger value="summary" className="text-xs sm:text-sm px-2 sm:px-3 shrink-0">{t('warehouse.reports.summary')}</TabsTrigger>
-            <TabsTrigger value="stock" className="text-xs sm:text-sm px-2 sm:px-3 shrink-0">{t('warehouse.reports.balances')}</TabsTrigger>
-            <TabsTrigger value="alerts" className="text-xs sm:text-sm px-2 sm:px-3 shrink-0">{t('warehouse.reports.alerts')}</TabsTrigger>
-            <TabsTrigger value="movements" className="text-xs sm:text-sm px-2 sm:px-3 shrink-0">{t('warehouse.reports.movements')}</TabsTrigger>
-            <TabsTrigger value="import-export" className="text-xs sm:text-sm px-2 sm:px-3 shrink-0">{t('warehouse.reports.importExport')}</TabsTrigger>
-          </TabsList>
-        </div>
+        <TabsList className="flex flex-wrap h-auto gap-1 p-1 sm:inline-flex sm:flex-nowrap sm:h-10">
+          <TabsTrigger value="summary" className="text-xs px-2 py-1.5 sm:text-sm sm:px-3">{t('warehouse.reports.summary')}</TabsTrigger>
+          <TabsTrigger value="stock" className="text-xs px-2 py-1.5 sm:text-sm sm:px-3">{t('warehouse.reports.balances')}</TabsTrigger>
+          <TabsTrigger value="alerts" className="text-xs px-2 py-1.5 sm:text-sm sm:px-3">{t('warehouse.reports.alerts')}</TabsTrigger>
+          <TabsTrigger value="movements" className="text-xs px-2 py-1.5 sm:text-sm sm:px-3">{t('warehouse.reports.movements')}</TabsTrigger>
+          <TabsTrigger value="import-export" className="text-xs px-2 py-1.5 sm:text-sm sm:px-3">{t('warehouse.reports.importExport')}</TabsTrigger>
+        </TabsList>
 
         <TabsContent value="summary" className="space-y-4">
           {summaryLoading ? (

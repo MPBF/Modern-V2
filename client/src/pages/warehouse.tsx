@@ -113,30 +113,28 @@ export default function Warehouse() {
       </div>
 
       <Tabs defaultValue="production-hall" className="space-y-4">
-        <div className="overflow-x-auto -mx-1 px-1 pb-1">
-          <TabsList className="inline-flex w-auto min-w-full justify-start gap-1">
-            <TabsTrigger value="production-hall" className="shrink-0 bg-amber-50 dark:bg-amber-950 text-xs sm:text-sm px-2 sm:px-3">
-              <Factory className="h-4 w-4 ml-1 shrink-0" />
-              {t('warehouse.tabs.productionHall')}
-            </TabsTrigger>
-            <TabsTrigger value="finished-goods" className="shrink-0 bg-blue-50 dark:bg-blue-950 text-xs sm:text-sm px-2 sm:px-3">
-              <Package className="h-4 w-4 ml-1 shrink-0" />
-              {t('warehouse.tabs.finishedGoods')}
-            </TabsTrigger>
-            <TabsTrigger value="raw-materials" className="shrink-0 bg-green-50 dark:bg-green-950 text-xs sm:text-sm px-2 sm:px-3">
-              <Boxes className="h-4 w-4 ml-1 shrink-0" />
-              {t('warehouse.tabs.rawMaterials')}
-            </TabsTrigger>
-            <TabsTrigger value="definitions" className="shrink-0 bg-purple-50 dark:bg-purple-950 text-xs sm:text-sm px-2 sm:px-3">
-              <Settings className="h-4 w-4 ml-1 shrink-0" />
-              {t('warehouse.tabs.definitions')}
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="shrink-0 bg-gray-50 dark:bg-gray-950 text-xs sm:text-sm px-2 sm:px-3">
-              <BarChart3 className="h-4 w-4 ml-1 shrink-0" />
-              {t('warehouse.tabs.reports')}
-            </TabsTrigger>
-          </TabsList>
-        </div>
+        <TabsList className="flex flex-wrap h-auto gap-1 p-1 sm:inline-flex sm:flex-nowrap sm:h-10">
+          <TabsTrigger value="production-hall" className="bg-amber-50 dark:bg-amber-950 text-xs px-2 py-1.5 sm:text-sm sm:px-3">
+            <Factory className="h-4 w-4 ml-1 shrink-0" />
+            {t('warehouse.tabs.productionHall')}
+          </TabsTrigger>
+          <TabsTrigger value="finished-goods" className="bg-blue-50 dark:bg-blue-950 text-xs px-2 py-1.5 sm:text-sm sm:px-3">
+            <Package className="h-4 w-4 ml-1 shrink-0" />
+            {t('warehouse.tabs.finishedGoods')}
+          </TabsTrigger>
+          <TabsTrigger value="raw-materials" className="bg-green-50 dark:bg-green-950 text-xs px-2 py-1.5 sm:text-sm sm:px-3">
+            <Boxes className="h-4 w-4 ml-1 shrink-0" />
+            {t('warehouse.tabs.rawMaterials')}
+          </TabsTrigger>
+          <TabsTrigger value="definitions" className="bg-purple-50 dark:bg-purple-950 text-xs px-2 py-1.5 sm:text-sm sm:px-3">
+            <Settings className="h-4 w-4 ml-1 shrink-0" />
+            {t('warehouse.tabs.definitions')}
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="bg-gray-50 dark:bg-gray-950 text-xs px-2 py-1.5 sm:text-sm sm:px-3">
+            <BarChart3 className="h-4 w-4 ml-1 shrink-0" />
+            {t('warehouse.tabs.reports')}
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="production-hall" className="space-y-4">
           <ProductionHallContent onCreateVoucher={() => openVoucherForm("finished-goods-in")} />
@@ -185,18 +183,16 @@ function FinishedGoodsSection({ onCreateVoucherIn, onCreateVoucherOut }: { onCre
   return (
     <div className="space-y-4">
       <Tabs defaultValue="fp-del" className="space-y-4">
-        <div className="overflow-x-auto">
-          <TabsList className="inline-flex w-auto min-w-full">
-            <TabsTrigger value="fp-del" className="text-xs sm:text-sm">
-              <Truck className="h-4 w-4 ml-1 shrink-0" />
-              {t('warehouse.production.fpDelVouchers')}
-            </TabsTrigger>
-            <TabsTrigger value="fp-rec" className="text-xs sm:text-sm">
-              <ArrowDownToLine className="h-4 w-4 ml-1 shrink-0" />
-              {t('warehouse.production.fpRecVouchers')}
-            </TabsTrigger>
-          </TabsList>
-        </div>
+        <TabsList className="flex flex-wrap h-auto gap-1 p-1 sm:inline-flex sm:flex-nowrap sm:h-10">
+          <TabsTrigger value="fp-del" className="text-xs px-2 py-1.5 sm:text-sm sm:px-3">
+            <Truck className="h-4 w-4 ml-1 shrink-0" />
+            {t('warehouse.production.fpDelVouchers')}
+          </TabsTrigger>
+          <TabsTrigger value="fp-rec" className="text-xs px-2 py-1.5 sm:text-sm sm:px-3">
+            <ArrowDownToLine className="h-4 w-4 ml-1 shrink-0" />
+            {t('warehouse.production.fpRecVouchers')}
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="fp-del">
           <DeliveryHallContent />
@@ -578,18 +574,16 @@ function RawMaterialsSection({ onCreateVoucherIn, onCreateVoucherOut }: { onCrea
   return (
     <div className="space-y-4">
       <Tabs defaultValue="rm-rec" className="space-y-4">
-        <div className="overflow-x-auto">
-          <TabsList className="inline-flex w-auto min-w-full">
-            <TabsTrigger value="rm-rec" className="text-xs sm:text-sm">
-              <ArrowDownToLine className="h-4 w-4 ml-1 shrink-0" />
-              {t('warehouse.production.rmRecVouchers')}
-            </TabsTrigger>
-            <TabsTrigger value="rm-del" className="text-xs sm:text-sm">
-              <ArrowUpFromLine className="h-4 w-4 ml-1 shrink-0" />
-              {t('warehouse.production.rmDelVouchers')}
-            </TabsTrigger>
-          </TabsList>
-        </div>
+        <TabsList className="flex flex-wrap h-auto gap-1 p-1 sm:inline-flex sm:flex-nowrap sm:h-10">
+          <TabsTrigger value="rm-rec" className="text-xs px-2 py-1.5 sm:text-sm sm:px-3">
+            <ArrowDownToLine className="h-4 w-4 ml-1 shrink-0" />
+            {t('warehouse.production.rmRecVouchers')}
+          </TabsTrigger>
+          <TabsTrigger value="rm-del" className="text-xs px-2 py-1.5 sm:text-sm sm:px-3">
+            <ArrowUpFromLine className="h-4 w-4 ml-1 shrink-0" />
+            {t('warehouse.production.rmDelVouchers')}
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="rm-rec">
           <div className="mb-3">

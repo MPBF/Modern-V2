@@ -1037,26 +1037,24 @@ export function WarehouseDefinitions() {
   return (
     <div className="space-y-4">
       <Tabs defaultValue="suppliers" className="space-y-4">
-        <div className="overflow-x-auto pb-1">
-          <TabsList className="inline-flex w-auto min-w-full">
-            <TabsTrigger value="suppliers" className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-3 shrink-0">
-              <Building2 className="h-4 w-4 shrink-0" />
-              {t('warehouse.definitions.suppliers')}
-            </TabsTrigger>
-            <TabsTrigger value="items" className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-3 shrink-0">
-              <Package className="h-4 w-4 shrink-0" />
-              {t('warehouse.definitions.items')}
-            </TabsTrigger>
-            <TabsTrigger value="units" className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-3 shrink-0">
-              <Scale className="h-4 w-4 shrink-0" />
-              {t('warehouse.definitions.units')}
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-3 shrink-0">
-              <Boxes className="h-4 w-4 shrink-0" />
-              {t('warehouse.definitions.groups')}
-            </TabsTrigger>
-          </TabsList>
-        </div>
+        <TabsList className="flex flex-wrap h-auto gap-1 p-1 sm:inline-flex sm:flex-nowrap sm:h-10">
+          <TabsTrigger value="suppliers" className="flex items-center gap-1 text-xs px-2 py-1.5 sm:text-sm sm:px-3">
+            <Building2 className="h-4 w-4 shrink-0" />
+            {t('warehouse.definitions.suppliers')}
+          </TabsTrigger>
+          <TabsTrigger value="items" className="flex items-center gap-1 text-xs px-2 py-1.5 sm:text-sm sm:px-3">
+            <Package className="h-4 w-4 shrink-0" />
+            {t('warehouse.definitions.items')}
+          </TabsTrigger>
+          <TabsTrigger value="units" className="flex items-center gap-1 text-xs px-2 py-1.5 sm:text-sm sm:px-3">
+            <Scale className="h-4 w-4 shrink-0" />
+            {t('warehouse.definitions.units')}
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="flex items-center gap-1 text-xs px-2 py-1.5 sm:text-sm sm:px-3">
+            <Boxes className="h-4 w-4 shrink-0" />
+            {t('warehouse.definitions.groups')}
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="suppliers">
           <SuppliersTab />

@@ -528,33 +528,59 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                     <div className="bg-blue-50 dark:bg-blue-900/30 px-3 py-2">
                       <span className="font-semibold text-xs sm:text-sm text-blue-800 dark:text-blue-200">أوامر الإنتاج المستلمة ({parsedItems.length})</span>
                     </div>
-                    <div className="overflow-x-auto">
-                    <table className="w-full text-xs sm:text-sm min-w-[400px]">
-                      <thead className="bg-gray-50 dark:bg-gray-800">
-                        <tr>
-                          <th className="py-2 px-3 text-center font-medium">أمر الإنتاج</th>
-                          <th className="py-2 px-3 text-center font-medium">رقم الطلب</th>
-                          <th className="py-2 px-3 text-center font-medium">العميل</th>
-                          <th className="py-2 px-3 text-center font-medium">المنتج</th>
-                          <th className="py-2 px-3 text-center font-medium">الوزن (كجم)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {parsedItems.map((item: any, idx: number) => (
-                          <tr key={idx} className="border-t dark:border-gray-700">
-                            <td className="py-2 px-3 text-center font-medium">{item.production_order_number || `PO-${item.production_order_id}`}</td>
-                            <td className="py-2 px-3 text-center">{item.order_number || '-'}</td>
-                            <td className="py-2 px-3 text-center">{item.customer_name || '-'}</td>
-                            <td className="py-2 px-3 text-center">{item.product_description || '-'}</td>
-                            <td className="py-2 px-3 text-center">{parseFloat(String(item.weight_kg || 0)).toLocaleString("en-US")}</td>
+                    <div className="hidden sm:block overflow-x-auto">
+                      <table className="w-full text-xs sm:text-sm min-w-[400px]">
+                        <thead className="bg-gray-50 dark:bg-gray-800">
+                          <tr>
+                            <th className="py-2 px-3 text-center font-medium">أمر الإنتاج</th>
+                            <th className="py-2 px-3 text-center font-medium">رقم الطلب</th>
+                            <th className="py-2 px-3 text-center font-medium">العميل</th>
+                            <th className="py-2 px-3 text-center font-medium">المنتج</th>
+                            <th className="py-2 px-3 text-center font-medium">الوزن (كجم)</th>
                           </tr>
-                        ))}
-                        <tr className="border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800 font-semibold">
-                          <td className="py-2 px-3 text-center" colSpan={4}>الإجمالي</td>
-                          <td className="py-2 px-3 text-center">{parsedItems.reduce((s: number, it: any) => s + parseFloat(String(it.weight_kg || 0)), 0).toLocaleString("en-US")}</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {parsedItems.map((item: any, idx: number) => (
+                            <tr key={idx} className="border-t dark:border-gray-700">
+                              <td className="py-2 px-3 text-center font-medium">{item.production_order_number || `PO-${item.production_order_id}`}</td>
+                              <td className="py-2 px-3 text-center">{item.order_number || '-'}</td>
+                              <td className="py-2 px-3 text-center">{item.customer_name || '-'}</td>
+                              <td className="py-2 px-3 text-center">{item.product_description || '-'}</td>
+                              <td className="py-2 px-3 text-center">{parseFloat(String(item.weight_kg || 0)).toLocaleString("en-US")}</td>
+                            </tr>
+                          ))}
+                          <tr className="border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800 font-semibold">
+                            <td className="py-2 px-3 text-center" colSpan={4}>الإجمالي</td>
+                            <td className="py-2 px-3 text-center">{parsedItems.reduce((s: number, it: any) => s + parseFloat(String(it.weight_kg || 0)), 0).toLocaleString("en-US")}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="sm:hidden space-y-2 p-2">
+                      {parsedItems.map((item: any, idx: number) => (
+                        <div key={idx} className="border rounded-lg p-3 bg-white dark:bg-gray-900 dark:border-gray-700 space-y-1">
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-xs">{item.production_order_number || `PO-${item.production_order_id}`}</span>
+                            <span className="text-xs text-muted-foreground">{item.order_number || '-'}</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">العميل:</span>
+                            <span>{item.customer_name || '-'}</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">المنتج:</span>
+                            <span>{item.product_description || '-'}</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">الوزن (كجم):</span>
+                            <span className="font-semibold">{parseFloat(String(item.weight_kg || 0)).toLocaleString("en-US")}</span>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="border-t pt-2 flex justify-between items-center px-2 dark:border-gray-700">
+                        <span className="font-semibold text-xs">الإجمالي</span>
+                        <span className="font-bold text-xs">{parsedItems.reduce((s: number, it: any) => s + parseFloat(String(it.weight_kg || 0)), 0).toLocaleString("en-US")} كجم</span>
+                      </div>
                     </div>
                   </div>
                 );
