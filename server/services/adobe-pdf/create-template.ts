@@ -71,7 +71,7 @@ function txt(text: string, opts: { bold?: boolean; size?: number; color?: string
 
 function cell(content: string | TextRun[], opts: {
   bold?: boolean; size?: number; color?: string; shading?: string;
-  width?: number; align?: (typeof AlignmentType)[keyof typeof AlignmentType]; borders?: any; vAlign?: (typeof VerticalAlign)[keyof typeof VerticalAlign];
+  width?: number; align?: (typeof AlignmentType)[keyof typeof AlignmentType]; borders?: any; vAlign?: any;
   colspan?: number;
 } = {}): TableCell {
   const children = typeof content === "string"

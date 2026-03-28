@@ -5110,7 +5110,7 @@ Do not include quotes or explanations.`;
             : undefined;
       }
 
-      const enrollments = await storage.getTrainingEnrollments(employeeId);
+      const enrollments = await storage.getTrainingEnrollments(employeeId ? { employeeId } : undefined);
       if (!enrollments) {
         return res.json([]); // Return empty array instead of null
       }
@@ -7988,7 +7988,11 @@ Do not include quotes or explanations.`;
         });
 
       const validated = validationSchema.parse(req.body);
-      const settings = await storage.updateProductionSettings(validated);
+      const settingsData = {
+        ...validated,
+        overrun_tolerance_percent: String(validated.overrun_tolerance_percent),
+      };
+      const settings = await storage.updateProductionSettings(settingsData);
       res.json(settings);
     } catch (error) {
       console.error("Error updating production settings:", error);

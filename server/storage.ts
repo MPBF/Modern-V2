@@ -585,9 +585,9 @@ export interface IStorage {
   getAllTrainingPrograms(): Promise<TrainingProgram[]>;
   createTrainingProgram(program: InsertTrainingProgram): Promise<TrainingProgram>;
   getTrainingProgramById(id: number): Promise<TrainingProgram | undefined>;
-  getTrainingMaterials(programId: number): Promise<TrainingMaterial[]>;
+  getTrainingMaterials(programId?: number): Promise<TrainingMaterial[]>;
   createTrainingMaterial(material: InsertTrainingMaterial): Promise<TrainingMaterial>;
-  getTrainingEnrollments(programId: number): Promise<any[]>;
+  getTrainingEnrollments(filters?: { programId?: number; employeeId?: number }): Promise<any[]>;
   enrollUserInProgram(enrollment: InsertTrainingEnrollment): Promise<TrainingEnrollment>;
   updateEnrollment(id: number, updates: Partial<TrainingEnrollment>): Promise<TrainingEnrollment>;
   createEvaluation(evaluation: InsertTrainingEvaluation): Promise<TrainingEvaluation>;
@@ -595,7 +595,7 @@ export interface IStorage {
   createCertificate(certificate: InsertTrainingCertificate): Promise<TrainingCertificate>;
 
   // HR & Performance
-  getPerformanceReviews(userId: number): Promise<PerformanceReview[]>;
+  getPerformanceReviews(userId?: number | string): Promise<PerformanceReview[]>;
   createPerformanceReview(review: InsertPerformanceReview): Promise<PerformanceReview>;
   getPerformanceCriteria(): Promise<PerformanceCriteria[]>;
   getPerformanceRatings(reviewId: number): Promise<PerformanceRating[]>;
@@ -603,10 +603,10 @@ export interface IStorage {
 
   // Leave Management
   getLeaveTypes(): Promise<LeaveType[]>;
-  getLeaveRequests(userId?: number): Promise<any[]>;
+  getLeaveRequests(userId?: number | string): Promise<any[]>;
   createLeaveRequest(request: InsertLeaveRequest): Promise<LeaveRequest>;
   updateLeaveRequest(id: number, updates: Partial<LeaveRequest>): Promise<LeaveRequest>;
-  getLeaveBalances(userId: number): Promise<LeaveBalance[]>;
+  getLeaveBalances(userId: number | string, year?: number): Promise<LeaveBalance[]>;
 
   // Admin Decisions
   getAllAdminDecisions(): Promise<AdminDecision[]>;
@@ -619,7 +619,7 @@ export interface IStorage {
   
   // System Settings
   getSystemSettings(): Promise<SystemSetting[]>;
-  updateSystemSetting(id: number, value: string): Promise<SystemSetting>;
+  updateSystemSetting(key: string, value: string, updatedBy?: number): Promise<SystemSetting>;
 
   // Factory Locations
   getFactoryLocations(): Promise<FactoryLocation[]>;
@@ -627,7 +627,7 @@ export interface IStorage {
 
   // User Settings
   getUserSettings(userId: number): Promise<UserSetting | undefined>;
-  updateUserSetting(userId: number, settings: Partial<InsertUserSetting>): Promise<UserSetting>;
+  updateUserSetting(userId: number, key: string, value: string): Promise<UserSetting>;
 
   // System Notifications
   createNotification(notification: InsertNotification): Promise<Notification>;
@@ -874,7 +874,7 @@ export class DatabaseStorage implements IStorage {
   async upsertUser(userData: UpsertUser): Promise<User> {
     return withDatabaseErrorHandling(
       async () => {
-        const existingUser = await this.getUserByReplitId(userData.replit_user_id);
+        const existingUser = userData.replit_user_id ? await this.getUserByReplitId(userData.replit_user_id) : undefined;
 
         if (existingUser) {
           const [updatedUser] = await db
@@ -1981,8 +1981,11 @@ export class DatabaseStorage implements IStorage {
     return p;
   }
 
-  async getTrainingMaterials(programId: number): Promise<TrainingMaterial[]> {
-    return await db.select().from(training_materials).where(eq(training_materials.program_id, programId));
+  async getTrainingMaterials(programId?: number): Promise<TrainingMaterial[]> {
+    if (programId) {
+      return await db.select().from(training_materials).where(eq(training_materials.program_id, programId));
+    }
+    return await db.select().from(training_materials);
   }
 
   async createTrainingMaterial(data: InsertTrainingMaterial): Promise<TrainingMaterial> {
@@ -1990,8 +1993,14 @@ export class DatabaseStorage implements IStorage {
     return m;
   }
 
-  async getTrainingEnrollments(programId: number): Promise<any[]> {
-    return await db.select().from(training_enrollments).where(eq(training_enrollments.program_id, programId));
+  async getTrainingEnrollments(filters?: { programId?: number; employeeId?: number }): Promise<any[]> {
+    const conditions: any[] = [];
+    if (filters?.programId) conditions.push(eq(training_enrollments.program_id, filters.programId));
+    if (filters?.employeeId) conditions.push(eq(training_enrollments.employee_id, String(filters.employeeId)));
+    if (conditions.length > 0) {
+      return await db.select().from(training_enrollments).where(and(...conditions));
+    }
+    return await db.select().from(training_enrollments);
   }
 
   async enrollUserInProgram(data: InsertTrainingEnrollment): Promise<TrainingEnrollment> {
@@ -2018,8 +2027,11 @@ export class DatabaseStorage implements IStorage {
     return c;
   }
 
-  async getPerformanceReviews(userId: number): Promise<PerformanceReview[]> {
-    return await db.select().from(performance_reviews).where(eq(performance_reviews.employee_id, String(userId))).orderBy(desc(performance_reviews.review_period_end));
+  async getPerformanceReviews(userId?: number | string): Promise<PerformanceReview[]> {
+    if (userId) {
+      return await db.select().from(performance_reviews).where(eq(performance_reviews.employee_id, String(userId))).orderBy(desc(performance_reviews.review_period_end));
+    }
+    return await db.select().from(performance_reviews).orderBy(desc(performance_reviews.review_period_end));
   }
 
   async createPerformanceReview(data: InsertPerformanceReview): Promise<PerformanceReview> {
@@ -2044,7 +2056,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(leave_types);
   }
 
-  async getLeaveRequests(userId?: number): Promise<any[]> {
+  async getLeaveRequests(userId?: number | string): Promise<any[]> {
     if (userId) return await db.select().from(leave_requests).where(eq(leave_requests.employee_id, String(userId)));
     return await db.select().from(leave_requests).orderBy(desc(leave_requests.created_at));
   }
@@ -2059,8 +2071,12 @@ export class DatabaseStorage implements IStorage {
     return u;
   }
 
-  async getLeaveBalances(userId: number): Promise<LeaveBalance[]> {
-    return await db.select().from(leave_balances).where(eq(leave_balances.employee_id, String(userId)));
+  async getLeaveBalances(userId: number | string, year?: number): Promise<LeaveBalance[]> {
+    const conditions = [eq(leave_balances.employee_id, String(userId))];
+    if (year) {
+      conditions.push(eq(leave_balances.year, year));
+    }
+    return await db.select().from(leave_balances).where(and(...conditions));
   }
 
   async getAllAdminDecisions(): Promise<AdminDecision[]> {
@@ -2089,8 +2105,12 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(system_settings);
   }
 
-  async updateSystemSetting(id: number, value: string): Promise<SystemSetting> {
-    const [u] = await db.update(system_settings).set({ setting_value: value }).where(eq(system_settings.id, id)).returning();
+  async updateSystemSetting(key: string, value: string, updatedBy?: number): Promise<SystemSetting> {
+    const updateData: any = { setting_value: value };
+    if (updatedBy) {
+      updateData.updated_by = String(updatedBy);
+    }
+    const [u] = await db.update(system_settings).set(updateData).where(eq(system_settings.setting_key, key)).returning();
     return u;
   }
 
@@ -2108,9 +2128,22 @@ export class DatabaseStorage implements IStorage {
     return s;
   }
 
-  async updateUserSetting(userId: number, data: Partial<InsertUserSetting>): Promise<UserSetting> {
-    const [u] = await db.update(user_settings).set(data).where(eq(user_settings.user_id, String(userId))).returning();
-    return u;
+  async updateUserSetting(userId: number, key: string, value: string): Promise<UserSetting> {
+    const existing = await db.select().from(user_settings)
+      .where(and(eq(user_settings.user_id, String(userId)), eq(user_settings.setting_key, key)));
+    
+    if (existing.length > 0) {
+      const [u] = await db.update(user_settings)
+        .set({ setting_value: value, updated_at: new Date() })
+        .where(and(eq(user_settings.user_id, String(userId)), eq(user_settings.setting_key, key)))
+        .returning();
+      return u;
+    } else {
+      const [u] = await db.insert(user_settings)
+        .values({ user_id: String(userId), setting_key: key, setting_value: value })
+        .returning();
+      return u;
+    }
   }
 
   async createNotification(data: InsertNotification): Promise<Notification> {
@@ -2178,8 +2211,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMaintenanceAction(data: InsertMaintenanceAction): Promise<MaintenanceAction> {
-    const [a] = await db.insert(maintenance_actions).values(data).returning();
-    return a;
+    const [maxResult] = await db.execute(sql`SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM maintenance_actions`).then(r => r.rows as any[]);
+    const nextNum = maxResult?.next_id || 1;
+    const action_number = `MA${String(nextNum).padStart(3, '0')}`;
+    try {
+      const [a] = await db.insert(maintenance_actions).values({ ...data, action_number } as any).returning();
+      return a;
+    } catch (e: any) {
+      if (e.code === '23505') {
+        const retryNum = Date.now() % 100000;
+        const retryNumber = `MA${String(retryNum).padStart(5, '0')}`;
+        const [a] = await db.insert(maintenance_actions).values({ ...data, action_number: retryNumber } as any).returning();
+        return a;
+      }
+      throw e;
+    }
   }
 
   async getMaintenanceReports(): Promise<MaintenanceReport[]> {
@@ -2187,8 +2233,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMaintenanceReport(data: InsertMaintenanceReport): Promise<MaintenanceReport> {
-    const [r] = await db.insert(maintenance_reports).values(data).returning();
-    return r;
+    const [maxResult] = await db.execute(sql`SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM maintenance_reports`).then(r => r.rows as any[]);
+    const nextNum = maxResult?.next_id || 1;
+    const report_number = `MR${String(nextNum).padStart(3, '0')}`;
+    try {
+      const [r] = await db.insert(maintenance_reports).values({ ...data, report_number } as any).returning();
+      return r;
+    } catch (e: any) {
+      if (e.code === '23505') {
+        const retryNum = Date.now() % 100000;
+        const retryNumber = `MR${String(retryNum).padStart(5, '0')}`;
+        const [r] = await db.insert(maintenance_reports).values({ ...data, report_number: retryNumber } as any).returning();
+        return r;
+      }
+      throw e;
+    }
   }
 
   async getOperatorNegligenceReports(): Promise<OperatorNegligenceReport[]> {
@@ -2196,8 +2255,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOperatorNegligenceReport(data: InsertOperatorNegligenceReport): Promise<OperatorNegligenceReport> {
-    const [r] = await db.insert(operator_negligence_reports).values(data).returning();
-    return r;
+    const [maxResult] = await db.execute(sql`SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM operator_negligence_reports`).then(r => r.rows as any[]);
+    const nextNum = maxResult?.next_id || 1;
+    const report_number = `ON${String(nextNum).padStart(3, '0')}`;
+    try {
+      const [r] = await db.insert(operator_negligence_reports).values({ ...data, report_number } as any).returning();
+      return r;
+    } catch (e: any) {
+      if (e.code === '23505') {
+        const retryNum = Date.now() % 100000;
+        const retryNumber = `ON${String(retryNum).padStart(5, '0')}`;
+        const [r] = await db.insert(operator_negligence_reports).values({ ...data, report_number: retryNumber } as any).returning();
+        return r;
+      }
+      throw e;
+    }
   }
 
   async getAllAlerts(options?: any): Promise<SystemAlert[]> {
@@ -3526,8 +3598,11 @@ export class DatabaseStorage implements IStorage {
     return this.updateRoll(id, { stage: 'printed', ...data });
   }
 
-  async markRollPrinted(id: number, data?: any): Promise<Roll> {
-    return this.markRollAsPrinted(id, data);
+  async markRollPrinted(id: number, userId?: number, printingMachineId?: number): Promise<Roll> {
+    const updateData: any = {};
+    if (userId) updateData.printed_by = userId;
+    if (printingMachineId) updateData.printing_machine_id = printingMachineId;
+    return this.markRollAsPrinted(id, updateData);
   }
 
   async createFinalRoll(data: any): Promise<Roll> {
@@ -3843,8 +3918,9 @@ export class DatabaseStorage implements IStorage {
     return r;
   }
 
-  async getTrainingCertificates(userId: number): Promise<TrainingCertificate[]> {
-    return this.getCertificates(userId);
+  async getTrainingCertificates(userId?: number): Promise<TrainingCertificate[]> {
+    if (userId) return this.getCertificates(userId);
+    return await db.select().from(training_certificates);
   }
 
   async updateTrainingCertificate(id: number, data: Partial<TrainingCertificate>): Promise<TrainingCertificate> {
@@ -3856,8 +3932,13 @@ export class DatabaseStorage implements IStorage {
     return { enrollmentId, generated: true };
   }
 
-  async getTrainingEvaluations(programId?: number): Promise<TrainingEvaluation[]> {
-    if (programId) return await db.select().from(training_evaluations).where(eq(training_evaluations.program_id, programId));
+  async getTrainingEvaluations(employeeId?: number, programId?: number): Promise<TrainingEvaluation[]> {
+    const conditions: any[] = [];
+    if (employeeId) conditions.push(eq(training_evaluations.employee_id, String(employeeId)));
+    if (programId) conditions.push(eq(training_evaluations.program_id, programId));
+    if (conditions.length > 0) {
+      return await db.select().from(training_evaluations).where(and(...conditions));
+    }
     return await db.select().from(training_evaluations);
   }
 
@@ -3929,16 +4010,19 @@ export class DatabaseStorage implements IStorage {
     return c;
   }
 
-  async getUserPerformanceStats(userId: number): Promise<any> {
-    const reviews = await this.getPerformanceReviews(userId);
-    return { userId, reviewCount: reviews.length, averageScore: 0 };
+  async getUserPerformanceStats(userId?: number, dateFrom?: string, dateTo?: string): Promise<any> {
+    if (userId) {
+      const reviews = await this.getPerformanceReviews(userId);
+      return { userId, reviewCount: reviews.length, averageScore: 0 };
+    }
+    return { reviewCount: 0, averageScore: 0 };
   }
 
-  async getRolePerformanceStats(roleId: number): Promise<any> {
-    return { roleId, count: 0, averageScore: 0 };
+  async getRolePerformanceStats(dateFrom?: string, dateTo?: string): Promise<any> {
+    return { count: 0, averageScore: 0, roles: [] };
   }
 
-  async getUsersPerformanceBySection(sectionId: number): Promise<any[]> {
+  async getUsersPerformanceBySection(section: string, dateFrom?: string, dateTo?: string): Promise<any[]> {
     return [];
   }
 
@@ -4073,7 +4157,12 @@ export class DatabaseStorage implements IStorage {
     return { totalWaste: 0, byType: {} };
   }
 
-  async calculateWasteStatistics(): Promise<any> {
+  async calculateWasteStatistics(productionOrderId?: number): Promise<any> {
+    if (productionOrderId) {
+      const wasteRecords = await db.select().from(waste).where(eq(waste.production_order_id, productionOrderId));
+      const totalWaste = wasteRecords.reduce((sum: number, w: any) => sum + parseFloat(w.weight_kg || '0'), 0);
+      return { productionOrderId, total: totalWaste, percentage: 0, records: wasteRecords };
+    }
     return { total: 0, percentage: 0 };
   }
 
@@ -4381,33 +4470,35 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
-  async assignToMachineQueue(machineId: string | number, productionOrderId: number, data?: any): Promise<any> {
+  async assignToMachineQueue(productionOrderId: number, machineId: string | number, position?: number, userId?: number): Promise<any> {
     const queueItems = await this.getMachineQueue(machineId as any);
     const newItem: InsertMachineQueue = {
       machine_id: String(machineId),
       production_order_id: productionOrderId,
-      queue_position: queueItems.length + 1,
-      ...data,
+      queue_position: position ?? queueItems.length + 1,
     };
+    if (userId) {
+      (newItem as any).assigned_by = userId;
+    }
     const [created] = await db.insert(machine_queues).values(newItem).returning();
     return created;
   }
 
-  async removeFromQueue(machineId: string | number, productionOrderId: number): Promise<void> {
-    await db.delete(machine_queues).where(and(eq(machine_queues.machine_id, String(machineId)), eq(machine_queues.production_order_id, productionOrderId)));
+  async removeFromQueue(queueId: number): Promise<void> {
+    await db.delete(machine_queues).where(eq(machine_queues.id, queueId));
   }
 
   async optimizeQueueOrder(machineId: string | number): Promise<MachineQueue[]> {
     return this.getMachineQueue(machineId as any);
   }
 
-  async updateQueuePosition(machineId: string | number, productionOrderId: number, position: number): Promise<any> {
-    const [u] = await db.update(machine_queues).set({ queue_position: position }).where(and(eq(machine_queues.machine_id, String(machineId)), eq(machine_queues.production_order_id, productionOrderId))).returning();
+  async updateQueuePosition(queueId: number, newPosition: number): Promise<any> {
+    const [u] = await db.update(machine_queues).set({ queue_position: newPosition }).where(eq(machine_queues.id, queueId)).returning();
     return u;
   }
 
-  async smartDistributeOrders(data?: any): Promise<any> {
-    return { distributed: 0 };
+  async smartDistributeOrders(algorithm: string, params?: any): Promise<any> {
+    return { success: true, distributed: 0, message: "التوزيع الذكي غير متاح حالياً" };
   }
 
   async suggestOptimalDistribution(data?: any): Promise<any> {
@@ -4624,8 +4715,8 @@ export class DatabaseStorage implements IStorage {
     return JSON.stringify(safeRows, null, 2);
   }
 
-  async importTableData(tableName: string, data: any[]): Promise<any> {
-    return { imported: data.length };
+  async importTableData(tableName: string, data: any[], format?: string): Promise<any> {
+    return { imported: data.length, count: data.length };
   }
 
   async getBackupFile(backupId: string): Promise<any> {
@@ -4820,11 +4911,11 @@ export class DatabaseStorage implements IStorage {
     return [];
   }
 
-  async getProductionEfficiencyMetrics(): Promise<any> {
+  async getProductionEfficiencyMetrics(dateFrom?: string, dateTo?: string): Promise<any> {
     return { efficiency: 0, target: 100 };
   }
 
-  async getProductionOrdersBySection(sectionId: number): Promise<ProductionOrder[]> {
+  async getProductionOrdersBySection(section: string, search?: string): Promise<ProductionOrder[]> {
     return await db.select().from(production_orders).orderBy(desc(production_orders.id));
   }
 
@@ -4954,8 +5045,8 @@ export class DatabaseStorage implements IStorage {
     return results;
   }
 
-  async getProductionStatsBySection(sectionId?: number): Promise<any> {
-    return { sectionId, total: 0 };
+  async getProductionStatsBySection(section?: string, dateFrom?: string, dateTo?: string): Promise<any> {
+    return { section, total: 0 };
   }
 
   async getMonitoringDashboard(dateFrom?: string, dateTo?: string): Promise<any> {
@@ -5205,7 +5296,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getDistributionPreview(options?: any): Promise<any> {
+  async getDistributionPreview(algorithm: string, params?: any): Promise<any> {
     return { preview: [], suggestions: [] };
   }
 
@@ -5222,7 +5313,7 @@ export class DatabaseStorage implements IStorage {
     return { machines: [], totalCapacity: 0, usedCapacity: 0 };
   }
 
-  async getMachineDetailAllStages(machineId: number): Promise<any> {
+  async getMachineDetailAllStages(machineId: number, dateFrom?: string, dateTo?: string): Promise<any> {
     const machine = await this.getMachineById(machineId);
     const queue = await this.getMachineQueue(machineId);
     return { machine, queue };
@@ -5238,7 +5329,7 @@ export class DatabaseStorage implements IStorage {
     return allMachines.map((m, i) => ({ machine: m, queue: queues[i] }));
   }
 
-  async getMachineUtilizationStats(): Promise<any> {
+  async getMachineUtilizationStats(dateFrom?: string, dateTo?: string): Promise<any> {
     return { utilization: 0, machines: [] };
   }
 

@@ -10,6 +10,7 @@ export interface User {
   username: string;
   display_name?: string;
   display_name_ar?: string;
+  full_name?: string;
   role_id?: number;
   section_id?: number;
   permissions?: string[];

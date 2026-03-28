@@ -41,7 +41,7 @@ export function invalidateRolesCache() {
 
 function cleanupExpiredTokens() {
   const now = Date.now();
-  for (const [token, entry] of mobileTokens) {
+  for (const [token, entry] of Array.from(mobileTokens.entries())) {
     if (now - entry.createdAt > TOKEN_EXPIRY_MS) {
       mobileTokens.delete(token);
     }
