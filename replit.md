@@ -480,15 +480,20 @@ Customer Order → Production Order(s) → Film Stage → Printing Stage → Cut
 - `client/src/components/pwa/InstallPrompt.tsx` — Mobile install banner
 - Express routes serve `sw.js`, `manifest.json`, and `/icons/` with correct MIME types
 
-## Mobile Warehouse App
+## Mobile Apps
 
-- **Route**: `/warehouse-mobile` — Mobile-optimized warehouse interface
-- **File**: `client/src/pages/warehouse-mobile.tsx` — Single file with all mobile views
-- **Features**: Dashboard, barcode scanner (html5-qrcode camera), quick inventory lookup, voucher creation, inventory count with scanner
-- **Library**: `html5-qrcode` for camera-based barcode/QR scanning
-- **Pattern**: Uses internal view state (dashboard/scanner/inventory/voucher/count) instead of sub-routes
-- **API calls**: Uses `apiRequest` from `@lib/queryClient` for all fetch operations
-- **Translation keys**: `warehouse.mobile.*` namespace in ar.json/en.json
+All mobile pages use internal view state instead of sub-routes, gradient headers with distinct colors, and card-based layouts optimized for touch.
+
+| Page | Route | File | Color | Features |
+|------|-------|------|-------|----------|
+| المستودع | `/warehouse-mobile` | `warehouse-mobile.tsx` | Blue | Barcode scanner (html5-qrcode), inventory, voucher creation, inventory count |
+| لوحة الإنتاج | `/production-mobile` | `production-mobile.tsx` | Indigo | Production orders list, progress tracking, rolls detail view |
+| لوحتي | `/user-dashboard-mobile` | `user-dashboard-mobile.tsx` | Emerald | Attendance (check-in/out/lunch), working hours, requests, violations |
+| إدارة الطلبات | `/orders-mobile` | `orders-mobile.tsx` | Orange | Orders list with status filters, order details, production orders view |
+
+- **Library**: `html5-qrcode` for camera barcode scanning (warehouse only)
+- **Translation keys**: `warehouse.mobile.*` and `mobilePages.*` namespaces
+- **API calls**: Uses `apiRequest` from `lib/queryClient` for all mutations
 
 ## External Service Integrations
 
