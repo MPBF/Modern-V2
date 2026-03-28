@@ -1482,6 +1482,16 @@
       "voucherCreateFailed": "Voucher creation failed",
       "deleteVoucherFailed": "Voucher deletion failed",
       "receiptSaveFailed": "Receipt save failed"
+    },
+    "sections": {
+      "voucherInfo": "Voucher Information",
+      "quantityInfo": "Quantity Details",
+      "itemInfo": "Item Details",
+      "supplierCustomerInfo": "Supplier / Customer",
+      "driverInfo": "Driver & Delivery",
+      "productionInfo": "Production Details",
+      "handoverInfo": "Handover Details",
+      "productsItems": "Products"
     }
   },
   "hr": {

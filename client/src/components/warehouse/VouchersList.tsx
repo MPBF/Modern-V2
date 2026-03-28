@@ -177,6 +177,8 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
             .details-table th { background: #1a56db; color: white; padding: 10px 12px; text-align: center; font-size: 14px; }
             .details-table td { padding: 10px 12px; border: 1px solid #e2e8f0; text-align: center; font-size: 14px; }
             .details-table tr:nth-child(even) { background: #f8fafc; }
+            .print-section { margin-bottom: 16px; }
+            .section-title { font-weight: 700; font-size: 14px; color: #1a56db; padding: 8px 12px; background: #eff6ff; border-right: 4px solid #1a56db; border-left: 4px solid #1a56db; margin-bottom: 0; border-radius: 4px 4px 0 0; }
             .notes-section { background: #fffbeb; border: 1px solid #fbbf24; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; }
             .notes-label { font-weight: 700; color: #92400e; margin-bottom: 4px; }
             .signatures { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
@@ -196,94 +198,75 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
     }, 200);
   };
 
-  const renderVoucherDetails = (v: any) => {
-    const rows: { label: string; value: string }[] = [];
+  const getGroupedVoucherDetails = (v: any) => {
+    type Row = { label: string; value: string };
+    type Section = { title: string; icon: string; rows: Row[] };
+    const sections: Section[] = [];
 
-    rows.push({ label: t('warehouse.voucherDetails.voucherNumber'), value: v.voucher_number });
-    rows.push({ label: t('warehouse.voucherDetails.voucherType'), value: getVoucherTypeLabel(v.voucher_type) });
-    rows.push({ label: t('warehouse.voucherDetails.date'), value: new Date(v.voucher_date).toLocaleDateString() });
+    const voucherInfo: Row[] = [];
+    voucherInfo.push({ label: t('warehouse.voucherDetails.voucherNumber'), value: v.voucher_number });
+    voucherInfo.push({ label: t('warehouse.voucherDetails.voucherType'), value: getVoucherTypeLabel(v.voucher_type) });
+    voucherInfo.push({ label: t('warehouse.voucherDetails.date'), value: new Date(v.voucher_date).toLocaleDateString() });
     if (v.receipt_time) {
       const rt = new Date(v.receipt_time);
-      rows.push({ label: t('warehouse.voucherDetails.receiptTime'), value: `${rt.toLocaleDateString()} ${rt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}` });
+      voucherInfo.push({ label: t('warehouse.voucherDetails.receiptTime'), value: `${rt.toLocaleDateString()} ${rt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}` });
     }
     if (v.delivery_time) {
       const dt = new Date(v.delivery_time);
-      rows.push({ label: t('warehouse.voucherDetails.deliveryTime'), value: `${dt.toLocaleDateString()} ${dt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}` });
+      voucherInfo.push({ label: t('warehouse.voucherDetails.deliveryTime'), value: `${dt.toLocaleDateString()} ${dt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}` });
     }
-    rows.push({ label: t('warehouse.voucherDetails.status'), value: getStatusText(v.status) });
+    voucherInfo.push({ label: t('warehouse.voucherDetails.status'), value: getStatusText(v.status) });
+    sections.push({ title: t('warehouse.sections.voucherInfo'), icon: "📋", rows: voucherInfo });
 
-    if (v.quantity) {
-      rows.push({ label: t('warehouse.voucherDetails.quantity'), value: `${parseFloat(v.quantity).toLocaleString("en-US")} ${v.unit || t('warehouse.units.kilo')}` });
-    }
-    if (v.weight_kg) {
-      rows.push({ label: t('warehouse.voucherDetails.weightKg'), value: parseFloat(v.weight_kg).toLocaleString("en-US") });
-    }
-    if (v.pieces_count) {
-      rows.push({ label: t('warehouse.voucherDetails.piecesCount'), value: v.pieces_count.toString() });
-    }
-    if (v.unit_price) {
-      rows.push({ label: t('warehouse.voucherDetails.unitPrice'), value: parseFloat(v.unit_price).toLocaleString("en-US") });
-    }
-    if (v.total_price) {
-      rows.push({ label: t('warehouse.voucherDetails.totalPrice'), value: parseFloat(v.total_price).toLocaleString("en-US") });
-    }
-    if (v.batch_number) {
-      rows.push({ label: t('warehouse.voucherDetails.batchNumber'), value: v.batch_number });
-    }
-    if (v.barcode) {
-      rows.push({ label: t('warehouse.voucherDetails.barcode'), value: v.barcode });
-    }
-    if (v.supplier_name_ar || v.supplier_name) {
-      rows.push({ label: t('warehouse.voucherDetails.supplier'), value: v.supplier_name_ar || v.supplier_name });
-    }
-    if (v.customer_name_ar || v.customer_name) {
-      rows.push({ label: t('warehouse.voucherDetails.customer'), value: v.customer_name_ar || v.customer_name });
-    }
-    if (v.item_name_ar || v.item_name || v.item_id) {
-      rows.push({ label: t('warehouse.voucherDetails.item'), value: v.item_name_ar || v.item_name || v.item_id });
-    }
-    if (v.item_code) {
-      rows.push({ label: t('warehouse.voucherDetails.itemCode'), value: v.item_code });
-    }
-    if (v.location_name_ar || v.location_name || v.location_id) {
-      rows.push({ label: t('warehouse.voucherDetails.location'), value: v.location_name_ar || v.location_name || v.location_id });
-    }
-    if (v.production_order_number) {
-      rows.push({ label: t('warehouse.voucherDetails.productionOrder'), value: v.production_order_number });
-    }
-    if (v.from_production_line) {
-      rows.push({ label: t('warehouse.voucherDetails.productionLine'), value: v.from_production_line });
-    }
-    if (v.delivered_by) {
-      rows.push({ label: t('warehouse.voucherDetails.deliveredBy'), value: v.delivered_by });
-    }
-    if (v.issued_to) {
-      rows.push({ label: t('warehouse.voucherDetails.receivedBy'), value: v.issued_to });
-    }
-    if (v.to_destination) {
-      rows.push({ label: t('warehouse.voucherDetails.destination'), value: v.to_destination });
-    }
-    if (v.driver_name) {
-      rows.push({ label: t('warehouse.voucherDetails.driverName'), value: v.driver_name });
-    }
-    if (v.driver_phone) {
-      rows.push({ label: t('warehouse.voucherDetails.driverPhone'), value: v.driver_phone });
-    }
-    if (v.vehicle_number) {
-      rows.push({ label: t('warehouse.voucherDetails.vehicleNumber'), value: v.vehicle_number });
-    }
-    if (v.delivery_address) {
-      rows.push({ label: t('warehouse.voucherDetails.deliveryAddress'), value: v.delivery_address });
-    }
-    if (v.expiry_date) {
-      rows.push({ label: t('warehouse.voucherDetails.expiryDate'), value: new Date(v.expiry_date).toLocaleDateString() });
-    }
+    const itemInfo: Row[] = [];
+    if (v.item_name_ar || v.item_name || v.item_id) itemInfo.push({ label: t('warehouse.voucherDetails.item'), value: v.item_name_ar || v.item_name || v.item_id });
+    if (v.item_code) itemInfo.push({ label: t('warehouse.voucherDetails.itemCode'), value: v.item_code });
+    if (v.barcode) itemInfo.push({ label: t('warehouse.voucherDetails.barcode'), value: v.barcode });
+    if (v.batch_number) itemInfo.push({ label: t('warehouse.voucherDetails.batchNumber'), value: v.batch_number });
+    if (v.location_name_ar || v.location_name || v.location_id) itemInfo.push({ label: t('warehouse.voucherDetails.location'), value: v.location_name_ar || v.location_name || v.location_id });
+    if (v.expiry_date) itemInfo.push({ label: t('warehouse.voucherDetails.expiryDate'), value: new Date(v.expiry_date).toLocaleDateString() });
+    if (itemInfo.length > 0) sections.push({ title: t('warehouse.sections.itemInfo'), icon: "📦", rows: itemInfo });
 
-    return rows;
+    const qtyInfo: Row[] = [];
+    if (v.quantity) qtyInfo.push({ label: t('warehouse.voucherDetails.quantity'), value: `${parseFloat(v.quantity).toLocaleString("en-US")} ${v.unit || t('warehouse.units.kilo')}` });
+    if (v.weight_kg) qtyInfo.push({ label: t('warehouse.voucherDetails.weightKg'), value: parseFloat(v.weight_kg).toLocaleString("en-US") });
+    if (v.pieces_count) qtyInfo.push({ label: t('warehouse.voucherDetails.piecesCount'), value: v.pieces_count.toString() });
+    if (v.unit_price) qtyInfo.push({ label: t('warehouse.voucherDetails.unitPrice'), value: parseFloat(v.unit_price).toLocaleString("en-US") });
+    if (v.total_price) qtyInfo.push({ label: t('warehouse.voucherDetails.totalPrice'), value: parseFloat(v.total_price).toLocaleString("en-US") });
+    if (qtyInfo.length > 0) sections.push({ title: t('warehouse.sections.quantityInfo'), icon: "⚖️", rows: qtyInfo });
+
+    const partyInfo: Row[] = [];
+    if (v.supplier_name_ar || v.supplier_name) partyInfo.push({ label: t('warehouse.voucherDetails.supplier'), value: v.supplier_name_ar || v.supplier_name });
+    if (v.customer_name_ar || v.customer_name) partyInfo.push({ label: t('warehouse.voucherDetails.customer'), value: v.customer_name_ar || v.customer_name });
+    if (partyInfo.length > 0) sections.push({ title: t('warehouse.sections.supplierCustomerInfo'), icon: "🏢", rows: partyInfo });
+
+    const productionInfo: Row[] = [];
+    if (v.production_order_number) productionInfo.push({ label: t('warehouse.voucherDetails.productionOrder'), value: v.production_order_number });
+    if (v.from_production_line) productionInfo.push({ label: t('warehouse.voucherDetails.productionLine'), value: v.from_production_line });
+    if (productionInfo.length > 0) sections.push({ title: t('warehouse.sections.productionInfo'), icon: "🏭", rows: productionInfo });
+
+    const handoverInfo: Row[] = [];
+    if (v.delivered_by) handoverInfo.push({ label: t('warehouse.voucherDetails.deliveredBy'), value: v.delivered_by });
+    if (v.issued_to) handoverInfo.push({ label: t('warehouse.voucherDetails.receivedBy'), value: v.issued_to });
+    if (v.to_destination) handoverInfo.push({ label: t('warehouse.voucherDetails.destination'), value: v.to_destination });
+    if (handoverInfo.length > 0) sections.push({ title: t('warehouse.sections.handoverInfo'), icon: "🤝", rows: handoverInfo });
+
+    const driverInfo: Row[] = [];
+    if (v.driver_name) driverInfo.push({ label: t('warehouse.voucherDetails.driverName'), value: v.driver_name });
+    if (v.driver_phone) driverInfo.push({ label: t('warehouse.voucherDetails.driverPhone'), value: v.driver_phone });
+    if (v.vehicle_number) driverInfo.push({ label: t('warehouse.voucherDetails.vehicleNumber'), value: v.vehicle_number });
+    if (v.delivery_address) driverInfo.push({ label: t('warehouse.voucherDetails.deliveryAddress'), value: v.delivery_address });
+    if (driverInfo.length > 0) sections.push({ title: t('warehouse.sections.driverInfo'), icon: "🚛", rows: driverInfo });
+
+    return sections;
+  };
+
+  const getFlatVoucherDetails = (v: any) => {
+    return getGroupedVoucherDetails(v).flatMap(s => s.rows);
   };
 
   const renderPrintContent = (v: any) => {
-    const details = renderVoucherDetails(v);
+    const sections = getGroupedVoucherDetails(v);
     let printItems: any[] = [];
     try { if (v.items) printItems = JSON.parse(v.items); } catch {}
 
@@ -297,32 +280,29 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
           </div>
           <div className="header-left">
             <div>{v.voucher_number}</div>
-            <div>{new Date(v.voucher_date).toLocaleDateString("ar-SA")}</div>
+            <div>{new Date(v.voucher_date).toLocaleDateString()}</div>
           </div>
         </div>
 
-        <table className="details-table">
-          <thead>
-            <tr>
-              <th style={{ width: "40%" }}>{t('warehouse.print.detail')}</th>
-              <th style={{ width: "60%" }}>{t('warehouse.print.value')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {details.map((row, i) => (
-              <tr key={i}>
-                <td style={{ fontWeight: 600 }}>{row.label}</td>
-                <td>{row.value}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {sections.map((section, si) => (
+          <div key={si} className="print-section">
+            <div className="section-title">{section.icon} {section.title}</div>
+            <table className="details-table">
+              <tbody>
+                {section.rows.map((row, ri) => (
+                  <tr key={ri}>
+                    <td style={{ fontWeight: 600, width: "35%", backgroundColor: '#f8fafc' }}>{row.label}</td>
+                    <td style={{ width: "65%" }}>{row.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
 
         {printItems.length > 0 && (
-          <div style={{ marginTop: '15px' }}>
-            <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '8px', borderBottom: '2px solid #333', paddingBottom: '4px' }}>
-              {t('warehouse.voucherDetails.receivedOrdersTitle')} ({printItems.length})
-            </div>
+          <div className="print-section">
+            <div className="section-title">{t('warehouse.voucherDetails.receivedOrdersTitle')} ({printItems.length})</div>
             <table className="details-table">
               <thead>
                 <tr>
@@ -509,15 +489,23 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
           </DialogHeader>
 
           {viewVoucher && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                {renderVoucherDetails(viewVoucher).map((row, i) => (
-                  <div key={i} className="flex gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                    <span className="font-semibold text-gray-600 dark:text-gray-400 min-w-[70px] sm:min-w-[90px] text-xs sm:text-sm">{row.label}:</span>
-                    <span className="text-xs sm:text-sm">{row.value}</span>
+            <div className="space-y-3">
+              {getGroupedVoucherDetails(viewVoucher).map((section, si) => (
+                <div key={si} className="border rounded-lg overflow-hidden dark:border-gray-700">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 border-b dark:border-gray-700">
+                    <span className="text-sm">{section.icon}</span>
+                    <span className="font-semibold text-xs sm:text-sm text-blue-800 dark:text-blue-200">{section.title}</span>
                   </div>
-                ))}
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-0">
+                    {section.rows.map((row, ri) => (
+                      <div key={ri} className="flex gap-2 px-3 py-2 border-b dark:border-gray-700 last:border-b-0">
+                        <span className="font-semibold text-gray-500 dark:text-gray-400 min-w-[80px] sm:min-w-[100px] text-xs sm:text-sm">{row.label}:</span>
+                        <span className="text-xs sm:text-sm font-medium">{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
 
               {(() => {
                 let parsedItems: any[] = [];
@@ -525,7 +513,7 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                 if (parsedItems.length <= 0) return null;
                 return (
                   <div className="border rounded-lg overflow-hidden dark:border-gray-700">
-                    <div className="bg-blue-50 dark:bg-blue-900/30 px-3 py-2">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 border-b dark:border-gray-700">
                       <span className="font-semibold text-xs sm:text-sm text-blue-800 dark:text-blue-200">{t('warehouse.voucherDetails.receivedOrdersTitle')} ({parsedItems.length})</span>
                     </div>
                     <div className="hidden sm:block overflow-x-auto">

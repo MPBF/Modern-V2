@@ -1777,6 +1777,16 @@
       "voucherCreateFailed": "فشل في إنشاء السند",
       "deleteVoucherFailed": "فشل في حذف السند",
       "receiptSaveFailed": "فشل في حفظ السند"
+    },
+    "sections": {
+      "voucherInfo": "بيانات السند",
+      "quantityInfo": "بيانات الكمية",
+      "itemInfo": "بيانات الصنف",
+      "supplierCustomerInfo": "بيانات المورد / العميل",
+      "driverInfo": "بيانات السائق والتوصيل",
+      "productionInfo": "بيانات الإنتاج",
+      "handoverInfo": "بيانات التسليم والاستلام",
+      "productsItems": "المنتجات"
     }
   },
   "hr": {
