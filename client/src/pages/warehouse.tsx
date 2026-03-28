@@ -263,7 +263,7 @@ function DeliveryHallContent() {
       });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.message || "فشل حفظ سند التسليم");
+        throw new Error(err.message || t('warehouse.delivery.deliverySaveFailed'));
       }
       return response.json();
     },
@@ -296,7 +296,7 @@ function DeliveryHallContent() {
 
   const handleDeliverySubmit = async () => {
     if (!user?.id) {
-      toast({ title: t('warehouse.toast.error'), description: "يجب تسجيل الدخول", variant: "destructive" });
+      toast({ title: t('warehouse.toast.error'), description: t('warehouse.delivery.loginRequired'), variant: "destructive" });
       return;
     }
 
@@ -305,7 +305,7 @@ function DeliveryHallContent() {
       : Array.from(selectedOrders);
 
     if (targetOrders.length === 0) {
-      toast({ title: t('warehouse.toast.error'), description: "يرجى تحديد أمر إنتاج واحد على الأقل", variant: "destructive" });
+      toast({ title: t('warehouse.toast.error'), description: t('warehouse.delivery.selectAtLeastOne'), variant: "destructive" });
       return;
     }
 
@@ -318,13 +318,13 @@ function DeliveryHallContent() {
       .filter((o) => o.weight > 0);
 
     if (ordersWithWeights.length === 0) {
-      toast({ title: t('warehouse.toast.error'), description: "يرجى إدخال وزن التسليم", variant: "destructive" });
+      toast({ title: t('warehouse.toast.error'), description: t('warehouse.delivery.enterWeight'), variant: "destructive" });
       return;
     }
 
     for (const { weight, order } of ordersWithWeights) {
       if (order && weight > order.available_for_delivery) {
-        toast({ title: t('warehouse.toast.error'), description: `الوزن يتجاوز الكمية المتاحة (${order.production_order_number})`, variant: "destructive" });
+        toast({ title: t('warehouse.toast.error'), description: `${t('warehouse.delivery.weightExceedsAvailable')} (${order.production_order_number})`, variant: "destructive" });
         return;
       }
     }
@@ -365,9 +365,9 @@ function DeliveryHallContent() {
       setDriverPhone("");
       setVehicleNumber("");
       setSelectedDeliveryOrderId(null);
-      toast({ title: "تم التسليم بنجاح", description: "تم إنشاء سند تسليم FP-Del" });
+      toast({ title: t('warehouse.delivery.deliverySuccess'), description: t('warehouse.delivery.fpDelCreated') });
     } catch (err: any) {
-      toast({ title: t('warehouse.toast.error'), description: err.message || "فشل التسليم", variant: "destructive" });
+      toast({ title: t('warehouse.toast.error'), description: err.message || t('warehouse.delivery.deliveryFailed'), variant: "destructive" });
     }
   };
 
@@ -383,10 +383,10 @@ function DeliveryHallContent() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Truck className="h-5 w-5 text-orange-600" />
-                تسليم العملاء
+                {t('warehouse.delivery.title')}
               </CardTitle>
               <CardDescription className="mt-1">
-                أوامر الإنتاج المستلمة في المستودع والمتاحة للتسليم
+                {t('warehouse.delivery.description')}
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -394,14 +394,14 @@ function DeliveryHallContent() {
                 <DialogTrigger asChild>
                   <Button disabled={selectedOrders.size === 0} className="bg-orange-600 hover:bg-orange-700">
                     <Truck className="h-4 w-4 ml-2" />
-                    تسليم المحدد ({selectedOrders.size})
+                    {t('warehouse.delivery.deliverSelected')} ({selectedOrders.size})
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto w-[95vw] sm:w-full">
                   <DialogHeader>
-                    <DialogTitle className="text-sm sm:text-base">إنشاء سند تسليم FP-Del</DialogTitle>
+                    <DialogTitle className="text-sm sm:text-base">{t('warehouse.delivery.createFpDelTitle')}</DialogTitle>
                     <DialogDescription className="text-xs sm:text-sm">
-                      أدخل أوزان التسليم لكل أمر إنتاج
+                      {t('warehouse.delivery.createFpDelDesc')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
@@ -412,11 +412,11 @@ function DeliveryHallContent() {
                           <div key={orderId} className="border rounded-lg p-3 space-y-2 dark:border-gray-700">
                             <div className="flex items-center justify-between">
                               <span className="font-bold text-sm">{order.production_order_number}</span>
-                              <Badge variant="outline" className="text-xs">{order.available_for_delivery.toFixed(2)} كجم متاح</Badge>
+                              <Badge variant="outline" className="text-xs">{order.available_for_delivery.toFixed(2)} {t('warehouse.delivery.kgAvailable')}</Badge>
                             </div>
                             <div className="text-xs text-gray-500">{order.product_name_ar || order.product_name}</div>
                             <div>
-                              <label className="text-xs font-medium">وزن التسليم (كجم) *</label>
+                              <label className="text-xs font-medium">{t('warehouse.delivery.deliveryWeight')} *</label>
                               <Input
                                 type="number"
                                 step="0.001"
@@ -424,7 +424,7 @@ function DeliveryHallContent() {
                                 max={order.available_for_delivery}
                                 value={deliveryWeights[orderId] || ""}
                                 onChange={(e) => setDeliveryWeights((prev) => ({ ...prev, [orderId]: e.target.value }))}
-                                placeholder="أدخل وزن التسليم"
+                                placeholder={t('warehouse.delivery.enterDeliveryWeight')}
                                 className="mt-1"
                               />
                             </div>
@@ -434,16 +434,16 @@ function DeliveryHallContent() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="text-xs sm:text-sm font-medium">اسم السائق</label>
-                        <Input value={driverName} onChange={(e) => setDriverName(e.target.value)} placeholder="اسم السائق" />
+                        <label className="text-xs sm:text-sm font-medium">{t('warehouse.delivery.driverName')}</label>
+                        <Input value={driverName} onChange={(e) => setDriverName(e.target.value)} placeholder={t('warehouse.delivery.driverName')} />
                       </div>
                       <div>
-                        <label className="text-xs sm:text-sm font-medium">هاتف السائق</label>
-                        <Input value={driverPhone} onChange={(e) => setDriverPhone(e.target.value)} placeholder="رقم الهاتف" />
+                        <label className="text-xs sm:text-sm font-medium">{t('warehouse.delivery.driverPhone')}</label>
+                        <Input value={driverPhone} onChange={(e) => setDriverPhone(e.target.value)} placeholder={t('warehouse.delivery.phoneNumber')} />
                       </div>
                       <div>
-                        <label className="text-xs sm:text-sm font-medium">رقم المركبة</label>
-                        <Input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value)} placeholder="رقم المركبة" />
+                        <label className="text-xs sm:text-sm font-medium">{t('warehouse.delivery.vehicleNumber')}</label>
+                        <Input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value)} placeholder={t('warehouse.delivery.vehicleNumber')} />
                       </div>
                     </div>
                     <div>
@@ -451,13 +451,13 @@ function DeliveryHallContent() {
                       <textarea
                         value={deliveryNotes}
                         onChange={(e) => setDeliveryNotes(e.target.value)}
-                        placeholder="ملاحظات إضافية"
+                        placeholder={t('warehouse.delivery.additionalNotes')}
                         className="w-full min-h-[60px] p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
                       />
                     </div>
                     <div className="flex gap-2">
                       <Button onClick={handleDeliverySubmit} disabled={deliveryMutation.isPending} className="bg-orange-600 hover:bg-orange-700">
-                        {deliveryMutation.isPending ? "جاري الحفظ..." : "تأكيد التسليم"}
+                        {deliveryMutation.isPending ? t('warehouse.delivery.saving') : t('warehouse.delivery.confirmDelivery')}
                       </Button>
                       <Button variant="outline" onClick={() => { setDeliveryDialogOpen(false); setSelectedDeliveryOrderId(null); }}>
                         {t('warehouse.buttons.cancel')}
@@ -476,7 +476,7 @@ function DeliveryHallContent() {
               <p className="mt-2 text-gray-500">{t('warehouse.loading')}</p>
             </div>
           ) : processedOrders.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">لا توجد أوامر إنتاج متاحة للتسليم</div>
+            <div className="text-center py-8 text-gray-500">{t('warehouse.delivery.noOrdersAvailable')}</div>
           ) : (
             <>
               <div className="flex gap-2 mb-3">
@@ -486,7 +486,7 @@ function DeliveryHallContent() {
                   onClick={() => setSelectedOrders(new Set(allPoIds))}
                   disabled={allPoIds.length === 0}
                 >
-                  تحديد الكل ({allPoIds.length})
+                  {t('warehouse.delivery.selectAll')} ({allPoIds.length})
                 </Button>
                 <Button
                   variant="outline"
@@ -494,7 +494,7 @@ function DeliveryHallContent() {
                   onClick={() => setSelectedOrders(new Set())}
                   disabled={selectedOrders.size === 0}
                 >
-                  إلغاء التحديد
+                  {t('warehouse.delivery.deselectAll')}
                 </Button>
               </div>
               {groupedByOrder.map((group) => (
@@ -508,12 +508,12 @@ function DeliveryHallContent() {
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
                           <th className="py-2 px-3 w-10"></th>
-                          <th className="py-2 px-3 text-center font-medium whitespace-nowrap">أمر الإنتاج</th>
-                          <th className="py-2 px-3 text-center font-medium whitespace-nowrap">المنتج</th>
-                          <th className="py-2 px-3 text-center font-medium whitespace-nowrap">مستلم (كجم)</th>
-                          <th className="py-2 px-3 text-center font-medium whitespace-nowrap">مسلّم (كجم)</th>
-                          <th className="py-2 px-3 text-center font-medium whitespace-nowrap">متاح (كجم)</th>
-                          <th className="py-2 px-3 text-center font-medium whitespace-nowrap">إجراء</th>
+                          <th className="py-2 px-3 text-center font-medium whitespace-nowrap">{t('warehouse.delivery.productionOrder')}</th>
+                          <th className="py-2 px-3 text-center font-medium whitespace-nowrap">{t('warehouse.delivery.product')}</th>
+                          <th className="py-2 px-3 text-center font-medium whitespace-nowrap">{t('warehouse.delivery.receivedKg')}</th>
+                          <th className="py-2 px-3 text-center font-medium whitespace-nowrap">{t('warehouse.delivery.deliveredKg')}</th>
+                          <th className="py-2 px-3 text-center font-medium whitespace-nowrap">{t('warehouse.delivery.availableKg')}</th>
+                          <th className="py-2 px-3 text-center font-medium whitespace-nowrap">{t('warehouse.delivery.action')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -527,7 +527,7 @@ function DeliveryHallContent() {
                               <td className="py-2 px-3 text-center whitespace-nowrap">{order.warehouse_received_kg.toFixed(2)}</td>
                               <td className="py-2 px-3 text-center whitespace-nowrap">{order.warehouse_delivered_kg.toFixed(2)}</td>
                               <td className="py-2 px-3 text-center whitespace-nowrap"><Badge variant={order.available_for_delivery > 0 ? "default" : "secondary"}>{order.available_for_delivery.toFixed(2)}</Badge></td>
-                              <td className="py-2 px-3 text-center whitespace-nowrap">{order.available_for_delivery > 0 && <Button size="sm" variant="outline" className="text-orange-600 border-orange-300 hover:bg-orange-50 text-sm px-3" onClick={() => openDeliveryForOrder(order.production_order_id.toString())}><Truck className="h-3 w-3 ml-1" />تسليم</Button>}</td>
+                              <td className="py-2 px-3 text-center whitespace-nowrap">{order.available_for_delivery > 0 && <Button size="sm" variant="outline" className="text-orange-600 border-orange-300 hover:bg-orange-50 text-sm px-3" onClick={() => openDeliveryForOrder(order.production_order_id.toString())}><Truck className="h-3 w-3 ml-1" />{t('warehouse.delivery.deliver')}</Button>}</td>
                             </tr>
                           );
                         })}
@@ -544,14 +544,14 @@ function DeliveryHallContent() {
                               <input type="checkbox" checked={isSelected} onChange={() => handleSelectOrder(order.production_order_id.toString())} className="h-4 w-4 rounded border-gray-300" />
                               <span className="font-bold text-sm">{order.production_order_number}</span>
                             </div>
-                            <Badge variant={order.available_for_delivery > 0 ? "default" : "secondary"}>{order.available_for_delivery.toFixed(2)} كجم</Badge>
+                            <Badge variant={order.available_for_delivery > 0 ? "default" : "secondary"}>{order.available_for_delivery.toFixed(2)} {t('warehouse.delivery.kg')}</Badge>
                           </div>
                           <div className="text-xs text-gray-600 dark:text-gray-400">{order.product_name_ar || order.product_name}</div>
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                            <div className="flex justify-between"><span className="text-gray-500">مستلم:</span><span className="font-medium">{order.warehouse_received_kg.toFixed(2)} كجم</span></div>
-                            <div className="flex justify-between"><span className="text-gray-500">مسلّم:</span><span className="font-medium">{order.warehouse_delivered_kg.toFixed(2)} كجم</span></div>
+                            <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.delivery.receivedLabel')}:</span><span className="font-medium">{order.warehouse_received_kg.toFixed(2)} {t('warehouse.delivery.kg')}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.delivery.deliveredLabel')}:</span><span className="font-medium">{order.warehouse_delivered_kg.toFixed(2)} {t('warehouse.delivery.kg')}</span></div>
                           </div>
-                          {order.available_for_delivery > 0 && <Button size="sm" variant="outline" className="w-full text-xs text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => openDeliveryForOrder(order.production_order_id.toString())}><Truck className="h-3 w-3 ml-1" />تسليم</Button>}
+                          {order.available_for_delivery > 0 && <Button size="sm" variant="outline" className="w-full text-xs text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => openDeliveryForOrder(order.production_order_id.toString())}><Truck className="h-3 w-3 ml-1" />{t('warehouse.delivery.deliver')}</Button>}
                         </div>
                       );
                     })}
@@ -563,7 +563,7 @@ function DeliveryHallContent() {
         </CardContent>
       </Card>
 
-      <VouchersList type="finished-goods-out" title="أرشيف سندات التسليم (FP-Del)" />
+      <VouchersList type="finished-goods-out" title={t('warehouse.delivery.archiveTitle')} />
     </div>
   );
 }

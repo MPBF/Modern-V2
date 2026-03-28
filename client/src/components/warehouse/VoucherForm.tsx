@@ -73,7 +73,7 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
   const finishedGoodsInSchema = baseSchema.extend({
     voucher_type: z.enum(["production_receipt", "customer_return", "adjustment"]).default("production_receipt"),
     customer_id: z.string().optional(),
-    production_order_id: z.string().min(1, "يجب اختيار أمر الإنتاج"),
+    production_order_id: z.string().min(1),
     weight_kg: z.string().optional(),
     pieces_count: z.string().optional(),
     from_production_line: z.string().optional(),
@@ -218,7 +218,7 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
       });
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.message || "فشل في إنشاء السند");
+        throw new Error(errData.message || t('warehouse.errors.voucherCreateFailed'));
       }
       return response.json();
     },
@@ -434,7 +434,7 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
                   name="production_order_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>أمر الإنتاج *</FormLabel>
+                      <FormLabel>{t('warehouse.voucherForm.productionOrderLabel')} *</FormLabel>
                       <Select
                         onValueChange={(val) => {
                           field.onChange(val);
@@ -444,20 +444,20 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
                             setRemainingKg(po.remaining_kg);
                             form.setValue("weight_kg", String(po.remaining_kg));
                             form.setValue("quantity", String(po.remaining_kg));
-                            form.setValue("notes", `استلام من صالة الإنتاج - أمر إنتاج ${po.production_order_number}`);
+                            form.setValue("notes", t('warehouse.voucherForm.receiptFromProductionNote', { orderNumber: po.production_order_number }));
                           }
                         }}
                         value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="اختر أمر الإنتاج" />
+                            <SelectValue placeholder={t('warehouse.voucherForm.selectProductionOrder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {(Array.isArray(productionOrders) ? productionOrders : []).map((po: any) => (
                             <SelectItem key={po.id} value={String(po.id)}>
-                              {po.production_order_number} - المتبقي: {po.remaining_kg} كجم (من {po.quantity_kg} كجم)
+                              {po.production_order_number} - {t('warehouse.voucherForm.remainingKg', { remaining: po.remaining_kg, total: po.quantity_kg })}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -471,9 +471,9 @@ export function VoucherForm({ type, open, onOpenChange }: VoucherFormProps) {
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                       <div className="flex justify-between">
-                        <span>الكمية الإجمالية: <strong>{selectedPO.quantity_kg} كجم</strong></span>
-                        <span>تم استلام: <strong>{selectedPO.warehouse_received_kg} كجم</strong></span>
-                        <span>المتبقي: <strong>{remainingKg} كجم</strong></span>
+                        <span>{t('warehouse.voucherForm.totalQuantity')}: <strong>{selectedPO.quantity_kg} {t('warehouse.delivery.kg')}</strong></span>
+                        <span>{t('warehouse.voucherForm.received')}: <strong>{selectedPO.warehouse_received_kg} {t('warehouse.delivery.kg')}</strong></span>
+                        <span>{t('warehouse.voucherForm.remaining')}: <strong>{remainingKg} {t('warehouse.delivery.kg')}</strong></span>
                       </div>
                     </AlertDescription>
                   </Alert>

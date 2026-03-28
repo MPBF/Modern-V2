@@ -100,7 +100,7 @@ function SuppliersTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("فشل في الحفظ");
+      if (!res.ok) throw new Error(t('warehouse.errors.saveFailed'));
       return res.json();
     },
     onSuccess: () => {
@@ -118,7 +118,7 @@ function SuppliersTab() {
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await fetch(`/api/suppliers/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("فشل في الحذف");
+      if (!res.ok) throw new Error(t('warehouse.errors.deleteFailed'));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
@@ -372,7 +372,7 @@ function ItemsTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("فشل في الحفظ");
+      if (!res.ok) throw new Error(t('warehouse.errors.saveFailed'));
       return res.json();
     },
     onSuccess: () => {
@@ -390,7 +390,7 @@ function ItemsTab() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/items/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("فشل في الحذف");
+      if (!res.ok) throw new Error(t('warehouse.errors.deleteFailed'));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/items"] });
@@ -665,7 +665,7 @@ function UnitsTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("فشل في الحفظ");
+      if (!res.ok) throw new Error(t('warehouse.errors.saveFailed'));
       return res.json();
     },
     onSuccess: () => {
@@ -683,7 +683,7 @@ function UnitsTab() {
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await fetch(`/api/units/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("فشل في الحذف");
+      if (!res.ok) throw new Error(t('warehouse.errors.deleteFailed'));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/units"] });
@@ -899,7 +899,7 @@ function CategoriesTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("فشل في الحفظ");
+      if (!res.ok) throw new Error(t('warehouse.errors.saveFailed'));
       return res.json();
     },
     onSuccess: () => {

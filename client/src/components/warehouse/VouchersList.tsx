@@ -45,7 +45,7 @@ interface VouchersListProps {
 }
 
 export function VouchersList({ type, title, onView }: VouchersListProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [viewVoucher, setViewVoucher] = useState<any>(null);
@@ -63,7 +63,7 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
       });
       if (!response.ok) {
         const err = await response.json();
-        throw new Error(err.message || "فشل في حذف السند");
+        throw new Error(err.message || t('warehouse.errors.deleteVoucherFailed'));
       }
       return response.json();
     },
@@ -98,10 +98,10 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
 
   const getTypeTitleLabel = () => {
     switch (type) {
-      case "raw-material-in": return "سند إدخال مواد خام";
-      case "raw-material-out": return "سند إخراج مواد خام";
-      case "finished-goods-in": return "سند استلام مواد تامة";
-      case "finished-goods-out": return "سند تسليم مواد تامة";
+      case "raw-material-in": return t('warehouse.voucherTypeLabels.rmIn');
+      case "raw-material-out": return t('warehouse.voucherTypeLabels.rmOut');
+      case "finished-goods-in": return t('warehouse.voucherTypeLabels.fpIn');
+      case "finished-goods-out": return t('warehouse.voucherTypeLabels.fpOut');
     }
   };
 
@@ -156,12 +156,12 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
       const printWindow = window.open("", "_blank");
       if (!printWindow) return;
       printWindow.document.write(`
-        <html dir="rtl" lang="ar">
+        <html dir="${i18n.language === 'ar' ? 'rtl' : 'ltr'}" lang="${i18n.language}">
         <head>
-          <title>طباعة سند - ${voucher.voucher_number}</title>
+          <title>${t('warehouse.print.printVoucher')} - ${voucher.voucher_number}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px; direction: rtl; color: #1a1a1a; }
+            body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px; direction: ${i18n.language === 'ar' ? 'rtl' : 'ltr'}; color: #1a1a1a; }
             .voucher-print { max-width: 800px; margin: 0 auto; }
             .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #1a56db; padding-bottom: 16px; margin-bottom: 20px; }
             .header img { width: 80px; height: 80px; object-fit: contain; }
@@ -199,84 +199,84 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
   const renderVoucherDetails = (v: any) => {
     const rows: { label: string; value: string }[] = [];
 
-    rows.push({ label: "رقم السند", value: v.voucher_number });
-    rows.push({ label: "نوع السند", value: getVoucherTypeLabel(v.voucher_type) });
-    rows.push({ label: "التاريخ", value: new Date(v.voucher_date).toLocaleDateString("ar-SA") });
+    rows.push({ label: t('warehouse.voucherDetails.voucherNumber'), value: v.voucher_number });
+    rows.push({ label: t('warehouse.voucherDetails.voucherType'), value: getVoucherTypeLabel(v.voucher_type) });
+    rows.push({ label: t('warehouse.voucherDetails.date'), value: new Date(v.voucher_date).toLocaleDateString() });
     if (v.receipt_time) {
       const rt = new Date(v.receipt_time);
-      rows.push({ label: "وقت الاستلام", value: `${rt.toLocaleDateString("ar-SA")} ${rt.toLocaleTimeString("ar-SA", { hour: '2-digit', minute: '2-digit' })}` });
+      rows.push({ label: t('warehouse.voucherDetails.receiptTime'), value: `${rt.toLocaleDateString()} ${rt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}` });
     }
     if (v.delivery_time) {
       const dt = new Date(v.delivery_time);
-      rows.push({ label: "وقت التسليم", value: `${dt.toLocaleDateString("ar-SA")} ${dt.toLocaleTimeString("ar-SA", { hour: '2-digit', minute: '2-digit' })}` });
+      rows.push({ label: t('warehouse.voucherDetails.deliveryTime'), value: `${dt.toLocaleDateString()} ${dt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}` });
     }
-    rows.push({ label: "الحالة", value: getStatusText(v.status) });
+    rows.push({ label: t('warehouse.voucherDetails.status'), value: getStatusText(v.status) });
 
     if (v.quantity) {
-      rows.push({ label: "الكمية", value: `${parseFloat(v.quantity).toLocaleString("en-US")} ${v.unit || "كيلو"}` });
+      rows.push({ label: t('warehouse.voucherDetails.quantity'), value: `${parseFloat(v.quantity).toLocaleString("en-US")} ${v.unit || t('warehouse.units.kilo')}` });
     }
     if (v.weight_kg) {
-      rows.push({ label: "الوزن (كجم)", value: parseFloat(v.weight_kg).toLocaleString("en-US") });
+      rows.push({ label: t('warehouse.voucherDetails.weightKg'), value: parseFloat(v.weight_kg).toLocaleString("en-US") });
     }
     if (v.pieces_count) {
-      rows.push({ label: "عدد القطع", value: v.pieces_count.toString() });
+      rows.push({ label: t('warehouse.voucherDetails.piecesCount'), value: v.pieces_count.toString() });
     }
     if (v.unit_price) {
-      rows.push({ label: "سعر الوحدة", value: parseFloat(v.unit_price).toLocaleString("en-US") });
+      rows.push({ label: t('warehouse.voucherDetails.unitPrice'), value: parseFloat(v.unit_price).toLocaleString("en-US") });
     }
     if (v.total_price) {
-      rows.push({ label: "السعر الإجمالي", value: parseFloat(v.total_price).toLocaleString("en-US") });
+      rows.push({ label: t('warehouse.voucherDetails.totalPrice'), value: parseFloat(v.total_price).toLocaleString("en-US") });
     }
     if (v.batch_number) {
-      rows.push({ label: "رقم الدفعة", value: v.batch_number });
+      rows.push({ label: t('warehouse.voucherDetails.batchNumber'), value: v.batch_number });
     }
     if (v.barcode) {
-      rows.push({ label: "الباركود", value: v.barcode });
+      rows.push({ label: t('warehouse.voucherDetails.barcode'), value: v.barcode });
     }
     if (v.supplier_name_ar || v.supplier_name) {
-      rows.push({ label: "المورد", value: v.supplier_name_ar || v.supplier_name });
+      rows.push({ label: t('warehouse.voucherDetails.supplier'), value: v.supplier_name_ar || v.supplier_name });
     }
     if (v.customer_name_ar || v.customer_name) {
-      rows.push({ label: "العميل", value: v.customer_name_ar || v.customer_name });
+      rows.push({ label: t('warehouse.voucherDetails.customer'), value: v.customer_name_ar || v.customer_name });
     }
     if (v.item_name_ar || v.item_name || v.item_id) {
-      rows.push({ label: "الصنف", value: v.item_name_ar || v.item_name || v.item_id });
+      rows.push({ label: t('warehouse.voucherDetails.item'), value: v.item_name_ar || v.item_name || v.item_id });
     }
     if (v.item_code) {
-      rows.push({ label: "كود الصنف", value: v.item_code });
+      rows.push({ label: t('warehouse.voucherDetails.itemCode'), value: v.item_code });
     }
     if (v.location_name_ar || v.location_name || v.location_id) {
-      rows.push({ label: "الموقع", value: v.location_name_ar || v.location_name || v.location_id });
+      rows.push({ label: t('warehouse.voucherDetails.location'), value: v.location_name_ar || v.location_name || v.location_id });
     }
     if (v.production_order_number) {
-      rows.push({ label: "أمر الإنتاج", value: v.production_order_number });
+      rows.push({ label: t('warehouse.voucherDetails.productionOrder'), value: v.production_order_number });
     }
     if (v.from_production_line) {
-      rows.push({ label: "خط الإنتاج", value: v.from_production_line });
+      rows.push({ label: t('warehouse.voucherDetails.productionLine'), value: v.from_production_line });
     }
     if (v.delivered_by) {
-      rows.push({ label: "المُسلّم", value: v.delivered_by });
+      rows.push({ label: t('warehouse.voucherDetails.deliveredBy'), value: v.delivered_by });
     }
     if (v.issued_to) {
-      rows.push({ label: "المستلم", value: v.issued_to });
+      rows.push({ label: t('warehouse.voucherDetails.receivedBy'), value: v.issued_to });
     }
     if (v.to_destination) {
-      rows.push({ label: "الجهة المستلمة", value: v.to_destination });
+      rows.push({ label: t('warehouse.voucherDetails.destination'), value: v.to_destination });
     }
     if (v.driver_name) {
-      rows.push({ label: "اسم السائق", value: v.driver_name });
+      rows.push({ label: t('warehouse.voucherDetails.driverName'), value: v.driver_name });
     }
     if (v.driver_phone) {
-      rows.push({ label: "هاتف السائق", value: v.driver_phone });
+      rows.push({ label: t('warehouse.voucherDetails.driverPhone'), value: v.driver_phone });
     }
     if (v.vehicle_number) {
-      rows.push({ label: "رقم المركبة", value: v.vehicle_number });
+      rows.push({ label: t('warehouse.voucherDetails.vehicleNumber'), value: v.vehicle_number });
     }
     if (v.delivery_address) {
-      rows.push({ label: "عنوان التسليم", value: v.delivery_address });
+      rows.push({ label: t('warehouse.voucherDetails.deliveryAddress'), value: v.delivery_address });
     }
     if (v.expiry_date) {
-      rows.push({ label: "تاريخ الانتهاء", value: new Date(v.expiry_date).toLocaleDateString("ar-SA") });
+      rows.push({ label: t('warehouse.voucherDetails.expiryDate'), value: new Date(v.expiry_date).toLocaleDateString() });
     }
 
     return rows;
@@ -290,9 +290,9 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
     return (
       <div className="voucher-print">
         <div className="header">
-          <img src={FactoryLogoPath} alt="شعار المصنع" />
+          <img src={FactoryLogoPath} alt={t('warehouse.print.factoryLogo')} />
           <div className="header-center">
-            <h1>مصنع الأكياس البلاستيكية الحديثة</h1>
+            <h1>{t('warehouse.print.factoryName')}</h1>
             <h2>{getTypeTitleLabel()}</h2>
           </div>
           <div className="header-left">
@@ -304,8 +304,8 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
         <table className="details-table">
           <thead>
             <tr>
-              <th style={{ width: "40%" }}>البيان</th>
-              <th style={{ width: "60%" }}>القيمة</th>
+              <th style={{ width: "40%" }}>{t('warehouse.print.detail')}</th>
+              <th style={{ width: "60%" }}>{t('warehouse.print.value')}</th>
             </tr>
           </thead>
           <tbody>
@@ -321,16 +321,16 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
         {printItems.length > 0 && (
           <div style={{ marginTop: '15px' }}>
             <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '8px', borderBottom: '2px solid #333', paddingBottom: '4px' }}>
-              أوامر الإنتاج المستلمة ({printItems.length})
+              {t('warehouse.voucherDetails.receivedOrdersTitle')} ({printItems.length})
             </div>
             <table className="details-table">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'center' }}>أمر الإنتاج</th>
-                  <th style={{ textAlign: 'center' }}>رقم الطلب</th>
-                  <th style={{ textAlign: 'center' }}>العميل</th>
-                  <th style={{ textAlign: 'center' }}>المنتج</th>
-                  <th style={{ textAlign: 'center' }}>الوزن (كجم)</th>
+                  <th style={{ textAlign: 'center' }}>{t('warehouse.voucherDetails.productionOrder')}</th>
+                  <th style={{ textAlign: 'center' }}>{t('warehouse.voucherDetails.orderNumber')}</th>
+                  <th style={{ textAlign: 'center' }}>{t('warehouse.voucherDetails.customer')}</th>
+                  <th style={{ textAlign: 'center' }}>{t('warehouse.delivery.product')}</th>
+                  <th style={{ textAlign: 'center' }}>{t('warehouse.voucherDetails.weightKg')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -344,7 +344,7 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                   </tr>
                 ))}
                 <tr style={{ fontWeight: 700, backgroundColor: '#f0f0f0' }}>
-                  <td colSpan={4} style={{ textAlign: 'center' }}>الإجمالي</td>
+                  <td colSpan={4} style={{ textAlign: 'center' }}>{t('warehouse.voucherDetails.total')}</td>
                   <td style={{ textAlign: 'center' }}>{printItems.reduce((s: number, it: any) => s + parseFloat(String(it.weight_kg || 0)), 0).toLocaleString("en-US")}</td>
                 </tr>
               </tbody>
@@ -354,20 +354,20 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
 
         {v.notes && (
           <div className="notes-section">
-            <div className="notes-label">ملاحظات:</div>
+            <div className="notes-label">{t('warehouse.voucherDetails.notes')}:</div>
             <div>{v.notes}</div>
           </div>
         )}
 
         <div className="signatures">
           <div className="sig-box">
-            <div className="sig-line">أمين المستودع</div>
+            <div className="sig-line">{t('warehouse.print.warehouseKeeper')}</div>
           </div>
           <div className="sig-box">
-            <div className="sig-line">المستلم</div>
+            <div className="sig-line">{t('warehouse.print.receiver')}</div>
           </div>
           <div className="sig-box">
-            <div className="sig-line">المدير</div>
+            <div className="sig-line">{t('warehouse.print.manager')}</div>
           </div>
         </div>
       </div>
@@ -408,9 +408,9 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                       <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.voucherNumber')}</TableHead>
                       <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.type')}</TableHead>
                       <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.date')}</TableHead>
-                      {(type === "raw-material-in" || type === "raw-material-out") && <TableHead className="text-center whitespace-nowrap">الصنف</TableHead>}
-                      {type === "raw-material-in" && <TableHead className="text-center whitespace-nowrap">المورد</TableHead>}
-                      {type === "raw-material-out" && <TableHead className="text-center whitespace-nowrap">الجهة</TableHead>}
+                      {(type === "raw-material-in" || type === "raw-material-out") && <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.item')}</TableHead>}
+                      {type === "raw-material-in" && <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.supplier')}</TableHead>}
+                      {type === "raw-material-out" && <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.destination')}</TableHead>}
                       <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.quantity')}</TableHead>
                       <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.status')}</TableHead>
                       <TableHead className="text-center whitespace-nowrap">{t('warehouse.vouchers.actions')}</TableHead>
@@ -429,8 +429,8 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                         <TableCell className="text-center">{getStatusBadge(voucher.status)}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex gap-1 justify-center">
-                            <Button variant="ghost" size="sm" onClick={() => handleView(voucher)} title="عرض السند"><Eye className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="sm" onClick={() => handlePrint(voucher)} title="طباعة السند"><Printer className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleView(voucher)} title={t('warehouse.actions.viewVoucher')}><Eye className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => handlePrint(voucher)} title={t('warehouse.actions.printVoucher')}><Printer className="h-4 w-4" /></Button>
                             {(type === "finished-goods-in" || type === "finished-goods-out" || type === "raw-material-in" || type === "raw-material-out") && (
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -466,17 +466,17 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                       <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.vouchers.type')}:</span><span>{getVoucherTypeLabel(voucher.voucher_type)}</span></div>
                       <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.vouchers.date')}:</span><span>{new Date(voucher.voucher_date).toLocaleDateString("en-US")}</span></div>
                       <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.vouchers.quantity')}:</span><span className="font-medium">{parseFloat(voucher.quantity || 0).toLocaleString("en-US")} {voucher.unit || t('warehouse.units.kilo')}</span></div>
-                      {(type === "raw-material-in" || type === "raw-material-out") && <div className="flex justify-between"><span className="text-gray-500">الصنف:</span><span>{voucher.item_name_ar || voucher.item_name || voucher.item_id}</span></div>}
-                      {type === "raw-material-in" && <div className="flex justify-between"><span className="text-gray-500">المورد:</span><span>{voucher.supplier_name_ar || voucher.supplier_name || '-'}</span></div>}
-                      {type === "raw-material-out" && <div className="flex justify-between"><span className="text-gray-500">الجهة:</span><span>{voucher.to_destination || voucher.production_order_number || '-'}</span></div>}
+                      {(type === "raw-material-in" || type === "raw-material-out") && <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.vouchers.item')}:</span><span>{voucher.item_name_ar || voucher.item_name || voucher.item_id}</span></div>}
+                      {type === "raw-material-in" && <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.vouchers.supplier')}:</span><span>{voucher.supplier_name_ar || voucher.supplier_name || '-'}</span></div>}
+                      {type === "raw-material-out" && <div className="flex justify-between"><span className="text-gray-500">{t('warehouse.vouchers.destination')}:</span><span>{voucher.to_destination || voucher.production_order_number || '-'}</span></div>}
                     </div>
                     <div className="flex gap-1 pt-1 border-t">
-                      <Button variant="ghost" size="sm" onClick={() => handleView(voucher)} className="flex-1 text-xs"><Eye className="h-3 w-3 ml-1" />عرض</Button>
-                      <Button variant="ghost" size="sm" onClick={() => handlePrint(voucher)} className="flex-1 text-xs"><Printer className="h-3 w-3 ml-1" />طباعة</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleView(voucher)} className="flex-1 text-xs"><Eye className="h-3 w-3 ml-1" />{t('warehouse.actions.view')}</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handlePrint(voucher)} className="flex-1 text-xs"><Printer className="h-3 w-3 ml-1" />{t('warehouse.actions.print')}</Button>
                       {(type === "finished-goods-in" || type === "finished-goods-out" || type === "raw-material-in" || type === "raw-material-out") && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="flex-1 text-xs text-red-500"><Trash2 className="h-3 w-3 ml-1" />حذف</Button>
+                            <Button variant="ghost" size="sm" className="flex-1 text-xs text-red-500"><Trash2 className="h-3 w-3 ml-1" />{t('warehouse.actions.delete')}</Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent className="w-[95vw] sm:w-full">
                             <AlertDialogHeader>
@@ -526,17 +526,17 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                 return (
                   <div className="border rounded-lg overflow-hidden dark:border-gray-700">
                     <div className="bg-blue-50 dark:bg-blue-900/30 px-3 py-2">
-                      <span className="font-semibold text-xs sm:text-sm text-blue-800 dark:text-blue-200">أوامر الإنتاج المستلمة ({parsedItems.length})</span>
+                      <span className="font-semibold text-xs sm:text-sm text-blue-800 dark:text-blue-200">{t('warehouse.voucherDetails.receivedOrdersTitle')} ({parsedItems.length})</span>
                     </div>
                     <div className="hidden sm:block overflow-x-auto">
                       <table className="w-full text-xs sm:text-sm min-w-[400px]">
                         <thead className="bg-gray-50 dark:bg-gray-800">
                           <tr>
-                            <th className="py-2 px-3 text-center font-medium">أمر الإنتاج</th>
-                            <th className="py-2 px-3 text-center font-medium">رقم الطلب</th>
-                            <th className="py-2 px-3 text-center font-medium">العميل</th>
-                            <th className="py-2 px-3 text-center font-medium">المنتج</th>
-                            <th className="py-2 px-3 text-center font-medium">الوزن (كجم)</th>
+                            <th className="py-2 px-3 text-center font-medium">{t('warehouse.voucherDetails.productionOrder')}</th>
+                            <th className="py-2 px-3 text-center font-medium">{t('warehouse.voucherDetails.orderNumber')}</th>
+                            <th className="py-2 px-3 text-center font-medium">{t('warehouse.voucherDetails.customer')}</th>
+                            <th className="py-2 px-3 text-center font-medium">{t('warehouse.delivery.product')}</th>
+                            <th className="py-2 px-3 text-center font-medium">{t('warehouse.voucherDetails.weightKg')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -550,7 +550,7 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                             </tr>
                           ))}
                           <tr className="border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800 font-semibold">
-                            <td className="py-2 px-3 text-center" colSpan={4}>الإجمالي</td>
+                            <td className="py-2 px-3 text-center" colSpan={4}>{t('warehouse.voucherDetails.total')}</td>
                             <td className="py-2 px-3 text-center">{parsedItems.reduce((s: number, it: any) => s + parseFloat(String(it.weight_kg || 0)), 0).toLocaleString("en-US")}</td>
                           </tr>
                         </tbody>
@@ -564,22 +564,22 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
                             <span className="text-xs text-muted-foreground">{item.order_number || '-'}</span>
                           </div>
                           <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">العميل:</span>
+                            <span className="text-muted-foreground">{t('warehouse.voucherDetails.customer')}:</span>
                             <span>{item.customer_name || '-'}</span>
                           </div>
                           <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">المنتج:</span>
+                            <span className="text-muted-foreground">{t('warehouse.delivery.product')}:</span>
                             <span>{item.product_description || '-'}</span>
                           </div>
                           <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">الوزن (كجم):</span>
+                            <span className="text-muted-foreground">{t('warehouse.voucherDetails.weightKg')}:</span>
                             <span className="font-semibold">{parseFloat(String(item.weight_kg || 0)).toLocaleString("en-US")}</span>
                           </div>
                         </div>
                       ))}
                       <div className="border-t pt-2 flex justify-between items-center px-2 dark:border-gray-700">
-                        <span className="font-semibold text-xs">الإجمالي</span>
-                        <span className="font-bold text-xs">{parsedItems.reduce((s: number, it: any) => s + parseFloat(String(it.weight_kg || 0)), 0).toLocaleString("en-US")} كجم</span>
+                        <span className="font-semibold text-xs">{t('warehouse.voucherDetails.total')}</span>
+                        <span className="font-bold text-xs">{parsedItems.reduce((s: number, it: any) => s + parseFloat(String(it.weight_kg || 0)), 0).toLocaleString("en-US")} {t('warehouse.delivery.kg')}</span>
                       </div>
                     </div>
                   </div>
@@ -588,7 +588,7 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
 
               {viewVoucher.notes && (
                 <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                  <p className="font-semibold text-yellow-800 dark:text-yellow-200 text-sm mb-1">ملاحظات:</p>
+                  <p className="font-semibold text-yellow-800 dark:text-yellow-200 text-sm mb-1">{t('warehouse.voucherDetails.notes')}:</p>
                   <p className="text-sm text-yellow-700 dark:text-yellow-300">{viewVoucher.notes}</p>
                 </div>
               )}
@@ -596,11 +596,11 @@ export function VouchersList({ type, title, onView }: VouchersListProps) {
               <div className="flex gap-2 justify-end pt-2 border-t">
                 <Button variant="outline" onClick={() => setViewVoucher(null)}>
                   <X className="h-4 w-4 ml-1" />
-                  إغلاق
+                  {t('warehouse.actions.close')}
                 </Button>
                 <Button onClick={() => handlePrint(viewVoucher)}>
                   <Printer className="h-4 w-4 ml-1" />
-                  طباعة
+                  {t('warehouse.actions.print')}
                 </Button>
               </div>
             </div>

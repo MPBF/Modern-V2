@@ -64,7 +64,7 @@ export function WarehouseReports() {
   const handleExport = async (type: string) => {
     try {
       const response = await fetch(`/api/warehouse/export/${type}`);
-      if (!response.ok) throw new Error("فشل التصدير");
+      if (!response.ok) throw new Error(t('warehouse.errors.exportFailed'));
       
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -85,7 +85,7 @@ export function WarehouseReports() {
   const handleDownloadTemplate = async (type: string) => {
     try {
       const response = await fetch(`/api/warehouse/template/${type}`);
-      if (!response.ok) throw new Error("فشل تحميل القالب");
+      if (!response.ok) throw new Error(t('warehouse.errors.templateFailed'));
       
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);

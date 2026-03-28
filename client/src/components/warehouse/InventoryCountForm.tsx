@@ -94,7 +94,7 @@ export function InventoryCountForm({ open, onOpenChange }: InventoryCountFormPro
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error("فشل في إنشاء عملية الجرد");
+      if (!response.ok) throw new Error(t('warehouse.errors.createCountFailed'));
       return response.json();
     },
     onSuccess: (data) => {
@@ -114,7 +114,7 @@ export function InventoryCountForm({ open, onOpenChange }: InventoryCountFormPro
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error("فشل في إضافة الصنف");
+      if (!response.ok) throw new Error(t('warehouse.errors.addItemFailed'));
       return response.json();
     },
     onSuccess: () => {
@@ -128,7 +128,7 @@ export function InventoryCountForm({ open, onOpenChange }: InventoryCountFormPro
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
-      if (!response.ok) throw new Error("فشل في إتمام الجرد");
+      if (!response.ok) throw new Error(t('warehouse.errors.completeCountFailed'));
       return response.json();
     },
     onSuccess: () => {
