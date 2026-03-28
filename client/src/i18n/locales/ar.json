@@ -5802,7 +5802,15 @@
   "header": {
     "factoryLogo": "شعار المصنع",
     "defaultRole": "الدور الافتراضي",
-    "defaultInitial": "الحرف الافتراضي"
+    "defaultInitial": "الحرف الافتراضي",
+    "mobile": {
+      "title": "نسخة الموبايل",
+      "backToDesktop": "العودة للنسخة الكاملة",
+      "userDashboard": "لوحتي",
+      "production": "لوحة الإنتاج",
+      "orders": "إدارة الطلبات",
+      "warehouse": "المستودع"
+    }
   },
   "modals": {
     "cuttingCreation": {
@@ -6149,7 +6157,13 @@
       "allStages": "كل المراحل",
       "searchOrders": "ابحث عن أمر إنتاج...",
       "kg": "كجم",
-      "viewRolls": "عرض الرولات"
+      "viewRolls": "عرض الرولات",
+      "filmStage": "الفيلم",
+      "printingStage": "الطباعة",
+      "cuttingStage": "التقطيع",
+      "doneRolls": "مكتملة",
+      "noRollsInStage": "لا توجد رولات في هذه المرحلة",
+      "stagesBreakdown": "توزيع المراحل"
     },
     "userDashboard": {
       "title": "لوحتي",

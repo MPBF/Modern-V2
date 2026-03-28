@@ -12,7 +12,7 @@ import {
   ScanBarcode, Package, ArrowDownToLine, ArrowUpFromLine,
   ClipboardList, Camera, CameraOff, Search,
   ChevronRight, AlertTriangle, CheckCircle, XCircle,
-  Keyboard, RotateCcw, Box, Truck, Plus, ArrowLeft,
+  Keyboard, RotateCcw, Box, Truck, Plus, ArrowLeft, Home,
   Warehouse as WarehouseIcon
 } from "lucide-react";
 
@@ -67,6 +67,13 @@ function MobileDashboard({ onNavigate }: { onNavigate: (view: MobileView) => voi
 
   return (
     <div className="pb-20">
+      <a
+        href="/"
+        className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-gray-900 text-white text-xs py-1.5 hover:bg-gray-800 transition-colors"
+      >
+        <Home className="h-3.5 w-3.5" />
+        <span>{t('header.mobile.backToDesktop', 'العودة للنسخة الكاملة')}</span>
+      </a>
       <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white px-4 pt-6 pb-8">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">

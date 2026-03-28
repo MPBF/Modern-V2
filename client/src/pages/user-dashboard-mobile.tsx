@@ -10,7 +10,7 @@ import { Badge } from "../components/ui/badge";
 import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import {
-  Clock, User, MapPin, CheckCircle, XCircle,
+  Clock, User, MapPin, CheckCircle, XCircle, Home,
   ArrowLeft, AlertTriangle, Coffee, LogIn, LogOut,
   FileText, Plus, Send, ChevronRight, Timer
 } from "lucide-react";
@@ -40,6 +40,19 @@ function MobileHeader({ title, onBack, rightAction }: { title: string; onBack?: 
       <h1 className="text-lg font-bold flex-1">{title}</h1>
       {rightAction}
     </div>
+  );
+}
+
+function BackToDesktopBar() {
+  const { t } = useTranslation();
+  return (
+    <a
+      href="/"
+      className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-gray-900 text-white text-xs py-1.5 hover:bg-gray-800 transition-colors"
+    >
+      <Home className="h-3.5 w-3.5" />
+      <span>{t('header.mobile.backToDesktop', 'العودة للنسخة الكاملة')}</span>
+    </a>
   );
 }
 
@@ -196,6 +209,7 @@ function MainDashboard({ onNavigate }: { onNavigate: (view: DashboardView) => vo
 
   return (
     <div className="pb-20">
+      <BackToDesktopBar />
       <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 text-white px-4 pt-6 pb-8">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">

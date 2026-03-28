@@ -5254,7 +5254,15 @@
   "header": {
     "factoryLogo": "Factory Logo",
     "defaultRole": "Default Role",
-    "defaultInitial": "Default Initial"
+    "defaultInitial": "Default Initial",
+    "mobile": {
+      "title": "Mobile Version",
+      "backToDesktop": "Back to Full Version",
+      "userDashboard": "My Dashboard",
+      "production": "Production Dashboard",
+      "orders": "Orders Management",
+      "warehouse": "Warehouse"
+    }
   },
   "modals": {
     "cuttingCreation": {
@@ -5568,7 +5576,13 @@
       "allStages": "All Stages",
       "searchOrders": "Search production orders...",
       "kg": "kg",
-      "viewRolls": "View Rolls"
+      "viewRolls": "View Rolls",
+      "filmStage": "Film",
+      "printingStage": "Printing",
+      "cuttingStage": "Cutting",
+      "doneRolls": "Completed",
+      "noRollsInStage": "No rolls in this stage",
+      "stagesBreakdown": "Stages Breakdown"
     },
     "userDashboard": {
       "title": "My Dashboard",

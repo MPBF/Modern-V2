@@ -6,7 +6,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import {
-  ClipboardList, Package, Search, ArrowLeft,
+  ClipboardList, Package, Search, ArrowLeft, Home,
   ChevronRight, ShoppingCart, Calendar, User,
   ChevronDown, ChevronUp, FileText, Truck
 } from "lucide-react";
@@ -40,6 +40,19 @@ function MobileHeader({ title, onBack, rightAction }: { title: string; onBack?: 
       <h1 className="text-lg font-bold flex-1">{title}</h1>
       {rightAction}
     </div>
+  );
+}
+
+function BackToDesktopBar() {
+  const { t } = useTranslation();
+  return (
+    <a
+      href="/"
+      className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-gray-900 text-white text-xs py-1.5 hover:bg-gray-800 transition-colors"
+    >
+      <Home className="h-3.5 w-3.5" />
+      <span>{t('header.mobile.backToDesktop', 'العودة للنسخة الكاملة')}</span>
+    </a>
   );
 }
 
@@ -108,6 +121,7 @@ function OrdersListView({ onViewOrder }: { onViewOrder: (order: any) => void }) 
 
   return (
     <div className="pb-20">
+      <BackToDesktopBar />
       <div className="bg-gradient-to-br from-orange-600 to-orange-800 text-white px-4 pt-6 pb-8">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
