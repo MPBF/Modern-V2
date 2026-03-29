@@ -396,6 +396,7 @@ A full-stack Manufacturing Resource Planning (MRP) system for a plastic bag manu
 - Admin role (role_id 10, name "Admin") has `'admin'` permission that bypasses all checks
 - Role cache with 60s TTL via `getCachedRoles()`, invalidated on role CRUD
 - `requireAdmin` is only used for database management and system-level operations
+- **Table Data Import** (`TableImportDialog`): Settings > Database section allows importing data from CSV/Excel/JSON files with interactive column mapping. Supported tables for batch import: customers, categories, sections, items, customer_products, users, machines, locations. Backend endpoint: `POST /api/database/import/:tableName/batch`, schema info: `GET /api/database/table-schema/:tableName`
 - All business operations (orders, production, attendance, etc.) use `requirePermission` with appropriate permissions
 
 ### Permission Categories

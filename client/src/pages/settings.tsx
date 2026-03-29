@@ -34,6 +34,7 @@ import WhatsAppWebhooksTab from "../components/settings/WhatsAppWebhooksTab";
 import SMSSettingsTab from "../components/settings/SMSSettingsTab";
 import NotificationEventSettingsTab from "../components/settings/NotificationEventSettingsTab";
 import LocationMapPicker from "../components/LocationMapPicker";
+import TableImportDialog from "../components/settings/TableImportDialog";
 import { canAccessSettingsTab } from "../utils/roleUtils";
 
 const SECTIONS = [
@@ -554,6 +555,7 @@ function DatabaseSection() {
   const [selectedBackupFile, setSelectedBackupFile] = useState<File | null>(null);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
   const [pendingBackupData, setPendingBackupData] = useState<any>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   const { data: databaseStatsData } = useQuery({ queryKey: ["/api/database/stats"], enabled: !!user });
 
@@ -772,6 +774,23 @@ function DatabaseSection() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Upload className="h-5 w-5 text-green-600" /> استيراد بيانات إلى جدول</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">استيراد بيانات من ملف خارجي (CSV, Excel, JSON) إلى جدول مع ربط الأعمدة تلقائياً</p>
+          <Button
+            className="w-full"
+            variant="outline"
+            onClick={() => setShowImportDialog(true)}
+          >
+            <Upload className="w-4 h-4 ml-2" />
+            استيراد بيانات من ملف
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="flex items-center gap-2"><SettingsIcon className="h-5 w-5" /> صيانة قاعدة البيانات</CardTitle>
         </CardHeader>
         <CardContent>
@@ -818,6 +837,16 @@ function DatabaseSection() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TableImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        tableOptions={["customers", "categories", "sections", "items", "customer_products", "users", "machines", "locations"]}
+        tableLabels={tableLabels}
+        onImportComplete={() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/database/stats"] });
+        }}
+      />
     </div>
   );
 }
