@@ -164,8 +164,8 @@ export default function OrdersForm({
         try {
           const response = await fetch(`/api/production-orders?order_id=${editingOrder.id}`);
           if (response.ok) {
-            const data = await response.json();
-            const existingProdOrders = data.data || [];
+            const rawData = await response.json();
+            const existingProdOrders = Array.isArray(rawData) ? rawData : (rawData.data || []);
 
             // Convert existing production orders to form format with stable uid
             const formattedOrders: ProdOrderInForm[] = existingProdOrders.map((po: any) => ({

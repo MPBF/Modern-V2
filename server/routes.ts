@@ -1726,6 +1726,11 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.get("/api/production-orders", requireAuth, async (req, res) => {
     try {
       const productionOrders = await storage.getAllProductionOrders();
+      const orderId = req.query.order_id ? parseInt(String(req.query.order_id)) : null;
+      if (orderId && !isNaN(orderId)) {
+        const filtered = productionOrders.filter((po: any) => po.order_id === orderId);
+        return res.json(filtered);
+      }
       res.json(productionOrders);
     } catch (error) {
       console.error("Error fetching production orders:", error);
