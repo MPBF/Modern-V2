@@ -6,7 +6,8 @@ import FactoryLogoPath from "../../../../attached_assets/MPBF11_factory_logo.web
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useTheme } from "../../contexts/ThemeContext";
-import { Sun, Moon, Smartphone, Factory, ClipboardList, User, Warehouse } from "lucide-react";
+import { Sun, Moon, Smartphone, Factory, ClipboardList, User, Warehouse, Cog } from "lucide-react";
+import { useForceDesktop } from "../../hooks/use-mobile-redirect";
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -79,6 +80,7 @@ function MobileMenuButton() {
   const { isRTL } = useLanguage();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { setForceDesktop } = useForceDesktop();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -91,6 +93,7 @@ function MobileMenuButton() {
   const mobilePages = [
     { path: "/user-dashboard-mobile", label: t('header.mobile.userDashboard', 'لوحتي'), icon: User, color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30" },
     { path: "/production-mobile", label: t('header.mobile.production', 'لوحة الإنتاج'), icon: Factory, color: "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30" },
+    { path: "/production-dashboard-mobile", label: t('header.mobile.productionDashboard', 'تسجيل الرولات'), icon: Cog, color: "text-cyan-600 bg-cyan-50 dark:bg-cyan-900/30" },
     { path: "/orders-mobile", label: t('header.mobile.orders', 'إدارة الطلبات'), icon: ClipboardList, color: "text-orange-600 bg-orange-50 dark:bg-orange-900/30" },
     { path: "/warehouse-mobile", label: t('header.mobile.warehouse', 'المستودع'), icon: Warehouse, color: "text-blue-600 bg-blue-50 dark:bg-blue-900/30" },
   ];
@@ -117,7 +120,7 @@ function MobileMenuButton() {
                 <a
                   key={page.path}
                   href={page.path}
-                  onClick={() => setOpen(false)}
+                  onClick={() => { setForceDesktop(false); setOpen(false); }}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${page.color}`}>

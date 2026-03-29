@@ -9,6 +9,7 @@ import {
   ChevronDown, ChevronUp, Film, Printer, Scissors,
   CheckCircle, Clock, TrendingUp
 } from "lucide-react";
+import { useForceDesktop } from "../hooks/use-mobile-redirect";
 
 type ProductionView = "dashboard" | "stage-detail" | "order-details";
 
@@ -68,9 +69,11 @@ function MobileHeader({ title, onBack, rightAction }: { title: string; onBack?: 
 
 function BackToDesktopBar() {
   const { t } = useTranslation();
+  const { setForceDesktop } = useForceDesktop();
   return (
     <a
       href="/"
+      onClick={() => setForceDesktop(true)}
       className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-gray-900 text-white text-xs py-1.5 hover:bg-gray-800 transition-colors"
     >
       <Home className="h-3.5 w-3.5" />

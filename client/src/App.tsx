@@ -6,6 +6,7 @@ import Login from "./pages/login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useTranslation } from "react-i18next";
 import InstallPrompt from "./components/pwa/InstallPrompt";
+import { MobileAutoRedirect } from "./hooks/use-mobile-redirect";
 
 const Dashboard = lazy(() => import("./pages/dashboard"));
 const Orders = lazy(() => import("./pages/orders"));
@@ -102,12 +103,14 @@ function AppRoutes() {
 
         <Route path="/orders">
           <ProtectedRoute path="/orders">
+            <MobileAutoRedirect path="/orders" />
             <Orders />
           </ProtectedRoute>
         </Route>
 
         <Route path="/production">
           <ProtectedRoute path="/production">
+            <MobileAutoRedirect path="/production" />
             <Production />
           </ProtectedRoute>
         </Route>
@@ -128,6 +131,7 @@ function AppRoutes() {
         {/* Production Dashboard - Unified operators dashboard */}
         <Route path="/production-dashboard">
           <ProtectedRoute path="/production-dashboard">
+            <MobileAutoRedirect path="/production-dashboard" />
             <ProductionDashboard />
           </ProtectedRoute>
         </Route>
@@ -153,6 +157,7 @@ function AppRoutes() {
 
         <Route path="/warehouse">
           <ProtectedRoute path="/warehouse">
+            <MobileAutoRedirect path="/warehouse" />
             <Warehouse />
           </ProtectedRoute>
         </Route>
@@ -193,6 +198,7 @@ function AppRoutes() {
 
         <Route path="/user-dashboard">
           <ProtectedRoute path="/user-dashboard">
+            <MobileAutoRedirect path="/user-dashboard" />
             <UserDashboard />
           </ProtectedRoute>
         </Route>

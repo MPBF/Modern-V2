@@ -15,6 +15,7 @@ import {
   Keyboard, RotateCcw, Box, Truck, Plus, ArrowLeft, Home,
   Warehouse as WarehouseIcon
 } from "lucide-react";
+import { useForceDesktop } from "../hooks/use-mobile-redirect";
 
 type MobileView = "dashboard" | "scanner" | "inventory" | "voucher" | "count";
 
@@ -65,10 +66,13 @@ function MobileDashboard({ onNavigate }: { onNavigate: (view: MobileView) => voi
     { id: "count" as MobileView, icon: Box, label: t('warehouse.mobile.inventoryCount'), desc: t('warehouse.mobile.inventoryCountDesc'), color: "bg-purple-500", hoverColor: "hover:bg-purple-600" },
   ];
 
+  const { setForceDesktop } = useForceDesktop();
+
   return (
     <div className="pb-20">
       <a
         href="/"
+        onClick={() => setForceDesktop(true)}
         className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-gray-900 text-white text-xs py-1.5 hover:bg-gray-800 transition-colors"
       >
         <Home className="h-3.5 w-3.5" />
