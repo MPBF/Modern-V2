@@ -53,6 +53,7 @@ const WarehouseMobile = lazy(() => import("./pages/warehouse-mobile"));
 const ProductionMobile = lazy(() => import("./pages/production-mobile"));
 const UserDashboardMobile = lazy(() => import("./pages/user-dashboard-mobile"));
 const OrdersMobile = lazy(() => import("./pages/orders-mobile"));
+const ProductionDashboardMobile = lazy(() => import("./pages/production-dashboard-mobile"));
 
 function PageLoadingFallback() {
   return (
@@ -341,6 +342,12 @@ function AppRoutes() {
         <Route path="/orders-mobile">
           <ProtectedRoute path="/orders-mobile">
             <OrdersMobile />
+          </ProtectedRoute>
+        </Route>
+
+        <Route path="/production-dashboard-mobile">
+          <ProtectedRoute path="/production-dashboard-mobile">
+            <ProductionDashboardMobile />
           </ProtectedRoute>
         </Route>
 
