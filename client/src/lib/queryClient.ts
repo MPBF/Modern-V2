@@ -9,7 +9,6 @@ import {
 let globalQueryClient: QueryClient | undefined;
 
 function handle401Error() {
-  localStorage.removeItem("mpbf_user");
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("auth:session-expired"));
   }

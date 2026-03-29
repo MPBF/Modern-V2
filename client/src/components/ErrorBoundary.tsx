@@ -47,6 +47,7 @@ class ErrorBoundary extends Component<Props, State> {
     this.props.onError?.(error, errorInfo);
 
     if (import.meta.env.PROD && typeof window !== "undefined") {
+      console.error("[Production Error]", error.message, errorInfo.componentStack);
     }
   }
 

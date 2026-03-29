@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Route, Switch, Redirect } from "wouter";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 import Login from "./pages/login";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -367,10 +368,12 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-      <InstallPrompt />
-    </AuthProvider>
+    <ErrorBoundary fallback="page" showReload>
+      <AuthProvider>
+        <AppRoutes />
+        <InstallPrompt />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

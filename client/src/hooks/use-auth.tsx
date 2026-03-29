@@ -99,7 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn("Error during logout:", error);
     }
     setUser(null);
-    localStorage.removeItem("mpbf_user");
   };
 
   return (
