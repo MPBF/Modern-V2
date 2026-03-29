@@ -1,5 +1,6 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
+import crypto from "crypto";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import ExcelJS from "exceljs";
@@ -3813,7 +3814,18 @@ Do not include quotes or explanations.`;
       if (!req.body.name) {
         return res.status(400).json({ message: "اسم الوصفة مطلوب" });
       }
-      const mixingRecipe = await storage.createMixingRecipe(req.body);
+      const allowedFields = ['name', 'name_ar', 'description', 'ingredients', 'total_weight', 'notes', 'is_active'];
+      const sanitizedData: Record<string, any> = {};
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          sanitizedData[field] = req.body[field];
+        }
+      }
+      const authUserId = getAuthUserId(req);
+      if (authUserId) {
+        sanitizedData.created_by = authUserId;
+      }
+      const mixingRecipe = await storage.createMixingRecipe(sanitizedData);
       res.json(mixingRecipe);
     } catch (error) {
       res.status(400).json({ message: "بيانات غير صحيحة" });
@@ -4204,7 +4216,14 @@ Do not include quotes or explanations.`;
       if (!req.body.name) {
         return res.status(400).json({ message: "اسم قطعة الغيار مطلوب" });
       }
-      const sparePart = await storage.createSparePart(req.body);
+      const sparePartFields = ['name', 'name_ar', 'description', 'part_number', 'quantity', 'min_quantity', 'unit', 'location', 'machine_id', 'supplier', 'cost', 'notes', 'status'];
+      const sanitizedSparePartData: Record<string, any> = {};
+      for (const field of sparePartFields) {
+        if (req.body[field] !== undefined) {
+          sanitizedSparePartData[field] = req.body[field];
+        }
+      }
+      const sparePart = await storage.createSparePart(sanitizedSparePartData);
       res.json(sparePart);
     } catch (error) {
       console.error("Error creating spare part:", error);
@@ -4215,7 +4234,14 @@ Do not include quotes or explanations.`;
   app.put("/api/spare-parts/:id", requireAuth, requirePermission('manage_maintenance'), async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "ID");
-      const sparePart = await storage.updateSparePart(id, req.body);
+      const sparePartUpdateFields = ['name', 'name_ar', 'description', 'part_number', 'quantity', 'min_quantity', 'unit', 'location', 'machine_id', 'supplier', 'cost', 'notes', 'status'];
+      const sanitizedUpdate: Record<string, any> = {};
+      for (const field of sparePartUpdateFields) {
+        if (req.body[field] !== undefined) {
+          sanitizedUpdate[field] = req.body[field];
+        }
+      }
+      const sparePart = await storage.updateSparePart(id, sanitizedUpdate);
       res.json(sparePart);
     } catch (error) {
       console.error("Error updating spare part:", error);
@@ -4569,7 +4595,7 @@ Do not include quotes or explanations.`;
 
       const processedData = {
         username: req.body.username,
-        password: req.body.password || require("crypto").randomBytes(12).toString("base64url"),
+        password: req.body.password || crypto.randomBytes(12).toString("base64url"),
         display_name: req.body.display_name,
         display_name_ar: req.body.display_name_ar,
         role_id: roleId,
@@ -6454,7 +6480,7 @@ Do not include quotes or explanations.`;
               // Set random temporary password if not provided (required for user creation)
               // Admin must reset password for imported users after import
               if (!processedRecord.password) {
-                const tempPassword = require("crypto").randomBytes(12).toString("base64url");
+                const tempPassword = crypto.randomBytes(12).toString("base64url");
                 processedRecord.password = tempPassword;
                 logger.warn(`Imported user "${processedRecord.username}" created with temporary random password - admin must reset`);
               }
@@ -7727,7 +7753,18 @@ Do not include quotes or explanations.`;
       if (!req.body.user_id || !req.body.type) {
         return res.status(400).json({ message: "معرف المستخدم ونوع المخالفة مطلوبان" });
       }
-      const violation = await storage.createViolation(req.body);
+      const violationFields = ['user_id', 'type', 'description', 'date', 'severity', 'status', 'notes', 'action_taken'];
+      const sanitizedViolation: Record<string, any> = {};
+      for (const field of violationFields) {
+        if (req.body[field] !== undefined) {
+          sanitizedViolation[field] = req.body[field];
+        }
+      }
+      const reporterId = getAuthUserId(req);
+      if (reporterId) {
+        sanitizedViolation.reported_by = reporterId;
+      }
+      const violation = await storage.createViolation(sanitizedViolation);
       res.status(201).json(violation);
     } catch (error) {
       console.error("Error creating violation:", error);
@@ -7738,7 +7775,14 @@ Do not include quotes or explanations.`;
   app.put("/api/violations/:id", requireAuth, async (req, res) => {
     try {
       const id = parseRouteParam(req.params.id, "id");
-      const violation = await storage.updateViolation(id, req.body);
+      const violationUpdateFields = ['type', 'description', 'date', 'severity', 'status', 'notes', 'action_taken'];
+      const sanitizedViolationUpdate: Record<string, any> = {};
+      for (const field of violationUpdateFields) {
+        if (req.body[field] !== undefined) {
+          sanitizedViolationUpdate[field] = req.body[field];
+        }
+      }
+      const violation = await storage.updateViolation(id, sanitizedViolationUpdate);
       res.json(violation);
     } catch (error) {
       console.error("Error updating violation:", error);
@@ -10387,8 +10431,6 @@ Do not include quotes or explanations.`;
         return res.status(404).json({ message: "المستخدم غير موجود", success: false });
       }
 
-      // Create a simple hash of the image for future comparison
-      const crypto = require("crypto");
       const imageHash = crypto.createHash("sha256").update(image.substring(0, 1000)).digest("hex");
       
       // Store face data in memory
@@ -10447,8 +10489,6 @@ Do not include quotes or explanations.`;
         });
       }
 
-      // Create hash of current image
-      const crypto = require("crypto");
       const currentHash = crypto.createHash("sha256").update(image.substring(0, 1000)).digest("hex");
 
       // For a real implementation, you would use face recognition AI
@@ -10719,7 +10759,7 @@ Do not include quotes or explanations.`;
       const parsed = insertFactorySnapshotSchema.parse({
         ...req.body,
         created_by: userId,
-        share_token: require('crypto').randomBytes(24).toString('hex'),
+        share_token: crypto.randomBytes(24).toString('hex'),
       });
       
       const snapshot = await storage.createFactorySnapshot(parsed);
