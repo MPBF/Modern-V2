@@ -3261,8 +3261,8 @@ Do not include quotes or explanations.`;
 
   app.put("/api/customers/:id", requireAuth, requirePermission('manage_customers', 'manage_definitions'), async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id) || id <= 0) {
+      const id = req.params.id?.trim();
+      if (!id) {
         return res.status(400).json({ message: "معرف العميل غير صحيح" });
       }
       const validatedData = insertCustomerSchema.parse(req.body);
