@@ -252,7 +252,7 @@ A full-stack Manufacturing Resource Planning (MRP) system for a plastic bag manu
 | `/system-monitoring` | SystemMonitoring | Real-time performance monitoring |
 | `/ai-agent` | AiAgent | AI factory assistant chat interface |
 | `/ai-agent-settings` | AiAgentSettings | AI agent configuration |
-| `/factory-simulation` | FactorySimulation3D | 3D factory floor visualization (Three.js) |
+| `/factory-simulation` | FactorySimulation3D | 3D factory floor visualization (Three.js) with real-time machine status indicators |
 | `/factory-floor` | FactoryFloor | 2D factory floor map |
 | `/display-screen` | DisplayScreen | Public display board (no auth required) |
 | `/display-control` | DisplayControlPanel | Display screen content management |

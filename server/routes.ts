@@ -10853,13 +10853,12 @@ Do not include quotes or explanations.`;
                capacity_small_kg_per_hour, capacity_medium_kg_per_hour, capacity_large_kg_per_hour,
                screw_type
         FROM machines 
-        WHERE status = 'active'
         ORDER BY section_id, id
       `);
       res.json(result.rows);
     } catch (error) {
-      console.error("Error fetching active machines for 3D:", error);
-      res.status(500).json({ message: "خطأ في جلب المكائن النشطة" });
+      console.error("Error fetching machines for 3D:", error);
+      res.status(500).json({ message: "خطأ في جلب المكائن" });
     }
   });
 

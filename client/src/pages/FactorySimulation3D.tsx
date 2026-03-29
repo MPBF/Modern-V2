@@ -1,5 +1,5 @@
 import { useState, Suspense, useEffect, useCallback, useRef } from 'react';
-import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
+import { Canvas, useThree, ThreeEvent, useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Environment, Html, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -48,6 +48,15 @@ const COLOR_PRESETS = [
   '#6366f1', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6',
 ];
 
+type MachineStatus = 'active' | 'maintenance' | 'down' | 'unknown';
+
+const STATUS_CONFIG: Record<MachineStatus, { label: string; color: string; glowColor: string; emissive: string; intensity: number }> = {
+  active: { label: 'تعمل', color: '#22c55e', glowColor: '#22c55e', emissive: '#22c55e', intensity: 0.4 },
+  maintenance: { label: 'صيانة', color: '#f59e0b', glowColor: '#f59e0b', emissive: '#f59e0b', intensity: 0.6 },
+  down: { label: 'متوقفة', color: '#ef4444', glowColor: '#ef4444', emissive: '#ef4444', intensity: 0.8 },
+  unknown: { label: 'غير محدد', color: '#6b7280', glowColor: '#6b7280', emissive: '#6b7280', intensity: 0.2 },
+};
+
 interface Machine {
   id: string;
   dbId?: string;
@@ -65,6 +74,7 @@ interface Machine {
   capacitySmall?: string;
   capacityMedium?: string;
   capacityLarge?: string;
+  status?: MachineStatus;
 }
 
 interface ActiveRoll {
@@ -156,6 +166,72 @@ function mapDbTypeToLocal(type: string): Machine['type'] {
   if (lower === 'mixer') return 'mixer';
   if (lower === 'inline_printer') return 'inline_printer';
   return 'film';
+}
+
+function mapDbStatusToLocal(status: string): MachineStatus {
+  const lower = (status || '').toLowerCase();
+  if (lower === 'active' || lower === 'تعمل' || lower === 'نشط' || lower === 'running') return 'active';
+  if (lower === 'maintenance' || lower === 'صيانة' || lower === 'under_maintenance') return 'maintenance';
+  if (lower === 'down' || lower === 'متوقفة' || lower === 'stopped' || lower === 'معطلة' || lower === 'inactive') return 'down';
+  return 'unknown';
+}
+
+function StatusIndicator3D({ status, machineType, scale }: { status: MachineStatus; machineType: Machine['type']; scale: [number, number, number] }) {
+  const ringRef = useRef<THREE.Mesh>(null!);
+  const lightRef = useRef<THREE.Mesh>(null!);
+  const cfg = STATUS_CONFIG[status];
+  
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    if (ringRef.current) {
+      const mat = ringRef.current.material as THREE.MeshStandardMaterial;
+      const pulse = status === 'active' ? 0.3 + Math.sin(t * 2) * 0.15 :
+                    status === 'maintenance' ? 0.4 + Math.sin(t * 4) * 0.3 :
+                    status === 'down' ? 0.6 + Math.sin(t * 6) * 0.3 : 0.2;
+      mat.opacity = pulse;
+    }
+    if (lightRef.current) {
+      const mat = lightRef.current.material as THREE.MeshStandardMaterial;
+      const pulse = status === 'active' ? 0.6 + Math.sin(t * 3) * 0.2 :
+                    status === 'maintenance' ? 0.5 + Math.sin(t * 5) * 0.4 :
+                    status === 'down' ? 0.4 + Math.sin(t * 8) * 0.5 : 0.3;
+      mat.emissiveIntensity = pulse;
+    }
+  });
+
+  const ringRadius = machineType === 'film' ? 2.0 : machineType === 'pallet' ? 1.2 : 2.2;
+  const lightY = machineType === 'film' ? 6.5 * scale[1] : machineType === 'pallet' ? 0.8 : 3.2 * scale[1];
+
+  return (
+    <group>
+      <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+        <ringGeometry args={[ringRadius * 0.9, ringRadius, 48]} />
+        <meshStandardMaterial 
+          color={cfg.glowColor} 
+          emissive={cfg.emissive} 
+          emissiveIntensity={cfg.intensity}
+          transparent 
+          opacity={0.4} 
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      <mesh ref={lightRef} position={[machineType === 'pallet' ? 0 : -0.8, lightY, machineType === 'pallet' ? 0 : -0.9]}>
+        <sphereGeometry args={[0.12, 16, 16]} />
+        <meshStandardMaterial 
+          color={cfg.color} 
+          emissive={cfg.emissive} 
+          emissiveIntensity={cfg.intensity} 
+        />
+      </mesh>
+      <pointLight 
+        position={[0, 0.5, 0]} 
+        color={cfg.glowColor} 
+        intensity={status === 'active' ? 0.3 : status === 'maintenance' ? 0.5 : status === 'down' ? 0.7 : 0.1} 
+        distance={4} 
+        decay={2}
+      />
+    </group>
+  );
 }
 
 function getAttendanceInfo(user: ProductionUser): { color: string; label: string; bgClass: string } {
@@ -1133,6 +1209,9 @@ function DraggableGroup({ machine, isSelected, onSelect, onDrag, rolls }: { mach
       {machine.type === 'mixer' && <ProfessionalMixer machine={machine} isSelected={isSelected} />}
       {machine.type === 'pallet' && <WoodenPallet machine={machine} isSelected={isSelected} />}
       {machine.type === 'inline_printer' && <InlinePrinterMachine machine={machine} isSelected={isSelected} />}
+      {machine.status && machine.dbId && (
+        <StatusIndicator3D status={machine.status} machineType={machine.type} scale={machine.scale} />
+      )}
       {machine.type === 'inline_printer' && machine.attachedTo && (
         <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[1.8, 1.9, 32]} />
@@ -1142,6 +1221,14 @@ function DraggableGroup({ machine, isSelected, onSelect, onDrag, rolls }: { mach
       <Html position={[0, machine.type === 'film' ? 7 * machine.scale[1] : machine.type === 'inline_printer' ? 2.8 * machine.scale[1] : 3.5 * machine.scale[1], 0]} center>
         <div className="bg-black/85 text-white px-2.5 py-1 rounded-md text-[9px] font-bold border border-white/20 shadow-xl pointer-events-none whitespace-nowrap backdrop-blur-sm">
           {machine.customName || machine.nameAr}
+          {machine.status && machine.dbId && (() => {
+            const sc = STATUS_CONFIG[machine.status];
+            return (
+              <span className="mr-1.5 px-1 rounded text-[7px] border" style={{ backgroundColor: sc.color + '33', color: sc.color, borderColor: sc.color + '66' }}>
+                {sc.label}
+              </span>
+            );
+          })()}
           {machine.type === 'inline_printer' && machine.attachedTo && (
             <span className="mr-1.5 bg-green-500/80 text-white px-1 rounded text-[7px]">متصلة</span>
           )}
@@ -1217,6 +1304,17 @@ function MachineDetailPanel({ machine, onClose }: { machine: Machine; onClose: (
             <X size={14} />
           </Button>
         </div>
+
+        {machine.status && machine.dbId && (() => {
+          const sc = STATUS_CONFIG[machine.status];
+          return (
+            <div className="mb-3 flex items-center gap-2 p-2 rounded-md border" style={{ backgroundColor: sc.color + '15', borderColor: sc.color + '40' }}>
+              <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: sc.color, boxShadow: `0 0 8px ${sc.glowColor}` }} />
+              <span className="text-[11px] font-bold" style={{ color: sc.color }}>{sc.label}</span>
+              <span className="text-[8px] text-slate-500 mr-auto">تحديث مباشر</span>
+            </div>
+          );
+        })()}
 
         <div className="grid grid-cols-2 gap-2 mb-3">
           <div className="bg-slate-800/60 rounded-md p-2 border border-slate-700/30">
@@ -1452,6 +1550,7 @@ export default function FactorySimulation3D() {
 
   const { data: dbMachines = [] } = useQuery<DbMachine[]>({
     queryKey: ['/api/factory-3d/machines'],
+    refetchInterval: 10000,
   });
 
   const { data: productionUsers = [] } = useQuery<ProductionUser[]>({
@@ -1485,9 +1584,16 @@ export default function FactorySimulation3D() {
               capacitySmall: db.capacity_small_kg_per_hour,
               capacityMedium: db.capacity_medium_kg_per_hour,
               capacityLarge: db.capacity_large_kg_per_hour,
+              status: mapDbStatusToLocal(db.status),
             };
           });
-        setMachines([...layoutMachines, ...newDbMachines]);
+        const statusMap = new Map(dbMachines.map(db => [db.id, mapDbStatusToLocal(db.status)]));
+        const layoutWithStatus = layoutMachines.map(m => {
+          const dbId = m.dbId || m.id;
+          const st = statusMap.get(dbId);
+          return st ? { ...m, status: st } : m;
+        });
+        setMachines([...layoutWithStatus, ...newDbMachines]);
       } else {
         setMachines(layoutMachines);
       }
@@ -1529,6 +1635,7 @@ export default function FactorySimulation3D() {
             capacitySmall: db.capacity_small_kg_per_hour,
             capacityMedium: db.capacity_medium_kg_per_hour,
             capacityLarge: db.capacity_large_kg_per_hour,
+            status: mapDbStatusToLocal(db.status),
           });
         });
       });
@@ -1537,6 +1644,25 @@ export default function FactorySimulation3D() {
       setDbMachinesLoaded(true);
     }
   }, [savedLayout, dbMachines, dbMachinesLoaded]);
+
+  useEffect(() => {
+    if (!dbMachinesLoaded || dbMachines.length === 0) return;
+    const statusMap = new Map(dbMachines.map(db => [db.id, mapDbStatusToLocal(db.status)]));
+    setMachines(prev => {
+      let changed = false;
+      const updated = prev.map(m => {
+        if (!m.dbId) return m;
+        const dbId = m.dbId;
+        const newStatus = statusMap.get(dbId) || 'unknown';
+        if (newStatus !== m.status) {
+          changed = true;
+          return { ...m, status: newStatus };
+        }
+        return m;
+      });
+      return changed ? updated : prev;
+    });
+  }, [dbMachines, dbMachinesLoaded]);
 
   const saveLayoutMutation = useMutation({
     mutationFn: async (data: Machine[]) => {
@@ -1979,6 +2105,37 @@ export default function FactorySimulation3D() {
 
             {productionUsers.length > 0 && (
               <ProductionStaffPanel users={productionUsers} />
+            )}
+
+            {machines.some(m => m.dbId) && (
+              <Card className="bg-slate-900/90 backdrop-blur-xl border-slate-700/50 text-white shadow-2xl">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Circle size={12} className="text-cyan-400" />
+                    <span className="text-xs font-bold text-slate-300">حالة الماكينات</span>
+                    <span className="text-[7px] text-slate-500 mr-auto">تحديث كل 10 ثوان</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {(['active', 'maintenance', 'down', 'unknown'] as MachineStatus[]).map(st => {
+                      const cfg = STATUS_CONFIG[st];
+                      const count = machines.filter(m => m.dbId && m.status === st).length;
+                      return (
+                        <div key={st} className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: cfg.color, boxShadow: `0 0 6px ${cfg.glowColor}` }} />
+                          <span className="text-[10px] text-slate-300 flex-1">{cfg.label}</span>
+                          <span className="text-[10px] font-bold" style={{ color: cfg.color }}>{count}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-slate-700/40">
+                    <div className="flex items-center justify-between text-[9px] text-slate-400">
+                      <span>إجمالي الماكينات</span>
+                      <span className="font-bold text-slate-200">{machines.filter(m => m.dbId).length}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
 
