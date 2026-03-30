@@ -1,4 +1,4 @@
-import * as ExcelJS from "exceljs";
+import ExcelJS from "exceljs";
 import {
   users,
   orders,
