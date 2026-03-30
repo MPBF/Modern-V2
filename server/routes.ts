@@ -2847,7 +2847,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // Export Report with real PDF/Excel generation
   app.post("/api/reports/export", requireAuth, async (req, res) => {
     try {
-      const { report_type, format, date_from, date_to, filters } = req.body;
+      const { format, date_from, date_to, filters } = req.body;
+      const report_type = typeof req.body.report_type === "string" ? req.body.report_type.trim().toLowerCase() : req.body.report_type;
 
       if (!report_type || !format) {
         return res.status(400).json({
@@ -2860,12 +2861,14 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       let reportTitle = "";
       switch (report_type) {
         case "orders":
+        case "production":
           reportData = await storage.getOrderReports({ dateFrom: date_from, dateTo: date_to });
-          reportTitle = "تقرير الطلبات";
+          reportTitle = report_type === "production" ? "تقرير الإنتاج" : "تقرير الطلبات";
           break;
         case "advanced-metrics":
+        case "quality":
           reportData = await storage.getAdvancedMetrics();
-          reportTitle = "تقرير المقاييس المتقدمة";
+          reportTitle = report_type === "quality" ? "تقرير الجودة" : "تقرير المقاييس المتقدمة";
           break;
         case "hr":
           reportData = await storage.getHRReports({ dateFrom: date_from, dateTo: date_to });
@@ -2875,6 +2878,15 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           reportData = await storage.getMaintenanceReports();
           reportTitle = "تقرير الصيانة";
           break;
+        case "financial": {
+          const [finOrders, finMetrics] = await Promise.all([
+            storage.getOrderReports({ dateFrom: date_from, dateTo: date_to }),
+            storage.getAdvancedMetrics(),
+          ]);
+          reportData = { orders: finOrders, metrics: finMetrics };
+          reportTitle = "التقرير المالي";
+          break;
+        }
         default:
           return res.status(400).json({
             message: "نوع التقرير غير صحيح",
