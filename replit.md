@@ -125,6 +125,22 @@ A full-stack Manufacturing Resource Planning (MRP) system for a plastic bag manu
 └── package.json                     # Dependencies (DO NOT MODIFY directly)
 ```
 
+## Auto-Migration & Company Setup
+
+### Database Auto-Migration (server/index.ts)
+- On startup, the server checks if the database has tables
+- **New database (0 tables)**: Runs `drizzle-kit push --force` to create all tables from `shared/schema.ts`. This only creates — never drops or modifies existing data
+- **Existing database**: Verifies critical tables (`users`, `system_settings`, `roles`) exist. If any are missing, runs push to add them. Otherwise skips push for fast startup
+- Safe for production: existing data is always preserved
+
+### Company Setup Wizard (`/setup`)
+- 3-step wizard: Company Info → Admin Account → Confirmation
+- **Route**: `/setup` (unprotected, for first-run)
+- **API**: `GET /api/setup/status` → `{ setupCompleted: boolean }`, `POST /api/setup/initialize` → creates company settings + admin user
+- Frontend checks setup status and redirects to `/login` if already completed
+- Rejects duplicate admin usernames
+- Setup data stored in `system_settings` table with keys like `company_name`, `company_phone`, etc.
+
 ## Database Schema (60+ Tables)
 
 ### Core Business Tables

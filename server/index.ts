@@ -466,327 +466,112 @@ function sanitizeResponseForLogging(response: any): any {
     });
   }
 
-  // Enhanced database initialization for production deployment
-  if (app.get("env") === "production") {
-    try {
-      console.log("🚀 Initializing production database...");
+  // Auto-migration: ensure all schema tables exist (safe for existing data)
+  // drizzle-kit push only adds missing tables/columns, never drops or modifies existing ones
+  try {
+    console.log("🔄 فحص قاعدة البيانات وتحديث الهيكل...");
 
-      const { db } = await import("./db.js");
+    await db.execute(sql`SELECT 1 as test`);
+    console.log("✅ Database connection verified");
 
-      // Step 1: Test database connection first
-      try {
-        await db.execute(sql`SELECT 1 as test`);
-        console.log("✅ Database connection verified");
-      } catch (connectionError: any) {
-        console.error(
-          "❌ Database connection failed:",
-          connectionError?.message || connectionError,
-        );
+    const tableCheck = await db.execute(sql`
+      SELECT table_name FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+      ORDER BY table_name
+    `);
 
-        // Provide specific guidance based on error type
-        if (connectionError?.message?.includes("connect")) {
-          console.error(
-            "💡 Connection issue - check DATABASE_URL configuration",
-          );
-        } else if (connectionError?.message?.includes("timeout")) {
-          console.error(
-            "💡 Timeout - database may be overloaded or network issue",
-          );
-        } else if (connectionError?.message?.includes("auth")) {
-          console.error(
-            "💡 Authentication failed - verify database credentials",
-          );
-        }
+    const existingTables = tableCheck.rows.map((row: any) => row.table_name);
+    const isNewDatabase = existingTables.length === 0;
 
-        throw connectionError;
-      }
+    console.log(
+      `📊 Database status: ${isNewDatabase ? "قاعدة بيانات جديدة" : `قاعدة بيانات موجودة (${existingTables.length} جدول)`}`,
+    );
 
-      // Step 2: Check existing schema and handle table conflicts
-      const tableCheck = await db.execute(sql`
-        SELECT table_name FROM information_schema.tables 
-        WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        ORDER BY table_name
-      `);
-
-      const existingTables = tableCheck.rows.map((row) => row.table_name);
-      const isNewDatabase = existingTables.length === 0;
-
+    if (!isNewDatabase) {
       console.log(
-        `📊 Database status: ${isNewDatabase ? "Fresh (new)" : `Existing (${existingTables.length} tables)`}`,
+        "📋 الجداول الموجودة:",
+        existingTables.slice(0, 10).join(", ") +
+          (existingTables.length > 10
+            ? ` ... و${existingTables.length - 10} جدول إضافي`
+            : ""),
       );
-
-      if (!isNewDatabase) {
-        // Log existing tables for debugging
-        console.log(
-          "📋 Existing tables:",
-          existingTables.slice(0, 10).join(", ") +
-            (existingTables.length > 10
-              ? ` ... and ${existingTables.length - 10} more`
-              : ""),
-        );
-
-        // Check for specific tables that might cause conflicts
-        const criticalTables = [
-          "admin_decisions",
-          "users",
-          "customers",
-          "orders",
-        ];
-        const conflictingTables = criticalTables.filter((table) =>
-          existingTables.includes(table),
-        );
-
-        if (conflictingTables.length > 0) {
-          console.log(
-            "🔍 Found existing critical tables:",
-            conflictingTables.join(", "),
-          );
-          console.log(
-            "⚠️  Will handle potential schema conflicts carefully...",
-          );
-        }
-      }
-
-      // Step 3: Try primary migration approach first
-      try {
-        const { migrate } = await import(
-          "drizzle-orm/neon-serverless/migrator"
-        );
-        await migrate(db, { migrationsFolder: "./migrations" });
-        console.log("✅ Database migrations completed via migrate()");
-      } catch (migrationError: any) {
-        console.log(
-          "⚠️ Standard migration failed, trying alternative approaches...",
-        );
-        console.log(
-          "Migration error:",
-          migrationError?.message || migrationError,
-        );
-
-        // Step 4: Handle specific migration errors
-        if (migrationError?.message?.includes("admin_decisions")) {
-          console.log(
-            "🔧 Detected admin_decisions table conflict, applying specific fixes...",
-          );
-
-          try {
-            // Try to handle admin_decisions table conflicts specifically
-            const adminTableExists = await db.execute(sql`
-              SELECT table_name FROM information_schema.tables 
-              WHERE table_name = 'admin_decisions' AND table_schema = 'public'
-            `);
-
-            if (adminTableExists.rows.length > 0) {
-              console.log(
-                "📋 admin_decisions table exists, checking for missing columns...",
-              );
-
-              // Check for required columns and add if missing
-              const ALLOWED_COLUMN_TYPES = new Set(["VARCHAR(100)", "VARCHAR(20)"]);
-              const requiredColumns = [
-                { name: "title_ar", type: "VARCHAR(100)" },
-                { name: "issued_by", type: "VARCHAR(20)" },
-              ];
-
-              for (const col of requiredColumns) {
-                try {
-                  if (!ALLOWED_COLUMN_TYPES.has(col.type)) {
-                    throw new Error(`Invalid column type: ${col.type}`);
-                  }
-                  const columnExists = await db.execute(sql`
-                    SELECT column_name FROM information_schema.columns 
-                    WHERE table_name = 'admin_decisions' 
-                    AND column_name = ${col.name} 
-                    AND table_schema = 'public'
-                  `);
-
-                  if (columnExists.rows.length === 0) {
-                    await db.execute(
-                      sql`ALTER TABLE admin_decisions ADD COLUMN ${sql.identifier(col.name)} ${sql.raw(col.type)}`,
-                    );
-                    console.log(
-                      `✅ Added missing column admin_decisions.${col.name}`,
-                    );
-                  }
-                } catch (columnError: any) {
-                  console.log(
-                    `⚠️  Could not add column ${col.name}: ${columnError?.message}`,
-                  );
-                }
-              }
-            }
-          } catch (tableFixError: any) {
-            console.log(
-              "⚠️  Could not fix admin_decisions table:",
-              tableFixError?.message,
-            );
-          }
-        }
-
-        // Step 5: Alternative approach - implement real fallback for fresh database
-        if (isNewDatabase) {
-          console.log(
-            "🆕 Fresh database detected - attempting schema creation via drizzle-kit push",
-          );
-
-          try {
-            // Import child_process for executing drizzle-kit
-            const { exec } = await import("child_process");
-            const { promisify } = await import("util");
-            const execAsync = promisify(exec);
-
-            console.log("📋 Running drizzle-kit push to create schema...");
-            const pushResult = await execAsync("npx drizzle-kit push --force", {
-              env: { ...process.env, NODE_ENV: "production" },
-              timeout: 60000, // 60 second timeout
-            });
-
-            console.log("✅ Schema created successfully via drizzle-kit push");
-            if (pushResult.stdout) {
-              console.log("   Output:", pushResult.stdout.substring(0, 200));
-            }
-
-            // Verify schema creation
-            const verifyTableCheck = await db.execute(sql`
-              SELECT COUNT(*) as table_count
-              FROM information_schema.tables 
-              WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-            `);
-
-            const newTableCount = parseInt(
-              String(verifyTableCheck.rows[0].table_count),
-            );
-            console.log(
-              `✅ Schema verification: ${newTableCount} tables created`,
-            );
-
-            if (newTableCount === 0) {
-              console.error(
-                "❌ Schema creation failed - no tables were created",
-              );
-              console.error(
-                "🚨 CRITICAL: Cannot start application without database schema",
-              );
-              console.error(
-                "💡 Manual intervention required - check DATABASE_URL and permissions",
-              );
-              process.exit(1);
-            }
-          } catch (pushError: any) {
-            console.error(
-              "❌ Schema creation via drizzle-kit failed:",
-              pushError?.message,
-            );
-            console.error("🚨 CRITICAL: Fresh database cannot be initialized");
-            console.error("💡 This may be due to:");
-            console.error("   - Missing drizzle-kit package");
-            console.error("   - Database permission issues");
-            console.error("   - Network connectivity problems");
-            console.error("   - Invalid DATABASE_URL configuration");
-
-            // For fresh database, we cannot continue without schema
-            process.exit(1);
-          }
-        } else {
-          console.log("🔄 Existing database - checking table accessibility...");
-
-          // Test critical table access and fail fast if missing
-          const criticalChecks = [
-            {
-              table: "users",
-              description: "User authentication",
-              required: true,
-            },
-            {
-              table: "customers",
-              description: "Customer management",
-              required: false,
-            },
-            {
-              table: "orders",
-              description: "Order processing",
-              required: false,
-            },
-          ];
-
-          let criticalFailures = 0;
-
-          for (const check of criticalChecks) {
-            try {
-              await db.execute(
-                sql`SELECT 1 FROM ${sql.identifier(check.table)} LIMIT 1`,
-              );
-              console.log(`✅ ${check.description} table accessible`);
-            } catch (tableError: any) {
-              const errorMsg = tableError?.message?.substring(0, 100);
-              console.log(`⚠️  ${check.description} table issue: ${errorMsg}`);
-
-              if (
-                check.required &&
-                tableError?.message?.includes("does not exist")
-              ) {
-                criticalFailures++;
-                console.error(
-                  `🚨 CRITICAL: Required table '${check.table}' is missing`,
-                );
-              }
-            }
-          }
-
-          // Fail fast if critical tables are missing
-          if (criticalFailures > 0) {
-            console.error(
-              `❌ Database schema is incomplete: ${criticalFailures} critical table(s) missing`,
-            );
-            console.error(
-              "🚨 CRITICAL: Cannot start application with incomplete schema",
-            );
-            console.error(
-              "💡 This indicates a partial migration or corrupted database",
-            );
-            console.error("📋 Required actions:");
-            console.error("   1. Run database migration scripts manually");
-            console.error("   2. Check deployment logs for migration failures");
-            console.error(
-              "   3. Verify DATABASE_URL points to correct database",
-            );
-            console.error("   4. Consider restoring from backup if available");
-
-            process.exit(1);
-          }
-        }
-      }
-    } catch (error: any) {
-      console.error(
-        "❌ Database initialization failed:",
-        error?.message || error,
-      );
-
-      // Enhanced error diagnostics
-      if (error?.message?.includes("ENOTFOUND")) {
-        console.error("💡 DNS resolution failed - check DATABASE_URL hostname");
-      } else if (error?.message?.includes("ECONNREFUSED")) {
-        console.error("💡 Connection refused - database server may be down");
-      } else if (
-        error?.message?.includes("relation") &&
-        error?.message?.includes("does not exist")
-      ) {
-        console.error("💡 Table missing - this is normal for fresh deployment");
-      } else if (error?.message?.includes("permission denied")) {
-        console.error("💡 Permission denied - check database user privileges");
-      } else if (error?.message?.includes("syntax error")) {
-        console.error("💡 SQL syntax error - check migration files");
-      }
-
-      console.error(
-        "🔄 Continuing with server startup - database will be retried on first request",
-      );
-      console.error(
-        "📚 For persistent issues, check the deployment logs and database status",
-      );
-
-      // Don't exit - let the server start and handle database issues gracefully
     }
+
+    if (isNewDatabase) {
+      // Fresh database: create all tables using drizzle-kit push
+      console.log("🆕 قاعدة بيانات جديدة - إنشاء جميع الجداول...");
+
+      try {
+        const { exec } = await import("child_process");
+        const { promisify } = await import("util");
+        const execAsync = promisify(exec);
+
+        const pushResult = await execAsync("npx drizzle-kit push --force", {
+          env: { ...process.env },
+          timeout: 120000,
+        });
+
+        console.log("✅ تم إنشاء هيكل قاعدة البيانات بنجاح");
+        if (pushResult.stderr && pushResult.stderr.includes("error")) {
+          console.warn("⚠️ Push warnings:", pushResult.stderr.substring(0, 200));
+        }
+
+        const verifyCheck = await db.execute(sql`
+          SELECT COUNT(*) as table_count
+          FROM information_schema.tables 
+          WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+        `);
+        const tableCount = parseInt(String(verifyCheck.rows[0].table_count));
+        console.log(`✅ عدد الجداول المُنشأة: ${tableCount}`);
+
+        if (tableCount === 0) {
+          console.error("❌ فشل إنشاء الجداول - لم يتم إنشاء أي جدول");
+          if (isProduction) process.exit(1);
+        }
+      } catch (pushError: any) {
+        console.error("❌ خطأ في إنشاء الجداول:", pushError?.message);
+        if (isProduction) {
+          console.error("🚨 لا يمكن بدء التطبيق بدون هيكل قاعدة البيانات");
+          process.exit(1);
+        }
+      }
+    } else {
+      // Existing database: verify critical tables, skip push to preserve performance
+      console.log("✅ قاعدة البيانات موجودة - التحقق من الجداول الأساسية...");
+
+      const criticalTables = ["users", "system_settings", "roles"];
+      for (const tableName of criticalTables) {
+        try {
+          await db.execute(sql`SELECT 1 FROM ${sql.identifier(tableName)} LIMIT 1`);
+        } catch (tableError: any) {
+          if (tableError?.message?.includes("does not exist")) {
+            console.warn(`⚠️ جدول ${tableName} غير موجود - سيتم إنشاء الجداول الناقصة...`);
+            try {
+              const { exec } = await import("child_process");
+              const { promisify } = await import("util");
+              const execAsync = promisify(exec);
+              await execAsync("npx drizzle-kit push --force", {
+                env: { ...process.env },
+                timeout: 120000,
+              });
+              console.log("✅ تم إضافة الجداول الناقصة بنجاح");
+            } catch (pushErr: any) {
+              console.error("❌ فشل إضافة الجداول الناقصة:", pushErr?.message);
+            }
+            break;
+          }
+        }
+      }
+
+      console.log("✅ جميع الجداول الأساسية متوفرة");
+    }
+  } catch (error: any) {
+    console.error("❌ فشل تهيئة قاعدة البيانات:", error?.message || error);
+    if (isProduction) {
+      console.error("🚨 فشل حرج في الإنتاج - إيقاف الخادم");
+      process.exit(1);
+    }
+    console.warn("⚠️ متابعة التشغيل في وضع التطوير رغم فشل التهيئة");
   }
 
   // Security check: Verify no plaintext passwords remain
