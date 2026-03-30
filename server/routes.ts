@@ -6080,6 +6080,110 @@ Do not include quotes or explanations.`;
     },
   );
 
+  // ============ Setup API ============
+
+  app.get("/api/setup/status", async (_req, res) => {
+    try {
+      const setting = await storage.getSystemSettingByKey("setup_completed");
+      const isCompleted = setting?.setting_value === "true";
+      res.json({ setupCompleted: isCompleted });
+    } catch (error) {
+      res.json({ setupCompleted: false });
+    }
+  });
+
+  app.post("/api/setup/initialize", async (req, res) => {
+    try {
+      const existing = await storage.getSystemSettingByKey("setup_completed");
+      if (existing?.setting_value === "true") {
+        return res.status(400).json({ message: "تم إعداد النظام مسبقاً" });
+      }
+
+      const { company, admin } = req.body;
+
+      if (!company?.name || !admin?.username || !admin?.password || !admin?.displayName) {
+        return res.status(400).json({ message: "جميع الحقول المطلوبة يجب أن تكون مملوءة" });
+      }
+
+      if (admin.password.length < 6) {
+        return res.status(400).json({ message: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
+      }
+
+      const companySettings: Record<string, string> = {
+        companyName: company.name,
+        companyPhone: company.phone || "",
+        companyAddress: company.address || "",
+        companyTaxNumber: company.taxNumber || "",
+        companyEmail: company.email || "",
+        country: company.country || "المملكة العربية السعودية",
+        region: company.region || "الرياض",
+        currency: company.currency || "SAR",
+        language: company.language || "ar",
+        timezone: "Asia/Riyadh",
+        workingHoursStart: company.workingHoursStart || "08:00",
+        workingHoursEnd: company.workingHoursEnd || "17:00",
+      };
+
+      for (const [key, value] of Object.entries(companySettings)) {
+        const existingSetting = await storage.getSystemSettingByKey(key);
+        if (existingSetting) {
+          await storage.updateSystemSetting(key, value);
+        } else {
+          await storage.createSystemSetting({
+            setting_key: key,
+            setting_value: value,
+          });
+        }
+      }
+
+      const existingUser = await storage.getUserByUsername(admin.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "اسم المستخدم مستخدم بالفعل. اختر اسم مستخدم آخر." });
+      }
+
+      const hashedPassword = await bcrypt.hash(admin.password, 10);
+      const adminUser = await storage.createUser({
+        username: admin.username,
+        password: hashedPassword,
+        display_name: admin.displayName,
+        display_name_ar: admin.displayNameAr || admin.displayName,
+        phone: admin.phone || null,
+        email: admin.email || null,
+        role_id: 1,
+        status: "active",
+      });
+
+      const setupSetting = await storage.getSystemSettingByKey("setup_completed");
+      if (setupSetting) {
+        await storage.updateSystemSetting("setup_completed", "true");
+      } else {
+        await storage.createSystemSetting({
+          setting_key: "setup_completed",
+          setting_value: "true",
+        });
+      }
+
+      const setupDateSetting = await storage.getSystemSettingByKey("setup_date");
+      if (setupDateSetting) {
+        await storage.updateSystemSetting("setup_date", new Date().toISOString());
+      } else {
+        await storage.createSystemSetting({
+          setting_key: "setup_date",
+          setting_value: new Date().toISOString(),
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "تم إعداد النظام بنجاح",
+        adminUserId: adminUser.id,
+      });
+    } catch (error: any) {
+      console.error("Error during setup:", error);
+      res.status(500).json({ message: "خطأ في إعداد النظام: " + error.message });
+    }
+  });
+
   // ============ Settings API ============
 
   // System Settings

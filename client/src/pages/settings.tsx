@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "../hooks/use-auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -142,6 +143,10 @@ function SystemSection() {
 
   const [systemSettings, setSystemSettings] = useState({
     companyName: "مصنع أكياس MPBF",
+    companyPhone: "",
+    companyAddress: "",
+    companyTaxNumber: "",
+    companyEmail: "",
     timezone: "Asia/Riyadh",
     currency: "SAR",
     language: "ar",
@@ -167,6 +172,10 @@ function SystemSection() {
       setSystemSettings((prev) => ({
         ...prev,
         companyName: o.companyName || prev.companyName,
+        companyPhone: o.companyPhone || prev.companyPhone,
+        companyAddress: o.companyAddress || prev.companyAddress,
+        companyTaxNumber: o.companyTaxNumber || prev.companyTaxNumber,
+        companyEmail: o.companyEmail || prev.companyEmail,
         timezone: o.timezone || prev.timezone,
         currency: o.currency || prev.currency,
         language: o.language || prev.language,
@@ -207,6 +216,10 @@ function SystemSection() {
         body: JSON.stringify({
           settings: {
             companyName: settings.companyName,
+            companyPhone: settings.companyPhone,
+            companyAddress: settings.companyAddress,
+            companyTaxNumber: settings.companyTaxNumber,
+            companyEmail: settings.companyEmail,
             timezone: settings.timezone,
             currency: settings.currency,
             language: settings.language,
@@ -281,6 +294,22 @@ function SystemSection() {
             <div className="space-y-2">
               <Label>اسم الشركة</Label>
               <Input value={systemSettings.companyName} onChange={(e) => setSystemSettings((p) => ({ ...p, companyName: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label>الرقم الضريبي</Label>
+              <Input value={systemSettings.companyTaxNumber} placeholder="مثال: 300000000000003" onChange={(e) => setSystemSettings((p) => ({ ...p, companyTaxNumber: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label>رقم الهاتف</Label>
+              <Input value={systemSettings.companyPhone} placeholder="مثال: +966500000000" dir="ltr" onChange={(e) => setSystemSettings((p) => ({ ...p, companyPhone: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label>البريد الإلكتروني</Label>
+              <Input type="email" value={systemSettings.companyEmail} placeholder="info@company.com" dir="ltr" onChange={(e) => setSystemSettings((p) => ({ ...p, companyEmail: e.target.value }))} />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>العنوان</Label>
+              <Input value={systemSettings.companyAddress} placeholder="المدينة، الحي، الشارع" onChange={(e) => setSystemSettings((p) => ({ ...p, companyAddress: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label>الدولة</Label>
@@ -419,8 +448,49 @@ function SystemSection() {
         </CardContent>
       </Card>
 
+      <NewCompanySetupCard />
       <PwaInstallCard />
     </div>
+  );
+}
+
+function NewCompanySetupCard() {
+  const [, navigate] = useLocation();
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  return (
+    <>
+      <Card className="border-dashed border-2 border-orange-300">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Plus className="h-5 w-5 text-orange-500" /> تنصيب شركة جديدة</CardTitle>
+          <CardDescription>إعداد النظام لشركة جديدة - إدخال بيانات الشركة وإنشاء حساب المدير</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" className="border-orange-400 text-orange-600 hover:bg-orange-50" onClick={() => setShowConfirm(true)}>
+            <Plus className="h-4 w-4 ml-2" />
+            بدء إعداد شركة جديدة
+          </Button>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>تنصيب شركة جديدة</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيتم فتح معالج إعداد شركة جديدة حيث يمكنك إدخال بيانات الشركة وإنشاء حساب المدير.
+              هل تريد المتابعة؟
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={() => navigate("/setup")}>
+              متابعة
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

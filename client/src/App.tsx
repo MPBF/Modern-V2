@@ -47,6 +47,7 @@ const SystemMonitoring = lazy(() => import("./pages/system-monitoring"));
 const AiAgent = lazy(() => import("./pages/ai-agent"));
 const AiAgentSettings = lazy(() => import("./pages/ai-agent-settings"));
 const FactorySimulation3D = lazy(() => import("./pages/FactorySimulation3D"));
+const CompanySetup = lazy(() => import("./pages/company-setup"));
 const DisplayScreen = lazy(() => import("./pages/DisplayScreen"));
 const DisplayControlPanel = lazy(() => import("./pages/DisplayControlPanel"));
 const FactoryFloor = lazy(() => import("./pages/FactoryFloor"));
@@ -88,7 +89,10 @@ function AppRoutes() {
       <Switch>
         <Route path="/login">
           {isAuthenticated ? <Redirect to="/" /> : <Login />}
-      
+        </Route>
+
+        <Route path="/setup">
+          <CompanySetup />
         </Route>
 <Route path="/tools">
   <ProtectedRoute path="/tools">
