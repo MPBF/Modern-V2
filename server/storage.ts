@@ -633,6 +633,7 @@ export interface IStorage {
   createNotification(notification: InsertNotification): Promise<Notification>;
   getNotifications(userId?: number, limit?: number, offset?: number): Promise<Notification[]>;
   updateNotificationStatus(twilioSid: string, updates: Partial<Notification>): Promise<Notification>;
+  updateNotificationStatusByExternalId(externalId: string, updates: Partial<Notification>): Promise<Notification | undefined>;
   getUserNotifications(userId: number, options?: any): Promise<Notification[]>;
   markNotificationAsRead(id: number): Promise<Notification>;
   markAllNotificationsAsRead(userId: number): Promise<void>;
@@ -2159,6 +2160,11 @@ export class DatabaseStorage implements IStorage {
   async updateNotificationStatus(twilioSid: string, updates: Partial<Notification>): Promise<Notification> {
     const [u] = await db.update(notifications).set(updates).where(eq(notifications.twilio_sid, twilioSid)).returning();
     return u;
+  }
+
+  async updateNotificationStatusByExternalId(externalId: string, updates: Partial<Notification>): Promise<Notification | undefined> {
+    const rows = await db.update(notifications).set(updates).where(eq(notifications.external_id, externalId)).returning();
+    return rows[0];
   }
 
   async getUserNotifications(userId: number, options?: any): Promise<Notification[]> {

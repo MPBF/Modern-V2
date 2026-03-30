@@ -93,23 +93,6 @@ export class PerformanceMonitor {
         }
       };
 
-      // تعديل res.send
-      res.send = function(data: any) {
-        res.send = originalSend;
-        const result = originalSend.call(this, data);
-        finishRequest();
-        return result;
-      };
-
-      // تعديل res.json
-      res.json = function(data: any) {
-        res.json = originalJson;
-        const result = originalJson.call(this, data);
-        finishRequest();
-        return result;
-      };
-
-      // في حالة انتهاء الـ response بدون استخدام send أو json
       res.on('finish', finishRequest);
 
       next();

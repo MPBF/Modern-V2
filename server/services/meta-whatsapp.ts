@@ -41,6 +41,8 @@ export class MetaWhatsAppService {
   private storage: IStorage;
   private baseUrl: string;
 
+  private tokenExpired: boolean = false;
+
   constructor(storage: IStorage, config?: Partial<MetaWhatsAppConfig>) {
     this.storage = storage;
 
@@ -63,6 +65,21 @@ export class MetaWhatsAppService {
     } else {
       logger.info("✅ Meta WhatsApp API service initialized successfully");
     }
+  }
+
+  refreshToken(): void {
+    const newToken = process.env.META_ACCESS_TOKEN || "";
+    if (newToken && newToken !== this.config.accessToken) {
+      this.config.accessToken = newToken;
+      this.tokenExpired = false;
+      logger.info("🔄 Meta access token refreshed from environment");
+    }
+  }
+
+  private isTokenExpiredError(errorMessage: string, errorCode?: number, errorSubcode?: number): boolean {
+    if (errorCode === 190) return true;
+    if (errorSubcode === 463 || errorSubcode === 467) return true;
+    return errorMessage.includes("validating access token") && errorMessage.includes("expired");
   }
 
   private generateAppSecretProof(): string | null {
@@ -133,10 +150,14 @@ export class MetaWhatsAppService {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          result.error?.message ||
+        const apiError = result.error;
+        const err: any = new Error(
+          apiError?.message ||
             `HTTP ${response.status}: ${response.statusText}`,
         );
+        err.code = apiError?.code;
+        err.subcode = apiError?.error_subcode;
+        throw err;
       }
 
       // حفظ الإشعار في قاعدة البيانات
@@ -167,7 +188,15 @@ export class MetaWhatsAppService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "خطأ غير معروف";
-      logger.error("خطأ في إرسال رسالة واتس اب عبر Meta API", error);
+
+      const errObj = error as any;
+      if (this.isTokenExpiredError(errorMessage, errObj?.code, errObj?.subcode)) {
+        this.tokenExpired = true;
+        this.refreshToken();
+        logger.error("🔑 Meta WhatsApp access token has expired. Please update META_ACCESS_TOKEN with a new token.");
+      } else {
+        logger.error("خطأ في إرسال رسالة واتس اب عبر Meta API", error);
+      }
 
       const notificationData = {
         title: options?.title || "رسالة واتس اب",
@@ -189,6 +218,10 @@ export class MetaWhatsAppService {
         error: errorMessage,
       };
     }
+  }
+
+  isExpired(): boolean {
+    return this.tokenExpired;
   }
 
   async uploadMediaBuffer(buffer: Buffer, filename: string, mimeType: string): Promise<string> {
@@ -595,20 +628,19 @@ export class MetaWhatsAppService {
     status: string,
   ): Promise<void> {
     try {
-      // تحديث حالة الرسالة في قاعدة البيانات
-      // ملاحظة: هذه الدالة كانت سابقاً تُنشئ كائن updatedNotification بدون حفظه.
-      // الآن نقوم بالحفظ عبر storage.updateNotificationStatus لضمان انعكاس الحالة في النظام.
-
       const updatePayload: Record<string, any> = {
         external_status: status,
         delivered_at: status === "delivered" ? new Date() : undefined,
         read_at: status === "read" ? new Date() : undefined,
       };
 
-      // نعتمد على طبقة التخزين لتحديث السجل بحسب المعرّف الخارجي (Twilio SID أو Meta message id)
-      await this.storage.updateNotificationStatus(messageId, updatePayload);
+      const updated = await this.storage.updateNotificationStatusByExternalId(messageId, updatePayload);
 
-      logger.info(`📊 تم تحديث حالة الرسالة ${messageId} إلى ${status}`);
+      if (updated) {
+        logger.info(`📊 تم تحديث حالة الرسالة ${messageId} إلى ${status}`);
+      } else {
+        logger.debug(`⚠️ لم يتم العثور على إشعار بالمعرف الخارجي ${messageId}`);
+      }
     } catch (error) {
       logger.error("خطأ في تحديث حالة الرسالة", error);
     }

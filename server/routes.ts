@@ -1141,7 +1141,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         JSON.stringify(req.body, null, 2),
       );
 
-      // معالجة webhook من Meta
       if (notificationService.metaWhatsApp) {
         await notificationService.metaWhatsApp.handleWebhook(req.body);
       }
@@ -1149,7 +1148,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       res.status(200).send("OK");
     } catch (error: any) {
       logger.error("Error processing Meta webhook", error);
-      res.status(500).json({ message: "خطأ في معالجة Meta webhook" });
+      res.status(200).send("OK");
     }
   });
 

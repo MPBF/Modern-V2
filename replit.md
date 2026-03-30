@@ -13,7 +13,7 @@ A full-stack Manufacturing Resource Planning (MRP) system for a plastic bag manu
 | Database | PostgreSQL (Neon Serverless) via Drizzle ORM |
 | Auth | Dual: session-based (Passport.js) + Replit Auth (OpenID Connect) + mobile Bearer tokens |
 | i18n | i18next (Arabic/English) |
-| Notifications | Meta WhatsApp Business API, Taqnyat SMS, Twilio WhatsApp |
+| Notifications | Meta WhatsApp Business API (with token expiry detection), Taqnyat SMS, Twilio WhatsApp |
 | PDF | Adobe Document Generation API (@adobe/pdfservices-node-sdk) |
 | AI | OpenAI integration for factory AI assistant |
 | PWA | Service worker, manifest.json, install prompt |

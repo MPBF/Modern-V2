@@ -1397,7 +1397,8 @@ export const notifications = pgTable("notifications", {
 
   // Twilio/WhatsApp specific
   twilio_sid: varchar("twilio_sid", { length: 100 }), // Twilio message SID
-  external_status: varchar("external_status", { length: 30 }), // Twilio status callback
+  external_id: varchar("external_id", { length: 100 }), // Meta WhatsApp message ID
+  external_status: varchar("external_status", { length: 30 }), // Twilio/Meta status callback
   error_message: text("error_message"),
 
   // Metadata
