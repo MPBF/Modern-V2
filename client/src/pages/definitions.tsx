@@ -3232,28 +3232,16 @@ export default function Definitions() {
                                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                                         {(() => {
                                           if (!user.section_id) return "-";
-                                          // Map numeric section_id to section string ID
-                                          const sectionMapping: {
-                                            [key: number]: string;
-                                          } = {
-                                            1: "SEC01",
-                                            2: "SEC02",
-                                            3: "SEC03",
-                                            4: "SEC04",
-                                            5: "SEC05",
-                                            6: "SEC06",
-                                            7: "SEC07",
-                                          };
-                                          const sectionId =
-                                            sectionMapping[user.section_id];
-                                          const section =
-                                            Array.isArray(sections) &&
-                                            sections.find(
-                                              (s: any) => s.id === sectionId,
-                                            );
+                                          if (!Array.isArray(sections)) return `${user.section_id}`;
+                                          const section = sections.find(
+                                            (s: any) =>
+                                              s.id === user.section_id ||
+                                              s.id === String(user.section_id) ||
+                                              s.id === `SEC${String(user.section_id).padStart(2, "0")}`
+                                          );
                                           return section
                                             ? section.name_ar || section.name
-                                            : `${t("definitions.table.section")} ${user.section_id}`;
+                                            : `${user.section_id}`;
                                         })()}
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
