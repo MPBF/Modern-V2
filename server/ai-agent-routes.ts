@@ -565,6 +565,10 @@ async function getSystemPrompt(): Promise<string> {
 12. **تحليل الملفات**: صور، Excel، CSV، PDF
 13. **الرسائل الصوتية**: تحويل الصوت إلى نص
 14. **قاعدة المعرفة**: البحث والتعلم وحفظ المعلومات
+15. **استعلامات قاعدة البيانات المباشرة**: تنفيذ أي استعلام SQL (SELECT/INSERT/UPDATE) على أي جدول في النظام. يمكنك قراءة البيانات وإنشاء بيانات جديدة وتحديثها
+16. **إنشاء بيانات حضور وهمية**: إنشاء سجلات حضور وانصراف تلقائية لأي مجموعة مستخدمين ولأي فترة زمنية مع تخصيص أوقات الحضور والانصراف وأيام الغياب
+17. **استكشاف هيكل قاعدة البيانات**: عرض جميع الجداول وأعمدتها وأنواع البيانات
+18. **البحث عن مستخدمي الأقسام**: عرض المستخدمين في أي قسم بالاسم أو الرقم
 
 ### معلومات المصنع:
 - الموقع: www.modplastic.com | متخصصون في الأكياس البلاستيكية والأفلام البلاستيكية
@@ -642,6 +646,21 @@ ${defaultGreeting ? `رسالة الترحيب: ${defaultGreeting}\n` : ""}
 
 **عند الاستعلام عن المخزون:**
 استخدم get_inventory_status (يمكن تصفية المواد منخفضة المخزون)
+
+**عند طلب إنشاء بيانات حضور وهمية:**
+1. حدد المستخدمين المطلوبين باستخدام get_section_users
+2. استخدم generate_attendance_data مع المعلمات المناسبة (أوقات الحضور/الانصراف، أيام الغياب، الأيام المستبعدة)
+3. أو استخدم execute_database_query لعمل INSERT مباشرة
+
+**عند طلب إنشاء أي بيانات أو جداول أو تقارير:**
+1. استخدم get_database_schema لمعرفة هيكل الجدول المطلوب
+2. استخدم execute_database_query لتنفيذ SELECT للقراءة أو INSERT/UPDATE للكتابة
+3. يمكنك تنفيذ عدة استعلامات متتالية لإنجاز المهمة
+4. لا تحذف بيانات (DELETE غير مسموح) - يمكنك فقط القراءة والإضافة والتحديث
+
+**عند الاستعلام عن بيانات معقدة:**
+1. استخدم execute_database_query مع استعلامات SQL متقدمة (JOIN, GROUP BY, COUNT, SUM, AVG)
+2. يمكنك عمل تحليلات وتقارير مباشرة من قاعدة البيانات
 
 **عند سؤال عام:**
 1. ابحث في قاعدة المعرفة بـ search_knowledge_base أولاً
@@ -1097,6 +1116,75 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           notes: { type: "string", description: "ملاحظات إضافية" }
         },
         required: ["customer_id"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "execute_database_query",
+      description: `تنفيذ استعلام SQL على قاعدة البيانات. يدعم SELECT للقراءة و INSERT/UPDATE للكتابة. لا يسمح بـ DROP أو DELETE أو TRUNCATE أو ALTER.
+الجداول المتاحة: users, attendance, sections, roles, orders, production_orders, rolls, customers, customer_products, inventory, machines, maintenance_requests, quotes, quote_items, leave_requests, leave_balances, training_programs, training_enrollments, quality_checks, quality_issues, system_settings, notifications, items, categories, suppliers, spare_parts, units, locations, warehouse_transactions, finished_goods_vouchers_in, finished_goods_vouchers_out, raw_material_vouchers_in, raw_material_vouchers_out, consumable_parts, violations, user_violations, performance_reviews, company_profile, admin_decisions, mixing_batches, batch_ingredients, master_batch_colors, waste, cuts, quick_notes, alert_rules, user_requests, temp_job_orders, training_records, training_certificates, training_evaluations, training_materials.
+أعمدة جدول attendance: id (serial), user_id (integer), status (varchar: حاضر/غائب/إجازة), check_in_time (timestamp), check_out_time (timestamp), lunch_start_time, lunch_end_time, break_start_time, break_end_time, work_hours (double), overtime_hours (double), shift_type (varchar: صباحي/مسائي/ليلي), late_minutes (integer).
+أعمدة جدول users: id (serial), username (varchar), password (varchar), display_name (varchar), display_name_ar (varchar), phone (varchar), email (varchar), role_id (integer), section_id (integer), status (varchar: active/suspended/deleted), created_at (timestamp).
+أعمدة جدول sections: id (varchar), name (varchar), name_ar (varchar), description (text).`,
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "استعلام SQL. أمثلة: SELECT * FROM attendance WHERE user_id = 5 أو INSERT INTO attendance (user_id, status, check_in_time) VALUES (5, 'حاضر', '2026-01-01 09:00:00')" },
+          description: { type: "string", description: "وصف مختصر لما يفعله الاستعلام" }
+        },
+        required: ["query", "description"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "generate_attendance_data",
+      description: "إنشاء بيانات حضور وانصراف وهمية لمستخدمين محددين لفترة زمنية معينة",
+      parameters: {
+        type: "object",
+        properties: {
+          user_ids: { type: "array", items: { type: "number" }, description: "أرقام معرفات المستخدمين" },
+          start_date: { type: "string", description: "تاريخ البداية (YYYY-MM-DD)" },
+          end_date: { type: "string", description: "تاريخ النهاية (YYYY-MM-DD)" },
+          check_in_start_hour: { type: "number", description: "بداية ساعة الحضور (مثل 8 أو 9)" },
+          check_in_end_hour: { type: "number", description: "نهاية ساعة الحضور (مثل 9 أو 10)" },
+          check_out_start_hour: { type: "number", description: "بداية ساعة الانصراف (مثل 14 أو 16)" },
+          check_out_end_hour: { type: "number", description: "نهاية ساعة الانصراف (مثل 17 أو 18)" },
+          absent_days_per_month: { type: "number", description: "عدد أيام الغياب لكل شهر (افتراضي 0)" },
+          exclude_days: { type: "array", items: { type: "number" }, description: "أيام الأسبوع المستبعدة (0=أحد، 5=جمعة، 6=سبت). افتراضي [5,6]" },
+          shift_type: { type: "string", description: "نوع الوردية (صباحي/مسائي/ليلي). افتراضي: صباحي" }
+        },
+        required: ["user_ids", "start_date", "end_date"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_database_schema",
+      description: "الحصول على هيكل جدول معين أو قائمة بجميع الجداول المتاحة في قاعدة البيانات",
+      parameters: {
+        type: "object",
+        properties: {
+          table_name: { type: "string", description: "اسم الجدول للحصول على أعمدته. اتركه فارغاً لعرض جميع الجداول" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_section_users",
+      description: "الحصول على قائمة المستخدمين في قسم معين",
+      parameters: {
+        type: "object",
+        properties: {
+          section_id: { type: "string", description: "رقم أو معرف القسم (مثل 1 أو SEC01)" },
+          section_name: { type: "string", description: "اسم القسم للبحث (مثل: التسويق، الإنتاج)" }
+        }
       }
     }
   }
@@ -2555,12 +2643,196 @@ async function executeFunction(name: string, args: Record<string, unknown>, user
         });
       }
 
+      case "execute_database_query": {
+        const queryStr = (args.query as string || "").trim();
+        const description = args.description as string || "";
+        
+        const forbidden = /\b(DROP|TRUNCATE|ALTER|DELETE\s+FROM|CREATE\s+TABLE|CREATE\s+INDEX)\b/i;
+        if (forbidden.test(queryStr)) {
+          return JSON.stringify({ error: "هذا النوع من الاستعلامات غير مسموح به (DROP/DELETE/TRUNCATE/ALTER/CREATE TABLE). يُسمح فقط بـ SELECT و INSERT و UPDATE." });
+        }
+
+        const isWrite = /^\s*(INSERT|UPDATE)\b/i.test(queryStr);
+        const isSelect = /^\s*SELECT\b/i.test(queryStr);
+        
+        if (!isSelect && !isWrite) {
+          return JSON.stringify({ error: "يُسمح فقط باستعلامات SELECT و INSERT و UPDATE" });
+        }
+
+        console.log(`[AI Agent] Executing SQL (${description}): ${queryStr.substring(0, 200)}`);
+        
+        const result = await db.execute(sql.raw(queryStr));
+        
+        if (isSelect) {
+          const rows = result.rows || [];
+          const limitedRows = rows.slice(0, 100);
+          return JSON.stringify({
+            success: true,
+            description,
+            row_count: rows.length,
+            data: limitedRows,
+            truncated: rows.length > 100
+          });
+        } else {
+          return JSON.stringify({
+            success: true,
+            description,
+            message: `تم تنفيذ الاستعلام بنجاح`,
+            rows_affected: result.rowCount || 0
+          });
+        }
+      }
+
+      case "generate_attendance_data": {
+        const userIds = args.user_ids as number[];
+        const startDate = new Date(args.start_date as string);
+        const endDate = new Date(args.end_date as string);
+        const checkInStartHour = (args.check_in_start_hour as number) || 8;
+        const checkInEndHour = (args.check_in_end_hour as number) || 9;
+        const checkOutStartHour = (args.check_out_start_hour as number) || 16;
+        const checkOutEndHour = (args.check_out_end_hour as number) || 17;
+        const absentDaysPerMonth = (args.absent_days_per_month as number) || 0;
+        const excludeDays = (args.exclude_days as number[]) || [5, 6];
+        const shiftType = (args.shift_type as string) || "صباحي";
+
+        let totalRecords = 0;
+        let absentRecords = 0;
+        let presentRecords = 0;
+
+        for (const userId of userIds) {
+          const currentDate = new Date(startDate);
+          let currentMonth = -1;
+          let absentDaysThisMonth = new Set<string>();
+          let workDaysThisMonth: string[] = [];
+
+          while (currentDate <= endDate) {
+            const month = currentDate.getMonth();
+            const dayOfWeek = currentDate.getDay();
+            const dateStr = currentDate.toISOString().split("T")[0];
+
+            if (month !== currentMonth) {
+              currentMonth = month;
+              workDaysThisMonth = [];
+              absentDaysThisMonth = new Set();
+              const tempDate = new Date(currentDate);
+              while (tempDate.getMonth() === month && tempDate <= endDate) {
+                if (!excludeDays.includes(tempDate.getDay())) {
+                  workDaysThisMonth.push(tempDate.toISOString().split("T")[0]);
+                }
+                tempDate.setDate(tempDate.getDate() + 1);
+              }
+              while (absentDaysThisMonth.size < Math.min(absentDaysPerMonth, workDaysThisMonth.length)) {
+                const idx = Math.floor(Math.random() * workDaysThisMonth.length);
+                absentDaysThisMonth.add(workDaysThisMonth[idx]);
+              }
+            }
+
+            if (!excludeDays.includes(dayOfWeek)) {
+              const isAbsent = absentDaysThisMonth.has(dateStr);
+
+              if (isAbsent) {
+                await db.execute(sql.raw(`INSERT INTO attendance (user_id, status, work_hours, overtime_hours, shift_type, late_minutes) VALUES (${userId}, 'غائب', 0, 0, '${shiftType}', 0)`));
+                absentRecords++;
+              } else {
+                const ciHour = checkInStartHour + Math.floor(Math.random() * (checkInEndHour - checkInStartHour));
+                const ciMin = Math.floor(Math.random() * 60);
+                const coHour = checkOutStartHour + Math.floor(Math.random() * (checkOutEndHour - checkOutStartHour));
+                const coMin = Math.floor(Math.random() * 60);
+                
+                const y = currentDate.getFullYear();
+                const m = String(currentDate.getMonth() + 1).padStart(2, "0");
+                const d = String(currentDate.getDate()).padStart(2, "0");
+                const checkIn = `${y}-${m}-${d} ${String(ciHour).padStart(2, "0")}:${String(ciMin).padStart(2, "0")}:00`;
+                const checkOut = `${y}-${m}-${d} ${String(coHour).padStart(2, "0")}:${String(coMin).padStart(2, "0")}:00`;
+                
+                const workHours = (coHour * 60 + coMin - ciHour * 60 - ciMin) / 60;
+                const overtime = workHours > 8 ? Math.round((workHours - 8) * 100) / 100 : 0;
+                const lateMin = ciMin > 0 && ciHour >= checkInStartHour ? ciMin : 0;
+
+                await db.execute(sql.raw(`INSERT INTO attendance (user_id, status, check_in_time, check_out_time, work_hours, overtime_hours, shift_type, late_minutes) VALUES (${userId}, 'حاضر', '${checkIn}', '${checkOut}', ${Math.round(workHours * 100) / 100}, ${overtime}, '${shiftType}', ${lateMin})`));
+                presentRecords++;
+              }
+              totalRecords++;
+            }
+
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+        }
+
+        return JSON.stringify({
+          success: true,
+          message: `تم إنشاء ${totalRecords} سجل حضور (${presentRecords} حضور، ${absentRecords} غياب) لـ ${userIds.length} مستخدم`,
+          total_records: totalRecords,
+          present_records: presentRecords,
+          absent_records: absentRecords,
+          users_count: userIds.length
+        });
+      }
+
+      case "get_database_schema": {
+        const tableName = args.table_name as string;
+
+        if (!tableName) {
+          const tables = await db.execute(sql`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name`);
+          return JSON.stringify({
+            tables: tables.rows.map((r: any) => r.table_name),
+            total: tables.rows.length
+          });
+        }
+
+        const columns = await db.execute(sql`SELECT column_name, data_type, character_maximum_length, is_nullable, column_default FROM information_schema.columns WHERE table_schema = 'public' AND table_name = ${tableName} ORDER BY ordinal_position`);
+        
+        if (columns.rows.length === 0) {
+          return JSON.stringify({ error: `الجدول '${tableName}' غير موجود` });
+        }
+
+        const rowCount = await db.execute(sql.raw(`SELECT COUNT(*) as cnt FROM "${tableName}"`));
+
+        return JSON.stringify({
+          table: tableName,
+          row_count: rowCount.rows[0]?.cnt || 0,
+          columns: columns.rows.map((c: any) => ({
+            name: c.column_name,
+            type: c.data_type + (c.character_maximum_length ? `(${c.character_maximum_length})` : ""),
+            nullable: c.is_nullable === "YES",
+            default: c.column_default
+          }))
+        });
+      }
+
+      case "get_section_users": {
+        const sectionId = args.section_id as string;
+        const sectionName = args.section_name as string;
+
+        let sectionUsers;
+        if (sectionId) {
+          sectionUsers = await db.execute(sql.raw(`SELECT id, username, display_name, display_name_ar, phone, email, section_id, status FROM users WHERE section_id::text = '${sectionId}' OR section_id::text = 'SEC${sectionId.padStart(2, '0')}' ORDER BY id`));
+        } else if (sectionName) {
+          const matchingSections = await db.execute(sql`SELECT id FROM sections WHERE name_ar LIKE ${'%' + sectionName + '%'} OR name LIKE ${'%' + sectionName + '%'}`);
+          if (matchingSections.rows.length === 0) {
+            return JSON.stringify({ error: `لم يتم العثور على قسم باسم '${sectionName}'`, available_sections: "استخدم get_database_schema مع table_name='sections' أو execute_database_query مع SELECT * FROM sections" });
+          }
+          const secIds = matchingSections.rows.map((r: any) => `'${r.id}'`).join(",");
+          sectionUsers = await db.execute(sql.raw(`SELECT id, username, display_name, display_name_ar, phone, email, section_id, status FROM users WHERE section_id::text IN (${secIds}) ORDER BY id`));
+        } else {
+          return JSON.stringify({ error: "يجب تحديد section_id أو section_name" });
+        }
+
+        const allSections = await db.execute(sql`SELECT id, name, name_ar FROM sections`);
+
+        return JSON.stringify({
+          users: sectionUsers.rows,
+          total: sectionUsers.rows.length,
+          available_sections: allSections.rows
+        });
+      }
+
       default:
         return JSON.stringify({ error: "دالة غير معروفة" });
     }
   } catch (error) {
     console.error("Error executing function:", name, error);
-    return JSON.stringify({ error: "حدث خطأ أثناء تنفيذ العملية" });
+    return JSON.stringify({ error: `حدث خطأ أثناء تنفيذ العملية: ${(error as Error).message}` });
   }
 }
 

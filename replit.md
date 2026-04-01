@@ -141,6 +141,14 @@ A full-stack Manufacturing Resource Planning (MRP) system for a plastic bag manu
 - Rejects duplicate admin usernames
 - Setup data stored in `system_settings` table with keys like `company_name`, `company_phone`, etc.
 
+### AI Agent Database Tools (`server/ai-agent-routes.ts`)
+The AI smart agent now has full database interaction capabilities:
+- **`execute_database_query`**: Run any SQL query (SELECT/INSERT/UPDATE). DROP/DELETE/TRUNCATE/ALTER are blocked for safety. Results limited to 100 rows for SELECT queries.
+- **`generate_attendance_data`**: Bulk-create attendance records with configurable check-in/out times, absent days, excluded weekdays, and shift types.
+- **`get_database_schema`**: Inspect table structure (columns, types, defaults) or list all tables.
+- **`get_section_users`**: Find users by section ID or section name (Arabic/English search).
+- The system prompt guides the agent to use these tools for any data creation, reporting, or schema exploration requests.
+
 ## Database Schema (60+ Tables)
 
 ### Core Business Tables
