@@ -164,6 +164,16 @@ function ChatPanel() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
 
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!isLoading && !isRecording && !isTranscribing) {
+      textareaRef.current?.focus();
+    }
+  }, [isLoading, isRecording, isTranscribing]);
+
   const handleViewportScrollCapture = () => {
     const el = viewportRef.current;
     if (!el) return;
