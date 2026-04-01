@@ -404,6 +404,12 @@ The AI smart agent now has full database interaction capabilities:
   - `calculate_bag_quantity`, `calculate_printing_costs` — Industry calculations
   - `convert_currency`, `get_exchange_rates` — Currency tools
   - `search_knowledge_base`, `add_to_knowledge_base`, `get_website_info` — Knowledge management
+  - `execute_database_query` — Direct SQL execution (SELECT/INSERT/UPDATE, blocks destructive DDL)
+  - `generate_attendance_data` — Bulk attendance record creation with customizable parameters
+  - `get_database_schema` — Inspect all tables, columns, and data types
+  - `get_section_users` — Find users by section ID or name
+  - `generate_document` — Professional PDF/Excel/Word document generation (reports, forms, invoices, contracts, payroll sheets, attendance reports, etc.) with download links
+- `GET /api/ai-agent/download/:filename` — Download generated documents (authenticated)
 
 ## Authentication & Authorization
 

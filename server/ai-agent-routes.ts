@@ -13,6 +13,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import PDFDocument from "pdfkit";
+import * as docx from "docx";
 import { objectStorageClient } from "./replit_integrations/object_storage";
 import { generateQuotePdfWithAdobe, isAdobePdfAvailable } from "./adobe-pdf-service";
 // @ts-ignore
@@ -24,6 +25,10 @@ const bidi = bidiFactory();
 const PDF_DIR = "/tmp/quote-pdfs";
 if (!fs.existsSync(PDF_DIR)) {
   fs.mkdirSync(PDF_DIR, { recursive: true });
+}
+const DOCS_DIR = "/tmp/agent-docs";
+if (!fs.existsSync(DOCS_DIR)) {
+  fs.mkdirSync(DOCS_DIR, { recursive: true });
 }
 
 // دالة للحصول على الدومين الأساسي للتطبيق
@@ -569,6 +574,7 @@ async function getSystemPrompt(): Promise<string> {
 16. **إنشاء بيانات حضور وهمية**: إنشاء سجلات حضور وانصراف تلقائية لأي مجموعة مستخدمين ولأي فترة زمنية مع تخصيص أوقات الحضور والانصراف وأيام الغياب
 17. **استكشاف هيكل قاعدة البيانات**: عرض جميع الجداول وأعمدتها وأنواع البيانات
 18. **البحث عن مستخدمي الأقسام**: عرض المستخدمين في أي قسم بالاسم أو الرقم
+19. **إنشاء مستندات احترافية**: إنشاء ملفات PDF و Excel و Word بتصميم احترافي. يمكن إنشاء أي نوع من المستندات: تقارير، نماذج، جداول، فواتير، عقود، خطابات رسمية، كشوف رواتب، تقارير حضور، نماذج إجازات، وغيرها. كل مستند يُنشأ مع رابط تحميل مباشر
 
 ### معلومات المصنع:
 - الموقع: www.modplastic.com | متخصصون في الأكياس البلاستيكية والأفلام البلاستيكية
@@ -1187,8 +1193,411 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
         }
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "generate_document",
+      description: `إنشاء ملف مستند احترافي (PDF أو Excel أو Word). يمكن إنشاء أي نوع من التقارير والنماذج والجداول.
+أمثلة: تقرير حضور شهري، كشف رواتب، قائمة مخزون، تقرير إنتاج، نموذج طلب إجازة، تقرير جودة، كشف صيانة، فاتورة، عقد عمل، خطاب رسمي.
+استخدم execute_database_query أولاً لجلب البيانات المطلوبة ثم مرّرها هنا.`,
+      parameters: {
+        type: "object",
+        properties: {
+          format: { type: "string", enum: ["pdf", "excel", "word"], description: "صيغة الملف" },
+          title: { type: "string", description: "عنوان المستند (مثل: تقرير الحضور الشهري - يناير 2026)" },
+          filename: { type: "string", description: "اسم الملف بدون امتداد (مثل: attendance_report_jan_2026)" },
+          content: {
+            type: "object",
+            description: "محتوى المستند",
+            properties: {
+              header: {
+                type: "object",
+                properties: {
+                  company_name: { type: "string", description: "اسم الشركة" },
+                  subtitle: { type: "string", description: "عنوان فرعي" },
+                  date: { type: "string", description: "التاريخ" },
+                  logo_text: { type: "string", description: "نص بديل للشعار" },
+                  extra_info: { type: "array", items: { type: "string" }, description: "معلومات إضافية في الرأس" }
+                }
+              },
+              sections: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string", description: "عنوان القسم" },
+                    type: { type: "string", enum: ["table", "text", "key_value", "summary"], description: "نوع المحتوى" },
+                    text: { type: "string", description: "نص حر (لنوع text)" },
+                    columns: { type: "array", items: { type: "string" }, description: "أسماء أعمدة الجدول (لنوع table)" },
+                    rows: { type: "array", items: { type: "array", items: { type: "string" } }, description: "صفوف الجدول (لنوع table)" },
+                    data: { type: "object", description: "بيانات مفتاح-قيمة (لنوع key_value)" },
+                    items: { type: "array", items: { type: "object", properties: { label: { type: "string" }, value: { type: "string" } } }, description: "عناصر الملخص (لنوع summary)" }
+                  }
+                },
+                description: "أقسام المستند"
+              },
+              footer: {
+                type: "object",
+                properties: {
+                  text: { type: "string", description: "نص التذييل" },
+                  signatures: { type: "array", items: { type: "object", properties: { title: { type: "string" }, name: { type: "string" } } }, description: "مناطق التوقيع" }
+                }
+              }
+            }
+          }
+        },
+        required: ["format", "title", "filename", "content"]
+      }
+    }
   }
 ];
+
+async function generatePdfDocument(title: string, filename: string, content: any): Promise<string> {
+  const filePath = path.join(DOCS_DIR, `${filename}.pdf`);
+  const fontSearchPaths = [
+    path.join(__dirname, "..", "public", "fonts", "NotoSansArabic-Regular.ttf"),
+    path.join(__dirname, "..", "server", "fonts", "NotoSansArabic-Regular.ttf"),
+    path.join(__dirname, "fonts", "NotoSansArabic-Regular.ttf"),
+  ];
+  const arabicFontPath = fontSearchPaths.find(p => fs.existsSync(p)) || "";
+  const hasArabicFont = !!arabicFontPath;
+
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", margin: 40, layout: "portrait", bufferPages: true });
+    const stream = fs.createWriteStream(filePath);
+    doc.pipe(stream);
+
+    const isArabic = (text: string) => /[\u0600-\u06FF]/.test(text || "");
+    const safeText = (text: string) => {
+      if (!text) return "";
+      if (isArabic(text) && hasArabicFont) return text;
+      if (isArabic(text)) return processArabicText(text);
+      return text;
+    };
+
+    if (hasArabicFont) {
+      doc.font(arabicFontPath);
+    }
+
+    const header = content.header || {};
+    if (header.company_name) {
+      doc.fontSize(18).fillColor("#1a365d").text(safeText(header.company_name), { align: "center" });
+      doc.moveDown(0.3);
+    }
+    doc.fontSize(14).fillColor("#2d3748").text(safeText(title), { align: "center" });
+    if (header.subtitle) {
+      doc.fontSize(10).fillColor("#718096").text(safeText(header.subtitle), { align: "center" });
+    }
+    if (header.date) {
+      doc.fontSize(9).fillColor("#a0aec0").text(safeText(header.date), { align: "center" });
+    }
+    if (header.extra_info && Array.isArray(header.extra_info)) {
+      header.extra_info.forEach((info: string) => {
+        doc.fontSize(9).fillColor("#718096").text(safeText(info), { align: "center" });
+      });
+    }
+    doc.moveDown(0.5);
+    doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor("#e2e8f0").lineWidth(1).stroke();
+    doc.moveDown(0.5);
+
+    const sections = content.sections || [];
+    for (const section of sections) {
+      if (doc.y > 700) doc.addPage();
+
+      if (section.title) {
+        doc.fontSize(12).fillColor("#2b6cb0").text(safeText(section.title), { underline: true });
+        doc.moveDown(0.3);
+      }
+
+      if (section.type === "text" && section.text) {
+        doc.fontSize(10).fillColor("#2d3748").text(safeText(section.text), { lineGap: 4 });
+        doc.moveDown(0.5);
+      }
+
+      if (section.type === "key_value" && section.data) {
+        const entries = Object.entries(section.data);
+        for (const [key, value] of entries) {
+          doc.fontSize(10).fillColor("#4a5568").text(`${safeText(key)}: `, { continued: true });
+          doc.fillColor("#1a202c").text(safeText(String(value)));
+        }
+        doc.moveDown(0.5);
+      }
+
+      if (section.type === "summary" && section.items) {
+        for (const item of section.items) {
+          doc.fontSize(10).fillColor("#4a5568").text(`${safeText(item.label)}: `, { continued: true });
+          doc.fillColor("#1a202c").text(safeText(String(item.value)));
+        }
+        doc.moveDown(0.5);
+      }
+
+      if (section.type === "table" && section.columns && section.rows && section.columns.length > 0) {
+        const cols = section.columns as string[];
+        const rows = section.rows as string[][];
+        const tableWidth = 515;
+        const colWidth = tableWidth / cols.length;
+        const startX = 40;
+        let y = doc.y;
+
+        doc.fillColor("#ebf8ff").rect(startX, y, tableWidth, 20).fill();
+        doc.fillColor("#2b6cb0").fontSize(8);
+        cols.forEach((col: string, i: number) => {
+          doc.text(safeText(col), startX + i * colWidth + 4, y + 5, { width: colWidth - 8, align: "center" });
+        });
+        y += 20;
+
+        rows.forEach((row: string[], rowIdx: number) => {
+          if (y > 740) { doc.addPage(); y = 40; }
+          if (rowIdx % 2 === 0) {
+            doc.fillColor("#f7fafc").rect(startX, y, tableWidth, 18).fill();
+          }
+          doc.fillColor("#2d3748").fontSize(7);
+          row.forEach((cell: string, i: number) => {
+            doc.text(safeText(String(cell || "")), startX + i * colWidth + 4, y + 4, { width: colWidth - 8, align: "center" });
+          });
+          y += 18;
+        });
+
+        doc.y = y + 10;
+      }
+    }
+
+    const footer = content.footer || {};
+    if (footer.signatures && Array.isArray(footer.signatures) && footer.signatures.length > 0) {
+      if (doc.y > 650) doc.addPage();
+      doc.moveDown(2);
+      const sigWidth = 515 / footer.signatures.length;
+      const sigY = doc.y;
+      footer.signatures.forEach((sig: any, i: number) => {
+        const x = 40 + i * sigWidth;
+        doc.fontSize(9).fillColor("#4a5568").text(safeText(sig.title || ""), x, sigY, { width: sigWidth, align: "center" });
+        doc.text(safeText(sig.name || "_______________"), x, sigY + 14, { width: sigWidth, align: "center" });
+        doc.moveTo(x + 20, sigY + 40).lineTo(x + sigWidth - 20, sigY + 40).strokeColor("#cbd5e0").stroke();
+      });
+    }
+    if (footer.text) {
+      doc.moveDown(2);
+      doc.fontSize(8).fillColor("#a0aec0").text(safeText(footer.text), { align: "center" });
+    }
+
+    doc.end();
+    stream.on("finish", () => resolve(filePath));
+    stream.on("error", reject);
+  });
+}
+
+async function generateExcelDocument(title: string, filename: string, content: any): Promise<string> {
+  const filePath = path.join(DOCS_DIR, `${filename}.xlsx`);
+  const workbook = new XLSX.Workbook();
+  workbook.creator = "MPBF Smart Agent";
+  workbook.created = new Date();
+
+  const header = content.header || {};
+  const sections = content.sections || [];
+
+  const usedSheetNames = new Set<string>();
+  for (const section of sections) {
+    let sheetName = (section.title || title).substring(0, 30).replace(/[\\/*?\[\]:]/g, "");
+    let counter = 1;
+    const baseName = sheetName;
+    while (usedSheetNames.has(sheetName)) {
+      sheetName = `${baseName.substring(0, 27)}_${counter++}`;
+    }
+    usedSheetNames.add(sheetName);
+    const sheet = workbook.addWorksheet(sheetName);
+
+    let rowNum = 1;
+
+    if (header.company_name) {
+      const hRow = sheet.getRow(rowNum);
+      hRow.getCell(1).value = header.company_name;
+      hRow.getCell(1).font = { bold: true, size: 16, color: { argb: "FF1A365D" } };
+      hRow.getCell(1).alignment = { horizontal: "center" };
+      sheet.mergeCells(rowNum, 1, rowNum, Math.max(section.columns?.length || 4, 4));
+      rowNum++;
+    }
+    const titleRow = sheet.getRow(rowNum);
+    titleRow.getCell(1).value = title;
+    titleRow.getCell(1).font = { bold: true, size: 13, color: { argb: "FF2D3748" } };
+    titleRow.getCell(1).alignment = { horizontal: "center" };
+    sheet.mergeCells(rowNum, 1, rowNum, Math.max(section.columns?.length || 4, 4));
+    rowNum++;
+
+    if (header.subtitle) {
+      const subRow = sheet.getRow(rowNum);
+      subRow.getCell(1).value = header.subtitle;
+      subRow.getCell(1).font = { size: 10, color: { argb: "FF718096" } };
+      subRow.getCell(1).alignment = { horizontal: "center" };
+      sheet.mergeCells(rowNum, 1, rowNum, Math.max(section.columns?.length || 4, 4));
+      rowNum++;
+    }
+    if (header.date) {
+      const dateRow = sheet.getRow(rowNum);
+      dateRow.getCell(1).value = header.date;
+      dateRow.getCell(1).font = { size: 9, color: { argb: "FFA0AEC0" } };
+      dateRow.getCell(1).alignment = { horizontal: "center" };
+      sheet.mergeCells(rowNum, 1, rowNum, Math.max(section.columns?.length || 4, 4));
+      rowNum++;
+    }
+    rowNum++;
+
+    if (section.type === "table" && section.columns && section.rows) {
+      const headerRow = sheet.getRow(rowNum);
+      section.columns.forEach((col: string, i: number) => {
+        const cell = headerRow.getCell(i + 1);
+        cell.value = col;
+        cell.font = { bold: true, size: 10, color: { argb: "FFFFFFFF" } };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF2B6CB0" } };
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+        cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+        sheet.getColumn(i + 1).width = Math.max(15, col.length * 2);
+      });
+      rowNum++;
+
+      section.rows.forEach((row: string[], rIdx: number) => {
+        const dataRow = sheet.getRow(rowNum);
+        row.forEach((cell: string, i: number) => {
+          const c = dataRow.getCell(i + 1);
+          c.value = isNaN(Number(cell)) ? cell : Number(cell);
+          c.font = { size: 9 };
+          c.alignment = { horizontal: "center", vertical: "middle" };
+          c.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+          if (rIdx % 2 === 0) {
+            c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF7FAFC" } };
+          }
+        });
+        rowNum++;
+      });
+    }
+
+    if (section.type === "key_value" && section.data) {
+      for (const [key, value] of Object.entries(section.data)) {
+        const kvRow = sheet.getRow(rowNum);
+        kvRow.getCell(1).value = key;
+        kvRow.getCell(1).font = { bold: true, size: 10 };
+        kvRow.getCell(2).value = String(value);
+        kvRow.getCell(2).font = { size: 10 };
+        rowNum++;
+      }
+    }
+
+    if (section.type === "text" && section.text) {
+      const textRow = sheet.getRow(rowNum);
+      textRow.getCell(1).value = section.text;
+      textRow.getCell(1).alignment = { wrapText: true };
+      sheet.mergeCells(rowNum, 1, rowNum, 4);
+      rowNum++;
+    }
+
+    if (section.type === "summary" && section.items) {
+      for (const item of section.items) {
+        const sRow = sheet.getRow(rowNum);
+        sRow.getCell(1).value = item.label;
+        sRow.getCell(1).font = { bold: true, size: 10 };
+        sRow.getCell(2).value = item.value;
+        sRow.getCell(2).font = { size: 10 };
+        rowNum++;
+      }
+    }
+
+    sheet.views = [{ rightToLeft: true }];
+  }
+
+  if (sections.length === 0) {
+    const sheet = workbook.addWorksheet(title.substring(0, 30));
+    sheet.getRow(1).getCell(1).value = title;
+  }
+
+  await workbook.xlsx.writeFile(filePath);
+  return filePath;
+}
+
+async function generateWordDocument(title: string, filename: string, content: any): Promise<string> {
+  const filePath = path.join(DOCS_DIR, `${filename}.docx`);
+  const header = content.header || {};
+  const sections = content.sections || [];
+  const footer = content.footer || {};
+
+  const children: any[] = [];
+
+  if (header.company_name) {
+    children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: header.company_name, bold: true, size: 36, color: "1A365D" })], alignment: docx.AlignmentType.CENTER, spacing: { after: 100 } }));
+  }
+  children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: title, bold: true, size: 28, color: "2D3748" })], alignment: docx.AlignmentType.CENTER, spacing: { after: 100 } }));
+  if (header.subtitle) {
+    children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: header.subtitle, size: 20, color: "718096" })], alignment: docx.AlignmentType.CENTER }));
+  }
+  if (header.date) {
+    children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: header.date, size: 18, color: "A0AEC0" })], alignment: docx.AlignmentType.CENTER }));
+  }
+  if (header.extra_info) {
+    for (const info of header.extra_info) {
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: info, size: 18, color: "718096" })], alignment: docx.AlignmentType.CENTER }));
+    }
+  }
+  children.push(new docx.Paragraph({ children: [], spacing: { after: 200 }, border: { bottom: { style: docx.BorderStyle.SINGLE, size: 1, color: "E2E8F0" } } }));
+
+  for (const section of sections) {
+    if (section.title) {
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: section.title, bold: true, size: 24, color: "2B6CB0", underline: { type: docx.UnderlineType.SINGLE } })], spacing: { before: 300, after: 100 } }));
+    }
+
+    if (section.type === "text" && section.text) {
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: section.text, size: 20 })], spacing: { after: 200 } }));
+    }
+
+    if (section.type === "key_value" && section.data) {
+      for (const [key, value] of Object.entries(section.data)) {
+        children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${key}: `, bold: true, size: 20 }), new docx.TextRun({ text: String(value), size: 20 })], spacing: { after: 60 } }));
+      }
+    }
+
+    if (section.type === "summary" && section.items) {
+      for (const item of section.items) {
+        children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${item.label}: `, bold: true, size: 20 }), new docx.TextRun({ text: String(item.value), size: 20 })], spacing: { after: 60 } }));
+      }
+    }
+
+    if (section.type === "table" && section.columns && section.rows) {
+      const headerCells = section.columns.map((col: string) => new docx.TableCell({
+        children: [new docx.Paragraph({ children: [new docx.TextRun({ text: col, bold: true, size: 18, color: "FFFFFF" })], alignment: docx.AlignmentType.CENTER })],
+        shading: { fill: "2B6CB0" }, verticalAlign: docx.VerticalAlign.CENTER,
+      }));
+
+      const dataRows = section.rows.map((row: string[], rIdx: number) => new docx.TableRow({
+        children: row.map((cell: string) => new docx.TableCell({
+          children: [new docx.Paragraph({ children: [new docx.TextRun({ text: String(cell || ""), size: 18 })], alignment: docx.AlignmentType.CENTER })],
+          shading: rIdx % 2 === 0 ? { fill: "F7FAFC" } : undefined, verticalAlign: docx.VerticalAlign.CENTER,
+        }))
+      }));
+
+      children.push(new docx.Table({
+        rows: [new docx.TableRow({ children: headerCells, tableHeader: true }), ...dataRows],
+        width: { size: 100, type: docx.WidthType.PERCENTAGE },
+      }));
+      children.push(new docx.Paragraph({ children: [], spacing: { after: 200 } }));
+    }
+  }
+
+  if (footer.signatures && Array.isArray(footer.signatures)) {
+    children.push(new docx.Paragraph({ children: [], spacing: { before: 400 } }));
+    for (const sig of footer.signatures) {
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: sig.title || "", bold: true, size: 20 }), new docx.TextRun({ text: `    ${sig.name || "_______________"}`, size: 20 })], spacing: { after: 100 } }));
+    }
+  }
+  if (footer.text) {
+    children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: footer.text, size: 16, color: "A0AEC0" })], alignment: docx.AlignmentType.CENTER, spacing: { before: 400 } }));
+  }
+
+  const document = new docx.Document({
+    sections: [{ properties: {}, children }],
+  });
+
+  const buffer = await docx.Packer.toBuffer(document);
+  fs.writeFileSync(filePath, buffer);
+  return filePath;
+}
 
 async function executeFunction(name: string, args: Record<string, unknown>, userPermissions?: string[]): Promise<string> {
   const perms = userPermissions || [];
@@ -2827,6 +3236,43 @@ async function executeFunction(name: string, args: Record<string, unknown>, user
         });
       }
 
+      case "generate_document": {
+        const format = args.format as string;
+        const docTitle = args.title as string;
+        const docFilename = (args.filename as string || "document").replace(/[^a-zA-Z0-9_\-]/g, "_");
+        const docContent = args.content as any || {};
+
+        let filePath: string;
+        let ext: string;
+
+        if (format === "pdf") {
+          filePath = await generatePdfDocument(docTitle, docFilename, docContent);
+          ext = "pdf";
+        } else if (format === "excel") {
+          filePath = await generateExcelDocument(docTitle, docFilename, docContent);
+          ext = "xlsx";
+        } else if (format === "word") {
+          filePath = await generateWordDocument(docTitle, docFilename, docContent);
+          ext = "docx";
+        } else {
+          return JSON.stringify({ error: "صيغة غير مدعومة. الصيغ المدعومة: pdf, excel, word" });
+        }
+
+        const baseUrl = getAppBaseUrl();
+        const downloadUrl = `${baseUrl}/api/ai-agent/download/${docFilename}.${ext}`;
+
+        console.log(`[AI Agent] Document generated: ${filePath} -> ${downloadUrl}`);
+
+        return JSON.stringify({
+          success: true,
+          message: `تم إنشاء الملف بنجاح: ${docTitle}`,
+          format: ext,
+          filename: `${docFilename}.${ext}`,
+          download_url: downloadUrl,
+          download_link: `[📥 تحميل الملف](${downloadUrl})`
+        });
+      }
+
       default:
         return JSON.stringify({ error: "دالة غير معروفة" });
     }
@@ -2837,6 +3283,38 @@ async function executeFunction(name: string, args: Record<string, unknown>, user
 }
 
 export function registerAiAgentRoutes(app: Express): void {
+  app.get("/api/ai-agent/download/:filename", requireAuth, (req: Request, res: Response) => {
+    const filename = req.params.filename;
+    if (!filename || filename.includes("..") || filename.includes("/") || filename.includes("\0")) {
+      return res.status(400).json({ error: "اسم ملف غير صالح" });
+    }
+    const filePath = path.join(DOCS_DIR, filename);
+    const resolvedPath = path.resolve(filePath);
+    if (!resolvedPath.startsWith(path.resolve(DOCS_DIR))) {
+      return res.status(400).json({ error: "مسار غير صالح" });
+    }
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "الملف غير موجود" });
+    }
+
+    const ext = path.extname(filename).toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      ".pdf": "application/pdf",
+      ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    };
+
+    res.setHeader("Content-Type", mimeTypes[ext] || "application/octet-stream");
+    res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
+    const stream = fs.createReadStream(filePath);
+    stream.on("error", () => {
+      if (!res.headersSent) {
+        res.status(500).json({ error: "خطأ في قراءة الملف" });
+      }
+    });
+    stream.pipe(res);
+  });
+
   app.post("/api/ai-agent/chat", requireAuth, async (req: Request, res: Response) => {
   let clientClosed = false;
 
