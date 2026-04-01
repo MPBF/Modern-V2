@@ -15,14 +15,74 @@ import {
 } from "lucide-react";
 import type { Quote } from "../../../shared/schema";
 
+function renderInlineFormatting(text: string, keyPrefix: string = ""): (string | JSX.Element)[] {
+  const result: (string | JSX.Element)[] = [];
+  const inlineRegex = /\*\*(.+?)\*\*|`([^`]+)`/g;
+  let lastIdx = 0;
+  let m;
+  while ((m = inlineRegex.exec(text)) !== null) {
+    if (m.index > lastIdx) result.push(text.slice(lastIdx, m.index));
+    if (m[1]) result.push(<strong key={`${keyPrefix}b${m.index}`}>{m[1]}</strong>);
+    else if (m[2]) result.push(<code key={`${keyPrefix}c${m.index}`} className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">{m[2]}</code>);
+    lastIdx = m.index + m[0].length;
+  }
+  if (lastIdx < text.length) result.push(text.slice(lastIdx));
+  return result;
+}
+
 function renderTextWithLinks(text: string) {
+  const lines = text.split("\n");
+  const elements: JSX.Element[] = [];
+
+  lines.forEach((line, lineIdx) => {
+    const trimmed = line.trim();
+
+    if (lineIdx > 0) elements.push(<br key={`br${lineIdx}`} />);
+
+    const headingMatch = trimmed.match(/^(#{1,3})\s+(.+)$/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const sizes = ["text-lg font-bold", "text-base font-bold", "text-sm font-semibold"];
+      elements.push(<span key={`h${lineIdx}`} className={sizes[level - 1] || sizes[2]}>{renderInlineFormatting(headingMatch[2], `h${lineIdx}`)}</span>);
+      return;
+    }
+
+    const bulletMatch = trimmed.match(/^[-*•]\s+(.+)$/);
+    if (bulletMatch) {
+      elements.push(
+        <span key={`li${lineIdx}`} className="flex gap-1.5 items-start">
+          <span className="mt-1 shrink-0">•</span>
+          <span>{renderLineWithLinks(bulletMatch[1], `li${lineIdx}`)}</span>
+        </span>
+      );
+      return;
+    }
+
+    const numMatch = trimmed.match(/^(\d+)[.)]\s+(.+)$/);
+    if (numMatch) {
+      elements.push(
+        <span key={`ol${lineIdx}`} className="flex gap-1.5 items-start">
+          <span className="mt-0 shrink-0 font-medium">{numMatch[1]}.</span>
+          <span>{renderLineWithLinks(numMatch[2], `ol${lineIdx}`)}</span>
+        </span>
+      );
+      return;
+    }
+
+    elements.push(<span key={`l${lineIdx}`}>{renderLineWithLinks(line, `l${lineIdx}`)}</span>);
+  });
+
+  return elements;
+}
+
+function renderLineWithLinks(line: string, keyPrefix: string): (string | JSX.Element)[] {
   const parts: { type: 'text' | 'link'; content: string; label?: string }[] = [];
   const combinedRegex = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)|(https?:\/\/[^\s<>"{}|\\^`[\]]+?)(?=[)\],.:;!?\s]|$)/g;
   let lastIndex = 0;
   let match;
-  while ((match = combinedRegex.exec(text)) !== null) {
+  while ((match = combinedRegex.exec(line)) !== null) {
     if (match.index > lastIndex) {
-      parts.push({ type: 'text', content: text.slice(lastIndex, match.index) });
+      parts.push({ type: 'text', content: line.slice(lastIndex, match.index) });
     }
     if (match[1] && match[2]) {
       parts.push({ type: 'link', content: match[2], label: match[1] });
@@ -32,14 +92,14 @@ function renderTextWithLinks(text: string) {
       lastIndex = match.index + match[3].length;
     }
   }
-  if (lastIndex < text.length) {
-    parts.push({ type: 'text', content: text.slice(lastIndex) });
+  if (lastIndex < line.length) {
+    parts.push({ type: 'text', content: line.slice(lastIndex) });
   }
-  return parts.map((part, index) => {
+  return parts.flatMap((part, index) => {
     if (part.type === 'link') {
-      return (
+      return [
         <a
-          key={index}
+          key={`${keyPrefix}a${index}`}
           href={part.content}
           target="_blank"
           rel="noopener noreferrer"
@@ -48,9 +108,9 @@ function renderTextWithLinks(text: string) {
         >
           {part.label || part.content}
         </a>
-      );
+      ];
     }
-    return <span key={index}>{part.content}</span>;
+    return renderInlineFormatting(part.content, `${keyPrefix}t${index}`);
   });
 }
 
@@ -125,7 +185,7 @@ function MessageBubble({ msg, getFileIcon, formatFileSize }: {
             </div>
           )}
           {msg.content ? (
-            <div className="whitespace-pre-wrap text-sm md:text-[0.9rem] leading-relaxed" dir="auto">
+            <div className="text-sm md:text-[0.9rem] leading-relaxed" dir="auto">
               {renderTextWithLinks(msg.content)}
             </div>
           ) : (
